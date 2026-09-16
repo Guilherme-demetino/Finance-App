@@ -3,7 +3,7 @@ import * as SQLite from "expo-sqlite";
 import { useEffect, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { CustomAlert } from "../components/CustomAlert";
-import { styles } from "./styles/indexStyles";
+import { styles } from "../styles/indexStyles";
 
 export default function WelcomeScreen() {
   const [name, setName] = useState("");

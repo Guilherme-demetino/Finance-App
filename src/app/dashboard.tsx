@@ -1,20 +1,38 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as ScreenOrientation from "expo-screen-orientation";
 import * as SQLite from "expo-sqlite";
 import { useEffect, useState } from "react";
-import {
-  Image,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ScrollView, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { AnnualPanoramaCard } from "../components/AnnualPanoramaCard";
+import { BalanceCard } from "../components/BalanceCard";
 import { CustomAlert } from "../components/CustomAlert";
-import { styles } from "./styles/dashboardStyles";
-import { styles as menuStyles } from "./styles/menuStyles";
+import { MonthModal, YearModal } from "../components/FilterModals";
+import { GeneralBalanceCard } from "../components/GeneralBalanceCard";
+import { LandscapePanoramaModal } from "../components/LandscapePanoramaModal";
+import { MonthlyBudgetCard } from "../components/MonthlyBudgetCard";
+import {
+  EditNameModal,
+  ProfileMenuModal,
+} from "../components/ProfileMenuModals";
+import { SummaryCards } from "../components/SummaryCards";
+import { TransactionModal } from "../components/TransactionModal";
+import { TransactionsList } from "../components/TransactionsList";
+import { UserProfileHeader } from "../components/UserProfileHeader";
+
+import { styles } from "../styles/dashboardStyles";
+
+const formatCurrency = (value: string) => {
+  const numbers = value.replace(/\D/g, "");
+  if (!numbers) return "";
+  const amount = Number(numbers) / 100;
+  return amount.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
 
 export default function DashboardScreen() {
   const [userName, setUserName] = useState("Carregando...");
@@ -24,7 +42,47 @@ export default function DashboardScreen() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState("");
 
-  // Estados para o CustomAlert
+  const [isLandscapePanoramaOpen, setIsLandscapePanoramaOpen] = useState(false);
+
+  // Modal Transação
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [transactionType, setTransactionType] = useState<"income" | "expense">(
+    "income",
+  );
+  const [transactionTitle, setTransactionTitle] = useState("");
+  const [transactionAmount, setTransactionAmount] = useState("");
+  const [transactionDate, setTransactionDate] = useState("16/09/2026");
+  const [transactionCategory] = useState("Alimentação");
+
+  // Filtros
+  const [selectedMonth, setSelectedMonth] = useState("Setembro");
+  const [selectedYear, setSelectedYear] = useState("2026");
+  const [isMonthModalOpen, setIsMonthModalOpen] = useState(false);
+  const [isYearModalOpen, setIsYearModalOpen] = useState(false);
+
+  const monthsList = [
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
+  ];
+  const yearsList = ["2024", "2025", "2026", "2027", "2028"];
+
+  const totalIncome = 4500.0;
+  const totalExpense = 189.9;
+  const totalBalance = totalIncome - totalExpense;
+
+  const [monthlyBudget, setMonthlyBudget] = useState(totalIncome.toString());
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
@@ -35,17 +93,41 @@ export default function DashboardScreen() {
     setAlertVisible(true);
   };
 
-  const totalIncome = 4500.0;
-  const totalExpense = 189.9;
-  const totalBalance = totalIncome - totalExpense;
-
   const totalMoney = totalIncome + totalExpense;
   const incomePercentage =
     totalMoney > 0 ? (totalIncome / totalMoney) * 100 : 50;
   const expensePercentage =
     totalMoney > 0 ? (totalExpense / totalMoney) * 100 : 50;
 
-  // Busca dados do usuário (Nome e Foto) do SQLite
+  const monthsData = [
+    { label: "JAN", income: 0, expense: 0 },
+    { label: "FEV", income: 0, expense: 0 },
+    { label: "MAR", income: 0, expense: 0 },
+    { label: "ABR", income: 0, expense: 0 },
+    { label: "MAI", income: 0, expense: 0 },
+    { label: "JUN", income: 0, expense: 0 },
+    { label: "JUL", income: 0, expense: 0 },
+    { label: "AGO", income: 0, expense: 0 },
+    { label: "SET", income: totalIncome, expense: totalExpense },
+    { label: "OUT", income: 0, expense: 0 },
+    { label: "NOV", income: 0, expense: 0 },
+    { label: "DEZ", income: 0, expense: 0 },
+  ];
+
+  const openLandscapePanorama = async () => {
+    await ScreenOrientation.lockAsync(
+      ScreenOrientation.OrientationLock.LANDSCAPE,
+    );
+    setIsLandscapePanoramaOpen(true);
+  };
+
+  const closeLandscapePanorama = async () => {
+    await ScreenOrientation.lockAsync(
+      ScreenOrientation.OrientationLock.PORTRAIT_UP,
+    );
+    setIsLandscapePanoramaOpen(false);
+  };
+
   useEffect(() => {
     fetchUserData();
   }, []);
@@ -53,29 +135,20 @@ export default function DashboardScreen() {
   const fetchUserData = async () => {
     try {
       const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
-
-      // 1. Garante que a tabela base existe
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS users (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL
         );
       `);
-
-      // 2. Adiciona a coluna 'avatar' caso ela ainda não exista na tabela antiga
       try {
         await db.execAsync(`ALTER TABLE users ADD COLUMN avatar TEXT;`);
-      } catch (e) {
-        // Se a coluna já existir, o SQLite vai gerar um erro que ignoramos aqui com segurança
-      }
+      } catch (e) {}
 
       const result: any = await db.getAllAsync("SELECT * FROM users LIMIT 1");
-
       if (result && result.length > 0) {
         setUserName(result[0].name);
-        if (result[0].avatar) {
-          setUserImage(result[0].avatar);
-        }
+        if (result[0].avatar) setUserImage(result[0].avatar);
       } else {
         setUserName("Meu Finanças");
       }
@@ -85,11 +158,9 @@ export default function DashboardScreen() {
     }
   };
 
-  // Função para escolher foto da galeria
   const pickImage = async () => {
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
-
     if (!permissionResult.granted) {
       showAlert(
         "Permissão negada",
@@ -107,23 +178,16 @@ export default function DashboardScreen() {
 
     if (!result.canceled && result.assets[0].uri) {
       const imageUri = result.assets[0].uri;
-
       try {
         setUserImage(imageUri);
-
         const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
-
-        // Garante que o registro com id = 1 existe antes de atualizar para evitar NullPointerException
         await db.runAsync(
           "INSERT OR IGNORE INTO users (id, name) VALUES (1, ?)",
           [userName],
         );
-
-        // Atualiza a foto no banco
         await db.runAsync("UPDATE users SET avatar = ? WHERE id = 1", [
           imageUri,
         ]);
-
         showAlert("Sucesso", "Foto de perfil atualizada com sucesso!");
       } catch (error) {
         console.log("Erro ao salvar foto no banco:", error);
@@ -132,7 +196,6 @@ export default function DashboardScreen() {
     }
   };
 
-  // Função para salvar o novo nome alterado
   const handleUpdateName = async () => {
     if (newName.trim() === "") {
       showAlert("Atenção", "O nome não pode ficar vazio.");
@@ -151,6 +214,17 @@ export default function DashboardScreen() {
       console.log("Erro ao atualizar nome:", error);
       showAlert("Erro", "Não foi possível atualizar o nome.");
     }
+  };
+
+  const handleSaveTransaction = () => {
+    if (!transactionTitle.trim() || !transactionAmount.trim()) {
+      showAlert("Atenção", "Preencha o título e o valor da transação.");
+      return;
+    }
+    showAlert("Sucesso", "Transação salva com sucesso!");
+    setTransactionTitle("");
+    setTransactionAmount("");
+    setIsTransactionModalOpen(false);
   };
 
   const mockTransactions = [
@@ -183,314 +257,114 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Cabeçalho */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Olá,</Text>
-            <Text style={styles.userName}>{userName}</Text>
-          </View>
+        <UserProfileHeader
+          userName={userName}
+          userImage={userImage}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onOpenMonthModal={() => setIsMonthModalOpen(true)}
+          onOpenYearModal={() => setIsYearModalOpen(true)}
+          onOpenMenu={() => setIsMenuOpen(true)}
+        />
 
-          {/* Botão de Perfil que abre a barra lateral */}
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={() => setIsMenuOpen(true)}
-          >
-            {userImage ? (
-              <Image
-                source={{ uri: userImage }}
-                style={{ width: 40, height: 40, borderRadius: 20 }}
-              />
-            ) : (
-              <Ionicons
-                name="person-circle-outline"
-                size={40}
-                color="#3B82F6"
-              />
-            )}
-          </TouchableOpacity>
-        </View>
+        <BalanceCard
+          totalBalance={totalBalance}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+        />
 
-        {/* Card de Saldo */}
-        <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>Saldo Atual</Text>
-          <Text style={styles.balanceAmount}>
-            R$ {totalBalance.toFixed(2).replace(".", ",")}
-          </Text>
-        </View>
+        <SummaryCards totalIncome={totalIncome} totalExpense={totalExpense} />
 
-        {/* Resumo de Receitas e Despesas */}
-        <View style={styles.summaryContainer}>
-          <View style={[styles.summaryCard, { marginRight: 8 }]}>
-            <View style={styles.summaryHeader}>
-              <Ionicons name="arrow-up-circle" size={24} color="#10B981" />
-              <Text style={styles.summaryLabel}>Receitas</Text>
-            </View>
-            <Text style={styles.summaryValueIncome}>
-              + R$ {totalIncome.toFixed(2).replace(".", ",")}
-            </Text>
-          </View>
+        <MonthlyBudgetCard
+          monthlyBudget={monthlyBudget}
+          setMonthlyBudget={setMonthlyBudget}
+          isEditingBudget={isEditingBudget}
+          setIsEditingBudget={setIsEditingBudget}
+          formatCurrency={formatCurrency}
+        />
 
-          <View style={[styles.summaryCard, { marginLeft: 8 }]}>
-            <View style={styles.summaryHeader}>
-              <Ionicons name="arrow-down-circle" size={24} color="#EF4444" />
-              <Text style={styles.summaryLabel}>Despesas</Text>
-            </View>
-            <Text style={styles.summaryValueExpense}>
-              - R$ {totalExpense.toFixed(2).replace(".", ",")}
-            </Text>
-          </View>
-        </View>
+        <GeneralBalanceCard
+          isPieView={isPieView}
+          setIsPieView={setIsPieView}
+          incomePercentage={incomePercentage}
+          expensePercentage={expensePercentage}
+        />
 
-        {/* PAINEL INTERATIVO */}
-        <View style={styles.chartCard}>
-          <View style={styles.chartHeader}>
-            <View>
-              <Text style={styles.chartTitle}>Balanço Geral</Text>
-              <Text style={styles.chartSubtitle}>
-                Toque no ícone para alternar a visão
-              </Text>
-            </View>
+        <AnnualPanoramaCard onPress={openLandscapePanorama} />
 
-            <TouchableOpacity
-              style={styles.toggleButton}
-              onPress={() => setIsPieView(!isPieView)}
-            >
-              <Ionicons
-                name={isPieView ? "bar-chart-outline" : "pie-chart"}
-                size={22}
-                color="#3B82F6"
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Gráfico de Pizza (Visão Circular) */}
-          <View
-            style={[
-              styles.viewContainer,
-              { display: isPieView ? "flex" : "none" },
-            ]}
-          >
-            <View style={styles.pieContainer}>
-              <View style={styles.donutOuterRing}>
-                <View style={styles.donutInnerCircle}>
-                  <Text style={styles.donutCenterText}>
-                    {incomePercentage.toFixed(0)}%
-                  </Text>
-                  <Text style={styles.donutCenterSub}>Entradas</Text>
-                </View>
-              </View>
-
-              <View style={styles.pieInfoSide}>
-                <Text style={styles.pieInfoTitle}>Proporção de Fluxo</Text>
-                <Text style={styles.pieInfoDesc}>
-                  O gráfico demonstra o peso das saídas em relação às suas
-                  entradas totais.
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Gráfico de Barras Proporcionais (Visão de Barras) */}
-          <View
-            style={[
-              styles.viewContainer,
-              { display: !isPieView ? "flex" : "none" },
-            ]}
-          >
-            <View style={styles.progressBarWrapper}>
-              <View style={styles.progressBarContainer}>
-                <View
-                  style={[
-                    styles.progressIncome,
-                    { width: `${incomePercentage}%` },
-                  ]}
-                />
-                <View
-                  style={[
-                    styles.progressExpense,
-                    { width: `${expensePercentage}%` },
-                  ]}
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Legendas Dinâmicas */}
-          <View style={styles.legendContainer}>
-            <View style={styles.legendItem}>
-              <View
-                style={[styles.legendDot, { backgroundColor: "#10B981" }]}
-              />
-              <Text style={styles.legendText}>
-                Entradas ({incomePercentage.toFixed(0)}%)
-              </Text>
-            </View>
-
-            <View style={styles.legendItem}>
-              <View
-                style={[styles.legendDot, { backgroundColor: "#EF4444" }]}
-              />
-              <Text style={styles.legendText}>
-                Saídas ({expensePercentage.toFixed(0)}%)
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Transações Recentes */}
-        <Text style={styles.sectionTitle}>Transações Recentes</Text>
-        <View style={styles.transactionsList}>
-          {mockTransactions.map((item) => (
-            <View key={item.id} style={styles.transactionItem}>
-              <View style={styles.transactionIcon}>
-                <Ionicons name={item.icon as any} size={24} color="#FFFFFF" />
-              </View>
-
-              <View style={styles.transactionDetails}>
-                <Text style={styles.transactionDescription}>
-                  {item.description}
-                </Text>
-                <Text style={styles.transactionDate}>{item.date}</Text>
-              </View>
-
-              <Text
-                style={[
-                  styles.transactionAmount,
-                  { color: item.type === "income" ? "#10B981" : "#EF4444" },
-                ]}
-              >
-                {item.type === "income" ? "+" : "-"} R${" "}
-                {item.amount.toFixed(2).replace(".", ",")}
-              </Text>
-            </View>
-          ))}
-        </View>
+        <TransactionsList transactions={mockTransactions} />
       </ScrollView>
 
       {/* Botão Flutuante (FAB) */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => console.log("Ir para tela de adicionar")}
+        onPress={() => {
+          setTransactionType("income");
+          setIsTransactionModalOpen(true);
+        }}
       >
-        <Ionicons name="add" size={32} color="#FFFFFF" />
+        <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
 
-      {/* ================= BARRA LATERAL (DRAWER MENU) ================= */}
-      <Modal
+      {/* Modais */}
+      <TransactionModal
+        visible={isTransactionModalOpen}
+        onClose={() => setIsTransactionModalOpen(false)}
+        transactionType={transactionType}
+        setTransactionType={setTransactionType}
+        transactionTitle={transactionTitle}
+        setTransactionTitle={setTransactionTitle}
+        transactionAmount={transactionAmount}
+        setTransactionAmount={setTransactionAmount}
+        transactionDate={transactionDate}
+        setTransactionDate={setTransactionDate}
+        transactionCategory={transactionCategory}
+        formatCurrency={formatCurrency}
+        onSave={handleSaveTransaction}
+      />
+
+      <MonthModal
+        visible={isMonthModalOpen}
+        onClose={() => setIsMonthModalOpen(false)}
+        months={monthsList}
+        selectedMonth={selectedMonth}
+        onSelectMonth={setSelectedMonth}
+      />
+
+      <YearModal
+        visible={isYearModalOpen}
+        onClose={() => setIsYearModalOpen(false)}
+        years={yearsList}
+        selectedYear={selectedYear}
+        onSelectYear={setSelectedYear}
+      />
+
+      <LandscapePanoramaModal
+        visible={isLandscapePanoramaOpen}
+        selectedYear={selectedYear}
+        totalIncome={totalIncome}
+        totalExpense={totalExpense}
+        monthsData={monthsData}
+        onClose={closeLandscapePanorama}
+      />
+
+      <ProfileMenuModal
         visible={isMenuOpen}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setIsMenuOpen(false)}
-      >
-        <View style={menuStyles.overlay}>
-          <TouchableOpacity
-            style={{ flex: 1 }}
-            activeOpacity={1}
-            onPress={() => setIsMenuOpen(false)}
-          />
+        onClose={() => setIsMenuOpen(false)}
+        userName={userName}
+        userImage={userImage}
+        onPickImage={pickImage}
+        onOpenEditName={() => setIsEditingName(true)}
+      />
 
-          <View style={menuStyles.menuContainer}>
-            <View>
-              {/* Ícone Redondo da Foto de Perfil */}
-              <View style={menuStyles.menuHeader}>
-                <TouchableOpacity
-                  onPress={pickImage}
-                  style={menuStyles.avatarContainer}
-                >
-                  {userImage ? (
-                    <Image
-                      source={{ uri: userImage }}
-                      style={menuStyles.avatarImage}
-                    />
-                  ) : (
-                    <Ionicons name="camera" size={40} color="#FFFFFF" />
-                  )}
-                </TouchableOpacity>
-                <Text style={menuStyles.menuTitle}>{userName}</Text>
-                <Text style={menuStyles.menuSubtitle}>
-                  Toque na foto para alterar
-                </Text>
-              </View>
-
-              {/* Botão Único para Alterar o Nome */}
-              <View style={menuStyles.menuBody}>
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: "#2A2A2A",
-                    borderWidth: 1,
-                    borderColor: "#FFFFFF",
-                    height: 50,
-                    borderRadius: 12,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "100%",
-                  }}
-                  onPress={() => setIsEditingName(true)}
-                >
-                  <Text
-                    style={{
-                      color: "#FFFFFF",
-                      fontSize: 16,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Altere seu nome
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Botão de Fechar Menu */}
-            <TouchableOpacity
-              style={menuStyles.closeButton}
-              onPress={() => setIsMenuOpen(false)}
-            >
-              <Text style={menuStyles.closeButtonText}>Fechar Menu</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ================= MODAL PARA ALTERAR O NOME ================= */}
-      <Modal
+      <EditNameModal
         visible={isEditingName}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setIsEditingName(false)}
-      >
-        <View style={menuStyles.modalContainer}>
-          <View style={menuStyles.modalContent}>
-            <Text style={menuStyles.modalTitle}>Alterar Seu Nome</Text>
+        onClose={() => setIsEditingName(false)}
+        newName={newName}
+        setNewName={setNewName}
+        onSave={handleUpdateName}
+      />
 
-            <TextInput
-              style={menuStyles.modalInput}
-              placeholder="Digite o novo nome"
-              placeholderTextColor="#666"
-              value={newName}
-              onChangeText={setNewName}
-              autoFocus={true}
-            />
-
-            <View style={menuStyles.modalButtons}>
-              <TouchableOpacity
-                style={menuStyles.modalButtonCancel}
-                onPress={() => setIsEditingName(false)}
-              >
-                <Text style={menuStyles.modalButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={menuStyles.modalButtonSave}
-                onPress={handleUpdateName}
-              >
-                <Text style={menuStyles.modalButtonText}>Salvar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ================= ALERTA CUSTOMIZADO ================= */}
       <CustomAlert
         visible={alertVisible}
         title={alertTitle}

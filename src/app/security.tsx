@@ -4,7 +4,7 @@ import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { CustomAlert } from "../components/CustomAlert";
-import { styles } from "./styles/securityStyles";
+import { styles } from "../styles/securityStyles";
 
 export default function SecurityScreen() {
   const [pin, setPin] = useState("");

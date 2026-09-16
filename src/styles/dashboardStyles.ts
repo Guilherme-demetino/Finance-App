@@ -104,11 +104,14 @@ export const styles = StyleSheet.create({
     marginTop: 2,
   },
   toggleButton: {
-    backgroundColor: "#2A2A2A",
-    padding: 8,
-    borderRadius: 10,
+    backgroundColor: "#2A2A2A", // Fundo escuro igual aos botões de login/PIN
     borderWidth: 1,
-    borderColor: "#444444",
+    borderColor: "#FFFFFF", // Borda branca
+    borderRadius: 12, // Cantos arredondados padronizados
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
   },
   viewContainer: {
     width: "100%",
@@ -247,18 +250,20 @@ export const styles = StyleSheet.create({
   },
   fab: {
     position: "absolute",
-    bottom: 32,
     right: 24,
-    backgroundColor: "#3B82F6",
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    bottom: 24,
+    backgroundColor: "#2A2A2A", // Fundo escuro igual aos outros botões
+    borderWidth: 1,
+    borderColor: "#FFFFFF", // Borda branca
+    width: 56,
+    height: 56,
+    borderRadius: 16, // Cantos arredondados padronizados
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 });
