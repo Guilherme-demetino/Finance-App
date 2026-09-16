@@ -1,18 +1,43 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { Stack } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
+import { initDatabase } from "../database/sqlite";
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+export default function RootLayout() {
+  const [dbReady, setDbReady] = useState(false);
 
-SplashScreen.preventAutoHideAsync();
+  useEffect(() => {
+    async function setup() {
+      // Chama a função que cria as tabelas e espera ela terminar
+      await initDatabase();
+      // Avisa que o banco está pronto
+      setDbReady(true);
+    }
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+    setup();
+  }, []);
+
+  // Enquanto o banco não estiver pronto, mostra um carregamento no fundo escuro
+  if (!dbReady) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#121212",
+        }}
+      >
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
+
+  // Quando o banco estiver pronto, libera as telas normais
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <Stack>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="dashboard" options={{ headerShown: false }} />
+    </Stack>
   );
 }

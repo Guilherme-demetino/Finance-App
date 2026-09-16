@@ -7,7 +7,7 @@ export async function initDatabase() {
     await db.execAsync(`
       PRAGMA journal_mode = WAL;
       
-      -- Tabela do Usuário (Para salvar o nome e preferências locais)
+      -- Tabela do Usuário
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL
@@ -22,7 +22,7 @@ export async function initDatabase() {
         type TEXT NOT NULL
       );
 
-      -- Tabela de Transações (Receitas e Despesas)
+      -- Tabela de Transações
       CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         amount REAL NOT NULL,
