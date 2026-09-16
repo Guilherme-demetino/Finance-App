@@ -4,19 +4,16 @@ import { useEffect, useState } from "react";
 import {
   SafeAreaView,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { styles } from "./styles/dashboardStyles";
 
 export default function DashboardScreen() {
-  const [userName, setUserName] = useState("");
-
-  // Estado para alternar o modo de visão do painel
+  const [userName, setUserName] = useState("Carregando...");
   const [isPieView, setIsPieView] = useState(false);
 
-  // Valores simulados para cálculo
   const totalIncome = 4500.0;
   const totalExpense = 189.9;
   const totalBalance = totalIncome - totalExpense;
@@ -30,15 +27,19 @@ export default function DashboardScreen() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const db = await SQLite.openDatabaseAsync("appfinanceiro.db");
-        const user: any = await db.getFirstAsync(
+        const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+        const result: any = await db.getAllAsync(
           "SELECT name FROM users LIMIT 1",
         );
-        if (user) {
-          setUserName(user.name);
+
+        if (result && result.length > 0) {
+          setUserName(result[0].name);
+        } else {
+          setUserName("Meu Finanças");
         }
       } catch (error) {
         console.log("Erro ao buscar usuário:", error);
+        setUserName("Meu Finanças");
       }
     };
     fetchUser();
@@ -78,7 +79,7 @@ export default function DashboardScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Olá,</Text>
-            <Text style={styles.userName}>{userName || "Usuário"}</Text>
+            <Text style={styles.userName}>{userName}</Text>
           </View>
           <TouchableOpacity style={styles.profileButton}>
             <Ionicons name="person-circle-outline" size={40} color="#3B82F6" />
@@ -138,8 +139,13 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </View>
 
-          {isPieView ? (
-            /* VISÃO EM GRÁFICO DE PIZZA / ROSCA */
+          {/* Gráfico de Pizza (Visão Circular) */}
+          <View
+            style={[
+              styles.viewContainer,
+              { display: isPieView ? "flex" : "none" },
+            ]}
+          >
             <View style={styles.pieContainer}>
               <View style={styles.donutOuterRing}>
                 <View style={styles.donutInnerCircle}>
@@ -158,8 +164,15 @@ export default function DashboardScreen() {
                 </Text>
               </View>
             </View>
-          ) : (
-            /* VISÃO EM BARRA PROPORCIONAL CORRIGIDA */
+          </View>
+
+          {/* Gráfico de Barras Proporcionais (Visão de Barras) */}
+          <View
+            style={[
+              styles.viewContainer,
+              { display: !isPieView ? "flex" : "none" },
+            ]}
+          >
             <View style={styles.progressBarWrapper}>
               <View style={styles.progressBarContainer}>
                 <View
@@ -176,7 +189,7 @@ export default function DashboardScreen() {
                 />
               </View>
             </View>
-          )}
+          </View>
 
           {/* Legendas Dinâmicas */}
           <View style={styles.legendContainer}>
@@ -240,263 +253,3 @@ export default function DashboardScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#121212",
-  },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 100,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-    marginTop: 20,
-  },
-  greeting: {
-    fontSize: 16,
-    color: "#A1A1AA",
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  profileButton: {
-    padding: 4,
-  },
-  balanceCard: {
-    backgroundColor: "#1E1E1E",
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#333333",
-  },
-  balanceLabel: {
-    fontSize: 16,
-    color: "#A1A1AA",
-    marginBottom: 8,
-  },
-  balanceAmount: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  summaryContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: "#1E1E1E",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#333333",
-  },
-  summaryHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: "#A1A1AA",
-    marginLeft: 8,
-  },
-  summaryValueIncome: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#10B981",
-  },
-  summaryValueExpense: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#EF4444",
-  },
-  chartCard: {
-    backgroundColor: "#1E1E1E",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "#333333",
-  },
-  chartHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  chartTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  chartSubtitle: {
-    fontSize: 12,
-    color: "#A1A1AA",
-    marginTop: 2,
-  },
-  toggleButton: {
-    backgroundColor: "#2A2A2A",
-    padding: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#444444",
-  },
-  progressBarWrapper: {
-    marginVertical: 10,
-    marginBottom: 16,
-  },
-  progressBarContainer: {
-    flexDirection: "row",
-    height: 14,
-    borderRadius: 7,
-    overflow: "hidden",
-    backgroundColor: "#333333",
-    width: "100%",
-  },
-  progressIncome: {
-    height: "100%",
-    backgroundColor: "#10B981",
-  },
-  progressExpense: {
-    height: "100%",
-    backgroundColor: "#EF4444",
-  },
-  pieContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: 10,
-    marginBottom: 16,
-  },
-  donutOuterRing: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 10,
-    borderColor: "#10B981",
-    borderTopColor: "#EF4444",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  donutInnerCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "#1E1E1E",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  donutCenterText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  donutCenterSub: {
-    fontSize: 10,
-    color: "#A1A1AA",
-  },
-  pieInfoSide: {
-    flex: 1,
-    marginLeft: 20,
-  },
-  pieInfoTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 4,
-  },
-  pieInfoDesc: {
-    fontSize: 12,
-    color: "#A1A1AA",
-    lineHeight: 16,
-  },
-  legendContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
-    paddingTop: 12,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  legendText: {
-    fontSize: 14,
-    color: "#A1A1AA",
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 16,
-  },
-  transactionsList: {
-    gap: 12,
-  },
-  transactionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1E1E1E",
-    padding: 16,
-    borderRadius: 12,
-  },
-  transactionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#333333",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  transactionDetails: {
-    flex: 1,
-  },
-  transactionDescription: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    marginBottom: 4,
-  },
-  transactionDate: {
-    fontSize: 14,
-    color: "#A1A1AA",
-  },
-  transactionAmount: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  fab: {
-    position: "absolute",
-    bottom: 32,
-    right: 24,
-    backgroundColor: "#3B82F6",
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-});

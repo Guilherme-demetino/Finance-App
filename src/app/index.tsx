@@ -1,14 +1,8 @@
 import { useRouter } from "expo-router";
 import * as SQLite from "expo-sqlite";
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { styles } from "./styles/indexStyles";
 
 export default function WelcomeScreen() {
   const [name, setName] = useState("");
@@ -23,7 +17,16 @@ export default function WelcomeScreen() {
   const checkIfUserExists = async () => {
     try {
       const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
-      const user = await db.getFirstAsync("SELECT * FROM users LIMIT 1");
+
+      // Garante a criação da tabela caso venha de um app limpo
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL
+        );
+      `);
+
+      const user: any = await db.getFirstAsync("SELECT * FROM users LIMIT 1");
 
       if (user) {
         // Se o usuário já existe, pula essa tela e vai pra tela de Segurança!
@@ -42,6 +45,14 @@ export default function WelcomeScreen() {
 
     try {
       const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL
+        );
+      `);
+
       await db.runAsync("INSERT INTO users (name) VALUES (?)", name);
 
       Alert.alert("Sucesso!", `Bem-vindo(a), ${name}!`);
@@ -74,47 +85,3 @@ export default function WelcomeScreen() {
     </View>
   );
 }
-
-// Estilos com o Padrão Dark Mode
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#121212",
-    justifyContent: "center",
-    padding: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#A1A1AA",
-    marginBottom: 32,
-    textAlign: "center",
-  },
-  input: {
-    backgroundColor: "#1E1E1E",
-    borderWidth: 1,
-    borderColor: "#333333",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: "#FFFFFF",
-    marginBottom: 24,
-  },
-  button: {
-    backgroundColor: "#3B82F6",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-});
