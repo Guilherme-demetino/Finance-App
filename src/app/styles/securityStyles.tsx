@@ -6,7 +6,6 @@ export const styles = StyleSheet.create({
     backgroundColor: "#121212",
     justifyContent: "center",
     padding: 24,
-    alignItems: "center", // Centraliza os itens
   },
   title: {
     fontSize: 24,
@@ -16,9 +15,9 @@ export const styles = StyleSheet.create({
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#A1A1AA",
-    marginBottom: 40,
+    marginBottom: 24,
     textAlign: "center",
   },
   input: {
@@ -26,16 +25,17 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#333333",
     borderRadius: 12,
-    padding: 20,
-    fontSize: 32,
-    letterSpacing: 8,
+    padding: 16,
+    fontSize: 16,
     color: "#FFFFFF",
+    marginBottom: 16,
     textAlign: "center",
-    width: "60%", // Caixa de texto mais curta, focada no centro
-    marginBottom: 32,
+    letterSpacing: 8,
   },
   button: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#2A2A2A", // Fundo escuro igual ao botão do menu
+    borderWidth: 1,
+    borderColor: "#FFFFFF", // Borda branca
     padding: 16,
     borderRadius: 12,
     width: "100%",
@@ -43,16 +43,23 @@ export const styles = StyleSheet.create({
     marginBottom: 16,
   },
   buttonText: {
-    color: "#FFFFFF",
+    color: "#FFFFFF", // Texto branco
     fontSize: 16,
     fontWeight: "bold",
   },
   biometricButton: {
+    backgroundColor: "#2A2A2A", // Fundo escuro igual ao botão principal
+    borderWidth: 1,
+    borderColor: "#FFFFFF", // Borda branca
     padding: 16,
+    borderRadius: 12,
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 16,
   },
   biometricText: {
-    color: "#3B82F6",
+    color: "#FFFFFF", // Texto branco
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "bold",
   },
 });

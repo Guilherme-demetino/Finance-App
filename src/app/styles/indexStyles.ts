@@ -31,13 +31,15 @@ export const styles = StyleSheet.create({
     marginBottom: 24,
   },
   button: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#2A2A2A", // Fundo escuro igual ao botão do menu e login
+    borderWidth: 1,
+    borderColor: "#FFFFFF", // Borda branca
     padding: 16,
     borderRadius: 12,
     alignItems: "center",
   },
   buttonText: {
-    color: "#FFFFFF",
+    color: "#FFFFFF", // Texto branco
     fontSize: 16,
     fontWeight: "bold",
   },

@@ -2,13 +2,25 @@ import * as LocalAuthentication from "expo-local-authentication";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
-import { Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { CustomAlert } from "../components/CustomAlert";
 import { styles } from "./styles/securityStyles";
 
 export default function SecurityScreen() {
   const [pin, setPin] = useState("");
   const [isSetupMode, setIsSetupMode] = useState(true);
   const router = useRouter();
+
+  // Estados para o CustomAlert
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+
+  const showAlert = (title: string, message: string) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertVisible(true);
+  };
 
   useEffect(() => {
     checkExistingPin();
@@ -43,14 +55,14 @@ export default function SecurityScreen() {
   // Lida com o botão de confirmar o PIN digitado
   const handlePinSubmit = async () => {
     if (pin.length !== 4) {
-      Alert.alert("Atenção", "O PIN deve ter exatamente 4 dígitos.");
+      showAlert("Atenção", "O PIN deve ter exatamente 4 dígitos.");
       return;
     }
 
     if (isSetupMode) {
       // Cria e salva o novo PIN
       await SecureStore.setItemAsync("user_pin", pin);
-      Alert.alert("Sucesso", "PIN cadastrado com segurança!");
+      showAlert("Sucesso", "PIN cadastrado com segurança!");
       router.replace("/dashboard");
     } else {
       // Valida o PIN existente
@@ -58,7 +70,7 @@ export default function SecurityScreen() {
       if (pin === savedPin) {
         router.replace("/dashboard");
       } else {
-        Alert.alert("Erro", "PIN incorreto. Tente novamente.");
+        showAlert("Erro", "PIN incorreto. Tente novamente.");
         setPin(""); // Limpa o campo
       }
     }
@@ -101,6 +113,14 @@ export default function SecurityScreen() {
           <Text style={styles.biometricText}>Usar Biometria</Text>
         </TouchableOpacity>
       )}
+
+      {/* ================= ALERTA CUSTOMIZADO ================= */}
+      <CustomAlert
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        onClose={() => setAlertVisible(false)}
+      />
     </View>
   );
 }

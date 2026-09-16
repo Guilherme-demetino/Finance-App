@@ -1,0 +1,137 @@
+import { StyleSheet } from "react-native";
+
+export const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+  menuContainer: {
+    width: "75%",
+    backgroundColor: "#1E1E1E",
+    height: "100%",
+    padding: 24,
+    paddingTop: 60,
+    justifyContent: "space-between",
+    borderLeftWidth: 1,
+    borderLeftColor: "#333333",
+  },
+  menuHeader: {
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  avatarContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#2A2A2A",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: "#3B82F6",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  menuTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    textAlign: "center",
+  },
+  menuSubtitle: {
+    fontSize: 12,
+    color: "#A1A1AA",
+    textAlign: "center",
+    marginTop: 4,
+  },
+  menuBody: {
+    flex: 1,
+  },
+  actionButton: {
+    backgroundColor: "#2A2A2A", // Corrigido o valor de fundo
+    borderWidth: 1,
+    borderColor: "#3B82F6",
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+  },
+  actionButtonText: {
+    color: "#3B82F6",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  closeButton: {
+    backgroundColor: "#333333",
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  closeButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  // Estilos do Modal de Alterar Nome
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: "#1E1E1E",
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "#333333",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  modalInput: {
+    backgroundColor: "#121212",
+    borderWidth: 1,
+    borderColor: "#333333",
+    borderRadius: 12,
+    padding: 16,
+    color: "#FFFFFF",
+    fontSize: 16,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  modalButtonCancel: {
+    flex: 1,
+    backgroundColor: "#333333",
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  modalButtonSave: {
+    flex: 1,
+    backgroundColor: "#3B82F6",
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+});

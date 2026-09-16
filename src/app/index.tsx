@@ -1,12 +1,24 @@
 import { useRouter } from "expo-router";
 import * as SQLite from "expo-sqlite";
 import { useEffect, useState } from "react";
-import { Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { CustomAlert } from "../components/CustomAlert";
 import { styles } from "./styles/indexStyles";
 
 export default function WelcomeScreen() {
   const [name, setName] = useState("");
   const router = useRouter();
+
+  // Estados para o CustomAlert
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+
+  const showAlert = (title: string, message: string) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertVisible(true);
+  };
 
   // Isso roda automaticamente quando a tela abre
   useEffect(() => {
@@ -39,7 +51,7 @@ export default function WelcomeScreen() {
 
   const handleSaveName = async () => {
     if (name.trim() === "") {
-      Alert.alert("Ops!", "Por favor, digite como gostaria de ser chamado.");
+      showAlert("Ops!", "Por favor, digite como gostaria de ser chamado.");
       return;
     }
 
@@ -55,20 +67,20 @@ export default function WelcomeScreen() {
 
       await db.runAsync("INSERT INTO users (name) VALUES (?)", name);
 
-      Alert.alert("Sucesso!", `Bem-vindo(a), ${name}!`);
+      showAlert("Sucesso!", `Bem-vindo(a), ${name}!`);
 
       // Agora ele vai para a tela de Segurança depois de salvar!
       router.replace("/security");
     } catch (error) {
       console.error("Erro ao salvar o nome:", error);
-      Alert.alert("Erro", "Ocorreu um problema ao salvar seu nome.");
+      showAlert("Erro", "Ocorreu um problema ao salvar seu nome.");
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Bem-vindo ao seu Financeiro!</Text>
-      <Text style={styles.subtitle}>Para começar, como podemos te chamar?</Text>
+      <Text style={styles.title}>Bem-vindo ao seu dashboard financeiro</Text>
+      <Text style={styles.subtitle}>Como devemos te chamar?</Text>
 
       <TextInput
         style={styles.input}
@@ -82,6 +94,14 @@ export default function WelcomeScreen() {
       <TouchableOpacity style={styles.button} onPress={handleSaveName}>
         <Text style={styles.buttonText}>Começar</Text>
       </TouchableOpacity>
+
+      {/* ================= ALERTA CUSTOMIZADO ================= */}
+      <CustomAlert
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        onClose={() => setAlertVisible(false)}
+      />
     </View>
   );
 }
