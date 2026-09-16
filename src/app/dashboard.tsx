@@ -22,6 +22,7 @@ import { TransactionModal } from "../components/TransactionModal";
 import { TransactionsList } from "../components/TransactionsList";
 import { UserProfileHeader } from "../components/UserProfileHeader";
 
+import { initDatabase } from "../database/sqlite";
 import { styles } from "../styles/dashboardStyles";
 
 const formatCurrency = (value: string) => {
@@ -52,7 +53,13 @@ export default function DashboardScreen() {
   const [transactionTitle, setTransactionTitle] = useState("");
   const [transactionAmount, setTransactionAmount] = useState("");
   const [transactionDate, setTransactionDate] = useState("16/09/2026");
-  const [transactionCategory] = useState("Alimentação");
+  const [transactionCategory, setTransactionCategory] = useState("Salário");
+
+  // Lista de transações do banco
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [totalIncome, setTotalIncome] = useState(0);
+  const [totalExpense, setTotalExpense] = useState(0);
+  const totalBalance = totalIncome - totalExpense;
 
   // Filtros
   const [selectedMonth, setSelectedMonth] = useState("Setembro");
@@ -76,11 +83,7 @@ export default function DashboardScreen() {
   ];
   const yearsList = ["2024", "2025", "2026", "2027", "2028"];
 
-  const totalIncome = 4500.0;
-  const totalExpense = 189.9;
-  const totalBalance = totalIncome - totalExpense;
-
-  const [monthlyBudget, setMonthlyBudget] = useState(totalIncome.toString());
+  const [monthlyBudget, setMonthlyBudget] = useState("0");
   const [isEditingBudget, setIsEditingBudget] = useState(false);
 
   const [alertVisible, setAlertVisible] = useState(false);
@@ -129,22 +132,17 @@ export default function DashboardScreen() {
   };
 
   useEffect(() => {
-    fetchUserData();
+    async function setupDashboard() {
+      await initDatabase();
+      await fetchUserData();
+      await fetchTransactions();
+    }
+    setupDashboard();
   }, []);
 
   const fetchUserData = async () => {
     try {
       const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
-      await db.execAsync(`
-        CREATE TABLE IF NOT EXISTS users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL
-        );
-      `);
-      try {
-        await db.execAsync(`ALTER TABLE users ADD COLUMN avatar TEXT;`);
-      } catch (e) {}
-
       const result: any = await db.getAllAsync("SELECT * FROM users LIMIT 1");
       if (result && result.length > 0) {
         setUserName(result[0].name);
@@ -155,6 +153,33 @@ export default function DashboardScreen() {
     } catch (error) {
       console.log("Erro ao buscar usuário:", error);
       setUserName("Meu Finanças");
+    }
+  };
+
+  const fetchTransactions = async () => {
+    try {
+      const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+      const result: any = await db.getAllAsync(
+        "SELECT * FROM transactions ORDER BY id DESC",
+      );
+      setTransactions(result);
+
+      let income = 0;
+      let expense = 0;
+
+      result.forEach((item: any) => {
+        if (item.type === "income") {
+          income += item.amount;
+        } else {
+          expense += item.amount;
+        }
+      });
+
+      setTotalIncome(income);
+      setTotalExpense(expense);
+      setMonthlyBudget(income.toString());
+    } catch (error) {
+      console.log("Erro ao buscar transações:", error);
     }
   };
 
@@ -181,6 +206,11 @@ export default function DashboardScreen() {
       try {
         setUserImage(imageUri);
         const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+
+        try {
+          await db.execAsync(`ALTER TABLE users ADD COLUMN avatar TEXT;`);
+        } catch (e) {}
+
         await db.runAsync(
           "INSERT OR IGNORE INTO users (id, name) VALUES (1, ?)",
           [userName],
@@ -216,43 +246,55 @@ export default function DashboardScreen() {
     }
   };
 
-  const handleSaveTransaction = () => {
+  const handleSaveTransaction = async () => {
     if (!transactionTitle.trim() || !transactionAmount.trim()) {
       showAlert("Atenção", "Preencha o título e o valor da transação.");
       return;
     }
-    showAlert("Sucesso", "Transação salva com sucesso!");
-    setTransactionTitle("");
-    setTransactionAmount("");
-    setIsTransactionModalOpen(false);
+
+    const cleanNumericValue = Number(
+      transactionAmount.replace(/\./g, "").replace(",", "."),
+    );
+
+    if (isNaN(cleanNumericValue) || cleanNumericValue <= 0) {
+      showAlert("Atenção", "Insira um valor válido.");
+      return;
+    }
+
+    try {
+      const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+      await db.runAsync(
+        "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, ?, ?)",
+        [
+          cleanNumericValue,
+          transactionDate,
+          transactionTitle,
+          transactionType,
+          transactionCategory,
+        ],
+      );
+
+      await fetchTransactions();
+
+      showAlert("Sucesso", "Transação salva com sucesso!");
+      setTransactionTitle("");
+      setTransactionAmount("");
+      setIsTransactionModalOpen(false);
+    } catch (error) {
+      console.log("Erro ao salvar transação:", error);
+      showAlert("Erro", "Não foi possível salvar a transação.");
+    }
   };
 
-  const mockTransactions = [
-    {
-      id: "1",
-      description: "Mercado",
-      amount: 150.0,
-      type: "expense",
-      date: "Hoje",
-      icon: "cart-outline",
-    },
-    {
-      id: "2",
-      description: "Salário",
-      amount: 4500.0,
-      type: "income",
-      date: "Ontem",
-      icon: "cash-outline",
-    },
-    {
-      id: "3",
-      description: "Netflix",
-      amount: 39.9,
-      type: "expense",
-      date: "14 Set",
-      icon: "tv-outline",
-    },
-  ];
+  const formattedTransactions = transactions.map((item) => ({
+    id: String(item.id),
+    description: item.description || "Sem descrição",
+    amount: item.amount,
+    type: item.type,
+    date: item.date,
+    category: item.category_id, // <-- ESSA LINHA FAZ A MÁGICA DAS CORES!
+    icon: item.type === "income" ? "cash-outline" : "cart-outline",
+  }));
 
   return (
     <SafeAreaView style={styles.container}>
@@ -284,15 +326,14 @@ export default function DashboardScreen() {
         />
 
         <GeneralBalanceCard
-          isPieView={isPieView}
-          setIsPieView={setIsPieView}
-          incomePercentage={incomePercentage}
-          expensePercentage={expensePercentage}
+          totalIncome={totalIncome}
+          totalExpense={totalExpense}
+          transactions={formattedTransactions}
         />
 
         <AnnualPanoramaCard onPress={openLandscapePanorama} />
 
-        <TransactionsList transactions={mockTransactions} />
+        <TransactionsList transactions={formattedTransactions} />
       </ScrollView>
 
       {/* Botão Flutuante (FAB) */}
@@ -300,6 +341,7 @@ export default function DashboardScreen() {
         style={styles.fab}
         onPress={() => {
           setTransactionType("income");
+          setTransactionCategory("Salário");
           setIsTransactionModalOpen(true);
         }}
       >
@@ -319,6 +361,7 @@ export default function DashboardScreen() {
         transactionDate={transactionDate}
         setTransactionDate={setTransactionDate}
         transactionCategory={transactionCategory}
+        setTransactionCategory={setTransactionCategory}
         formatCurrency={formatCurrency}
         onSave={handleSaveTransaction}
       />

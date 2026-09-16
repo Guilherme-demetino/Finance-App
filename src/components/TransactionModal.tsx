@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
 import { Modal, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 interface TransactionModalProps {
@@ -13,9 +14,21 @@ interface TransactionModalProps {
   transactionDate: string;
   setTransactionDate: (text: string) => void;
   transactionCategory: string;
+  setTransactionCategory: (category: string) => void;
   formatCurrency: (value: string) => string;
   onSave: () => void;
 }
+
+// Mapa global de cores por categoria
+export const categoryColors: Record<string, string> = {
+  Salário: "#10B981",
+  Investimentos: "#3B82F6",
+  Alimentação: "#F59E0B",
+  Moradia: "#8B5CF6",
+  Transporte: "#06B6D4",
+  Lazer: "#EC4899",
+  Outros: "#A1A1AA",
+};
 
 export function TransactionModal({
   visible,
@@ -29,9 +42,25 @@ export function TransactionModal({
   transactionDate,
   setTransactionDate,
   transactionCategory,
+  setTransactionCategory,
   formatCurrency,
   onSave,
 }: TransactionModalProps) {
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+
+  const incomeCategories = ["Salário", "Investimentos"];
+  const expenseCategories = [
+    "Alimentação",
+    "Moradia",
+    "Transporte",
+    "Lazer",
+    "Outros",
+  ];
+  const currentCategories =
+    transactionType === "income" ? incomeCategories : expenseCategories;
+
+  const activeCategoryColor = categoryColors[transactionCategory] || "#FFFFFF";
+
   return (
     <Modal
       visible={visible}
@@ -81,6 +110,7 @@ export function TransactionModal({
             </TouchableOpacity>
           </View>
 
+          {/* Abas Receita / Despesa */}
           <View
             style={{
               flexDirection: "row",
@@ -99,7 +129,11 @@ export function TransactionModal({
                   transactionType === "income" ? "#10B981" : "transparent",
                 borderRadius: 10,
               }}
-              onPress={() => setTransactionType("income")}
+              onPress={() => {
+                setTransactionType("income");
+                setTransactionCategory("Salário");
+                setIsCategoryDropdownOpen(false);
+              }}
             >
               <Text
                 style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 12 }}
@@ -117,7 +151,11 @@ export function TransactionModal({
                   transactionType === "expense" ? "#EF4444" : "transparent",
                 borderRadius: 10,
               }}
-              onPress={() => setTransactionType("expense")}
+              onPress={() => {
+                setTransactionType("expense");
+                setTransactionCategory("Alimentação");
+                setIsCategoryDropdownOpen(false);
+              }}
             >
               <Text
                 style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 12 }}
@@ -213,7 +251,8 @@ export function TransactionModal({
               />
             </View>
 
-            <View>
+            {/* Seletor de Categoria com Indicador de Cor */}
+            <View style={{ position: "relative" }}>
               <Text
                 style={{
                   color: "#A1A1AA",
@@ -224,7 +263,8 @@ export function TransactionModal({
               >
                 CATEGORIA
               </Text>
-              <View
+
+              <TouchableOpacity
                 style={{
                   backgroundColor: "#121212",
                   borderWidth: 1,
@@ -235,12 +275,96 @@ export function TransactionModal({
                   justifyContent: "space-between",
                   alignItems: "center",
                 }}
+                onPress={() =>
+                  setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
+                }
               >
-                <Text style={{ color: "#FFFFFF", fontSize: 14 }}>
-                  {transactionCategory}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#A1A1AA" />
-              </View>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                >
+                  <View
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 5,
+                      backgroundColor: activeCategoryColor,
+                    }}
+                  />
+                  <Text style={{ color: "#FFFFFF", fontSize: 14 }}>
+                    {transactionCategory}
+                  </Text>
+                </View>
+                <Ionicons
+                  name={isCategoryDropdownOpen ? "chevron-up" : "chevron-down"}
+                  size={18}
+                  color="#A1A1AA"
+                />
+              </TouchableOpacity>
+
+              {isCategoryDropdownOpen && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 75,
+                    left: 0,
+                    right: 0,
+                    backgroundColor: "#121212",
+                    borderWidth: 1,
+                    borderColor: "#333333",
+                    borderRadius: 12,
+                    zIndex: 10,
+                    overflow: "hidden",
+                  }}
+                >
+                  {currentCategories.map((cat, index) => {
+                    const itemColor = categoryColors[cat] || "#FFFFFF";
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        style={{
+                          padding: 12,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 8,
+                          borderBottomWidth:
+                            index < currentCategories.length - 1 ? 1 : 0,
+                          borderBottomColor: "#222222",
+                          backgroundColor:
+                            transactionCategory === cat
+                              ? "#1E1E1E"
+                              : "transparent",
+                        }}
+                        onPress={() => {
+                          setTransactionCategory(cat);
+                          setIsCategoryDropdownOpen(false);
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: 5,
+                            backgroundColor: itemColor,
+                          }}
+                        />
+                        <Text
+                          style={{
+                            color:
+                              transactionCategory === cat
+                                ? itemColor
+                                : "#FFFFFF",
+                            fontWeight:
+                              transactionCategory === cat ? "bold" : "normal",
+                            fontSize: 14,
+                          }}
+                        >
+                          {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
             </View>
 
             <TouchableOpacity

@@ -1,110 +1,405 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Text, TouchableOpacity, View } from "react-native";
-import { styles } from "../app/../styles/dashboardStyles";
+import { StyleSheet, Text, View } from "react-native";
+import Svg, { Circle, G } from "react-native-svg";
 
-interface GeneralBalanceCardProps {
-  isPieView: boolean;
-  setIsPieView: (val: boolean) => void;
-  incomePercentage: number;
-  expensePercentage: number;
+interface Transaction {
+  id: string;
+  amount: number;
+  type: string;
+  category?: string;
 }
 
+interface GeneralBalanceCardProps {
+  totalIncome: number;
+  totalExpense: number;
+  transactions: Transaction[];
+}
+
+const categoryColors: Record<string, string> = {
+  "Saldo Livre": "#10B981", // Verde
+  Moradia: "#3B82F6", // Azul
+  Alimentação: "#F59E0B", // Laranja
+  Transporte: "#8B5CF6", // Roxo
+  Lazer: "#EC4899", // Rosa
+  Outros: "#A1A1AA", // Cinza
+};
+
 export function GeneralBalanceCard({
-  isPieView,
-  setIsPieView,
-  incomePercentage,
-  expensePercentage,
+  totalIncome,
+  totalExpense,
+  transactions,
 }: GeneralBalanceCardProps) {
+  const saldoLivre = Math.max(0, totalIncome - totalExpense);
+  const comprometidoPercent =
+    totalIncome > 0 ? (totalExpense / totalIncome) * 100 : 0;
+
+  // Agrupar despesas por categoria
+  const expensesByCategory = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((acc: Record<string, number>, t) => {
+      const cat = t.category || "Outros";
+      acc[cat] = (acc[cat] || 0) + t.amount;
+      return acc;
+    }, {});
+
+  // Criar array ordenado para legendas e barras
+  const expenseData = Object.keys(expensesByCategory)
+    .map((key) => ({
+      name: key.toUpperCase(),
+      originalName: key,
+      amount: expensesByCategory[key],
+      color: categoryColors[key] || "#A1A1AA",
+      percent:
+        totalIncome > 0 ? (expensesByCategory[key] / totalIncome) * 100 : 0,
+    }))
+    .sort((a, b) => b.amount - a.amount);
+
+  // Dados para o Gráfico de Rosca (Donut Chart)
+  const pieData = [
+    { value: saldoLivre, color: categoryColors["Saldo Livre"] },
+    ...expenseData.map((item) => ({ value: item.amount, color: item.color })),
+  ].filter((item) => item.value > 0);
+
+  // Configurações do SVG
+  const size = 120;
+  const strokeWidth = 14;
+  const center = size / 2;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  let currentOffset = 0; // Para desenhar as fatias no lugar certo
+
+  const formatCurrency = (val: number) =>
+    `R$ ${val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
   return (
-    <View style={styles.chartCard}>
-      <View style={styles.chartHeader}>
+    <View style={styles.card}>
+      <View style={styles.header}>
         <View>
-          <Text style={styles.chartTitle}>Balanço Geral</Text>
-          <Text style={styles.chartSubtitle}>
-            Toque no ícone para alternar a visão
+          <Text style={styles.title}>ANÁLISE DE GASTOS</Text>
+          <Text style={styles.subtitle}>
+            Distribuição de despesas e saldo livre
           </Text>
         </View>
-
-        <TouchableOpacity
-          style={{
-            backgroundColor: "#2A2A2A",
-            borderWidth: 1,
-            borderColor: "#FFFFFF",
-            borderRadius: 12,
-            width: 40,
-            height: 40,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-          onPress={() => setIsPieView(!isPieView)}
-        >
-          <Ionicons
-            name={isPieView ? "bar-chart-outline" : "pie-chart"}
-            size={20}
-            color="#FFFFFF"
-          />
-        </TouchableOpacity>
+        <View style={{ alignItems: "flex-end" }}>
+          <Text style={styles.comprometidoLabel}>COMPROMETIDO</Text>
+          <Text style={styles.comprometidoValue}>
+            {comprometidoPercent.toFixed(1)}%
+          </Text>
+        </View>
       </View>
 
-      <View
-        style={[styles.viewContainer, { display: isPieView ? "flex" : "none" }]}
-      >
-        <View style={styles.pieContainer}>
-          <View style={styles.donutOuterRing}>
-            <View style={styles.donutInnerCircle}>
-              <Text style={styles.donutCenterText}>
-                {incomePercentage.toFixed(0)}%
-              </Text>
-              <Text style={styles.donutCenterSub}>Entradas</Text>
-            </View>
-          </View>
+      <View style={styles.chartContainer}>
+        {/* Gráfico de Rosca (SVG) */}
+        <View style={styles.donutWrapper}>
+          <Svg width={size} height={size}>
+            <G rotation="-90" origin={`${center}, ${center}`}>
+              {/* Círculo base cinza (caso não tenha valores) */}
+              <Circle
+                cx={center}
+                cy={center}
+                r={radius}
+                stroke="#1E1E1E"
+                strokeWidth={strokeWidth}
+                fill="none"
+              />
+              {/* Fatias Coloridas */}
+              {totalIncome > 0 &&
+                pieData.map((slice, index) => {
+                  const slicePercent = slice.value / totalIncome;
+                  const strokeDasharray = `${circumference * slicePercent} ${circumference}`;
+                  const strokeDashoffset = -currentOffset;
+                  currentOffset += circumference * slicePercent;
 
-          <View style={styles.pieInfoSide}>
-            <Text style={styles.pieInfoTitle}>Proporção de Fluxo</Text>
-            <Text style={styles.pieInfoDesc}>
-              O gráfico demonstra o peso das saídas em relação às suas entradas
-              totais.
+                  return (
+                    <Circle
+                      key={index}
+                      cx={center}
+                      cy={center}
+                      r={radius}
+                      stroke={slice.color}
+                      strokeWidth={strokeWidth}
+                      fill="none"
+                      strokeDasharray={strokeDasharray}
+                      strokeDashoffset={strokeDashoffset}
+                      strokeLinecap="butt"
+                    />
+                  );
+                })}
+            </G>
+          </Svg>
+
+          {/* Textos no centro do gráfico */}
+          <View style={styles.donutCenterText}>
+            <Text style={styles.donutLabel}>SALDO LIVRE</Text>
+            <Text style={styles.donutValue}>
+              R$ {(saldoLivre / 1000).toFixed(1)}k
             </Text>
           </View>
         </View>
-      </View>
 
-      <View
-        style={[
-          styles.viewContainer,
-          { display: !isPieView ? "flex" : "none" },
-        ]}
-      >
-        <View style={styles.progressBarWrapper}>
-          <View style={styles.progressBarContainer}>
-            <View
-              style={[styles.progressIncome, { width: `${incomePercentage}%` }]}
-            />
+        {/* Legendas (Direita) */}
+        <View style={styles.legendContainer}>
+          <View style={styles.legendItem}>
             <View
               style={[
-                styles.progressExpense,
-                { width: `${expensePercentage}%` },
+                styles.legendDot,
+                { backgroundColor: categoryColors["Saldo Livre"] },
+              ]}
+            />
+            <View>
+              <Text
+                style={[
+                  styles.legendName,
+                  { color: categoryColors["Saldo Livre"] },
+                ]}
+              >
+                SALDO LIVRE
+              </Text>
+            </View>
+            <View style={styles.legendPercentContainer}>
+              <Text style={styles.legendPercent}>
+                {(totalIncome > 0
+                  ? (saldoLivre / totalIncome) * 100
+                  : 0
+                ).toFixed(1)}
+                %
+              </Text>
+              <Text style={styles.legendDesc}>da receita</Text>
+            </View>
+          </View>
+
+          {expenseData.slice(0, 3).map((item, index) => (
+            <View key={index} style={styles.legendItem}>
+              <View
+                style={[styles.legendDot, { backgroundColor: item.color }]}
+              />
+              <Text style={styles.legendName}>{item.originalName}</Text>
+              <View style={styles.legendPercentContainer}>
+                <Text style={styles.legendPercent}>
+                  {item.percent.toFixed(1)}%
+                </Text>
+                <Text style={styles.legendDesc}>da receita</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Barras de Progresso */}
+      <View style={styles.barsContainer}>
+        {/* Barra Saldo Livre */}
+        <View style={styles.barBlock}>
+          <View style={styles.barHeader}>
+            <View style={styles.barTitleGroup}>
+              <View
+                style={[
+                  styles.legendDot,
+                  { backgroundColor: categoryColors["Saldo Livre"] },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.barTitle,
+                  { color: categoryColors["Saldo Livre"] },
+                ]}
+              >
+                SALDO LIVRE RESTANTE
+              </Text>
+            </View>
+            <Text
+              style={[
+                styles.barAmount,
+                { color: categoryColors["Saldo Livre"] },
+              ]}
+            >
+              {formatCurrency(saldoLivre)}{" "}
+              <Text style={styles.barPercent}>
+                (
+                {(totalIncome > 0
+                  ? (saldoLivre / totalIncome) * 100
+                  : 0
+                ).toFixed(1)}
+                % DA RECEITA)
+              </Text>
+            </Text>
+          </View>
+          <View style={styles.barBackground}>
+            <View
+              style={[
+                styles.barFill,
+                {
+                  backgroundColor: categoryColors["Saldo Livre"],
+                  width: `${totalIncome > 0 ? (saldoLivre / totalIncome) * 100 : 0}%`,
+                },
               ]}
             />
           </View>
         </View>
-      </View>
 
-      <View style={styles.legendContainer}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: "#10B981" }]} />
-          <Text style={styles.legendText}>
-            Entradas ({incomePercentage.toFixed(0)}%)
-          </Text>
-        </View>
-
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: "#EF4444" }]} />
-          <Text style={styles.legendText}>
-            Saídas ({expensePercentage.toFixed(0)}%)
-          </Text>
-        </View>
+        {/* Barras de Despesas */}
+        {expenseData.map((item, index) => (
+          <View key={index} style={styles.barBlock}>
+            <View style={styles.barHeader}>
+              <View style={styles.barTitleGroup}>
+                <View
+                  style={[styles.legendDot, { backgroundColor: item.color }]}
+                />
+                <Text style={styles.barTitle}>{item.name}</Text>
+              </View>
+              <Text style={styles.barAmount}>
+                {formatCurrency(item.amount)}{" "}
+                <Text style={styles.barPercent}>
+                  ({item.percent.toFixed(1)}% DA RECEITA)
+                </Text>
+              </Text>
+            </View>
+            <View style={styles.barBackground}>
+              <View
+                style={[
+                  styles.barFill,
+                  { backgroundColor: item.color, width: `${item.percent}%` },
+                ]}
+              />
+            </View>
+          </View>
+        ))}
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: "#1E1E1E", // <-- Corrigido para trazer o painel de volta
+    borderWidth: 1, // <-- Corrigido para adicionar a borda
+    borderColor: "#333333",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  title: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "bold",
+    letterSpacing: 1,
+  },
+  subtitle: {
+    color: "#A1A1AA",
+    fontSize: 11,
+    marginTop: 4,
+  },
+  comprometidoLabel: {
+    color: "#A1A1AA",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  comprometidoValue: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
+    marginTop: 2,
+  },
+  chartContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 30,
+  },
+  donutWrapper: {
+    width: 120,
+    height: 120,
+    position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  donutCenterText: {
+    position: "absolute",
+    alignItems: "center",
+  },
+  donutLabel: {
+    color: "#A1A1AA",
+    fontSize: 9,
+    fontWeight: "bold",
+  },
+  donutValue: {
+    color: "#10B981",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  legendContainer: {
+    flex: 1,
+    marginLeft: 20,
+    gap: 12,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendName: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "bold",
+    flex: 1,
+  },
+  legendPercentContainer: {
+    alignItems: "flex-end",
+  },
+  legendPercent: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  legendDesc: {
+    color: "#666666",
+    fontSize: 9,
+  },
+  barsContainer: {
+    gap: 20,
+  },
+  barBlock: {},
+  barHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  barTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  barTitle: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  barAmount: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  barPercent: {
+    color: "#666666",
+    fontWeight: "normal",
+  },
+  barBackground: {
+    width: "100%",
+    height: 6,
+    backgroundColor: "#121212", // Fundo da barrinha mais escuro para contrastar
+    borderRadius: 3,
+  },
+  barFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+});
