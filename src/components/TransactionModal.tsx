@@ -112,14 +112,13 @@ export function TransactionModal({
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
           style={{ maxHeight: "90%" }}
         >
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-          >
-          <View
-            style={{
+            contentContainerStyle={{
               backgroundColor: "#1E1E1E",
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
@@ -360,7 +359,6 @@ export function TransactionModal({
                 Salvar Transação
               </Text>
             </TouchableOpacity>
-          </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </View>

@@ -18,7 +18,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.guilhermedemetino.myapp"
+      "package": "com.guilhermedemetino.myapp",
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "output": "static",
