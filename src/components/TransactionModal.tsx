@@ -118,8 +118,7 @@ export function TransactionModal({
         }}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ maxHeight: "90%" }}
         >
           <ScrollView
