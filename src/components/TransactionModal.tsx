@@ -112,22 +112,23 @@ export function TransactionModal({
           right: 0,
           bottom: 0,
           backgroundColor: "rgba(0,0,0,0.6)",
-          justifyContent: "flex-end",
+          justifyContent: "flex-start",
+          paddingTop: 60,
           zIndex: 999,
           elevation: 999,
         }}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={{ maxHeight: "90%" }}
+          style={{ maxHeight: "85%" }}
         >
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
               backgroundColor: "#1E1E1E",
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
+              borderRadius: 24,
+              marginHorizontal: 16,
               padding: 24,
             }}
           >
