@@ -2,12 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   Image,
   Modal,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { styles as menuStyles } from "../app/../styles/menuStyles";
 
 interface ProfileMenuModalProps {
   visible: boolean;
@@ -17,6 +17,8 @@ interface ProfileMenuModalProps {
   onPickImage: () => void;
   onOpenEditName: () => void;
   onExportPDF: () => void;
+  onChangePIN: () => void;
+  onWipeData: () => void;
 }
 
 export function ProfileMenuModal({
@@ -27,103 +29,59 @@ export function ProfileMenuModal({
   onPickImage,
   onOpenEditName,
   onExportPDF,
+  onChangePIN,
+  onWipeData,
 }: ProfileMenuModalProps) {
+  if (!visible) return null;
+
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={menuStyles.overlay}>
-        <TouchableOpacity
-          style={{ flex: 1 }}
-          activeOpacity={1}
-          onPress={onClose}
-        />
-        <View style={menuStyles.menuContainer}>
-          <View>
-            <View style={menuStyles.menuHeader}>
-              <TouchableOpacity
-                onPress={onPickImage}
-                style={menuStyles.avatarContainer}
-              >
-                {userImage ? (
-                  <Image
-                    source={{ uri: userImage }}
-                    style={menuStyles.avatarImage}
-                  />
-                ) : (
-                  <Ionicons name="camera" size={40} color="#FFFFFF" />
-                )}
-              </TouchableOpacity>
-              <Text style={menuStyles.menuTitle}>{userName}</Text>
-              <Text style={menuStyles.menuSubtitle}>
-                Toque na foto para alterar
-              </Text>
-            </View>
-
-            <View style={menuStyles.menuBody}>
-              {/* Botão de Alterar Nome */}
-              <TouchableOpacity
-                style={{
-                  backgroundColor: "#2A2A2A",
-                  borderWidth: 1,
-                  borderColor: "#FFFFFF",
-                  height: 50,
-                  borderRadius: 12,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "100%",
-                  marginBottom: 12,
-                }}
-                onPress={onOpenEditName}
-              >
-                <Text
-                  style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "bold" }}
-                >
-                  Altere seu nome
-                </Text>
-              </TouchableOpacity>
-
-              {/* Botão de Exportar Relatório PDF (Com borda branca igual ao de cima) */}
-              <TouchableOpacity
-                style={{
-                  backgroundColor: "#2A2A2A",
-                  borderWidth: 1,
-                  borderColor: "#FFFFFF", // Alterado para branco
-                  height: 50,
-                  borderRadius: 12,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "100%",
-                  gap: 8,
-                }}
-                onPress={() => {
-                  onClose();
-                  onExportPDF();
-                }}
-              >
-                <Ionicons
-                  name="document-text-outline"
-                  size={18}
-                  color="#FFFFFF"
-                />
-                <Text
-                  style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "bold" }}
-                >
-                  Exportar Relatório PDF
-                </Text>
+    <Modal visible={visible} transparent animationType="fade">
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <TouchableOpacity activeOpacity={1} style={styles.menuContainer}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={onPickImage}>
+              {userImage ? (
+                <Image source={{ uri: userImage }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="person" size={24} color="#FFFFFF" />
+                </View>
+              )}
+            </TouchableOpacity>
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>{userName}</Text>
+              <TouchableOpacity onPress={onOpenEditName}>
+                <Text style={styles.editNameText}>Editar Nome</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          <TouchableOpacity style={menuStyles.closeButton} onPress={onClose}>
-            <Text style={menuStyles.closeButtonText}>Fechar Menu</Text>
+          <View style={styles.divider} />
+
+          <TouchableOpacity style={styles.menuItem} onPress={onExportPDF}>
+            <Ionicons name="document-text-outline" size={24} color="#FFFFFF" />
+            <Text style={styles.menuItemText}>Exportar Relatório PDF</Text>
           </TouchableOpacity>
-        </View>
-      </View>
+
+          <TouchableOpacity style={styles.menuItem} onPress={onChangePIN}>
+            <Ionicons name="lock-closed-outline" size={24} color="#10B981" />
+            <Text style={styles.menuItemText}>Alterar PIN de Segurança</Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity style={styles.menuItem} onPress={onWipeData}>
+            <Ionicons name="trash-outline" size={24} color="#EF4444" />
+            <Text style={[styles.menuItemText, { color: "#EF4444" }]}>
+              Zerar Dados do App
+            </Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   );
 }
@@ -132,7 +90,7 @@ interface EditNameModalProps {
   visible: boolean;
   onClose: () => void;
   newName: string;
-  setNewName: (text: string) => void;
+  setNewName: (name: string) => void;
   onSave: () => void;
 }
 
@@ -143,36 +101,28 @@ export function EditNameModal({
   setNewName,
   onSave,
 }: EditNameModalProps) {
+  if (!visible) return null;
+
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={menuStyles.modalContainer}>
-        <View style={menuStyles.modalContent}>
-          <Text style={menuStyles.modalTitle}>Alterar Seu Nome</Text>
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={styles.overlay}>
+        <View style={styles.modalContainer}>
+          <Text style={styles.modalTitle}>Como devemos te chamar?</Text>
           <TextInput
-            style={menuStyles.modalInput}
-            placeholder="Digite o novo nome"
-            placeholderTextColor="#666"
+            style={styles.input}
+            placeholder="Digite seu nome"
+            placeholderTextColor="#888888"
             value={newName}
             onChangeText={setNewName}
-            autoFocus={true}
+            autoCorrect={false}
+            autoFocus
           />
-          <View style={menuStyles.modalButtons}>
-            <TouchableOpacity
-              style={menuStyles.modalButtonCancel}
-              onPress={onClose}
-            >
-              <Text style={menuStyles.modalButtonText}>Cancelar</Text>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={menuStyles.modalButtonSave}
-              onPress={onSave}
-            >
-              <Text style={menuStyles.modalButtonText}>Salvar</Text>
+            <TouchableOpacity style={styles.saveButton} onPress={onSave}>
+              <Text style={styles.saveButtonText}>Salvar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -180,3 +130,110 @@ export function EditNameModal({
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  menuContainer: {
+    width: "85%",
+    backgroundColor: "#1E1E1E",
+    borderRadius: 16,
+    padding: 20,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 16,
+  },
+  avatarPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#333333",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  editNameText: {
+    color: "#10B981",
+    fontSize: 14,
+    marginTop: 4,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#333333",
+    marginVertical: 16,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  menuItemText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    marginLeft: 16,
+  },
+  modalContainer: {
+    width: "85%",
+    backgroundColor: "#1E1E1E",
+    borderRadius: 16,
+    padding: 24,
+  },
+  modalTitle: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 16,
+  },
+  input: {
+    backgroundColor: "#2A2A2A",
+    color: "#FFFFFF",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 24,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 16,
+  },
+  cancelButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  cancelButtonText: {
+    color: "#A1A1AA",
+    fontSize: 16,
+  },
+  saveButton: {
+    backgroundColor: "#10B981",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  saveButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+});

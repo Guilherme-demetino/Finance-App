@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Print from "expo-print";
+import { useRouter } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as SQLite from "expo-sqlite";
 import { useEffect, useState } from "react";
-import { ScrollView, TouchableOpacity } from "react-native";
+import { Alert, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AnnualPanoramaCard } from "../components/AnnualPanoramaCard";
@@ -52,6 +53,7 @@ const formatCurrency = (value: string) => {
 };
 
 export default function DashboardScreen() {
+  const router = useRouter();
   const today = new Date();
   const currentMonthNamesList = Object.keys(monthMap);
   const currentMonthName = currentMonthNamesList[today.getMonth()];
@@ -570,6 +572,50 @@ export default function DashboardScreen() {
     }
   };
 
+  // ------------------ NOVAS FUNÇÕES DE SEGURANÇA ------------------
+  const handleChangePIN = () => {
+    setIsMenuOpen(false);
+    try {
+      const db = SQLite.openDatabaseSync("meufinanceiro.db");
+      db.runSync("DELETE FROM security"); // Apaga o PIN atual
+      router.replace("/security" as any); // Manda criar um novo
+    } catch (error) {
+      console.log("Erro ao alterar PIN:", error);
+      showAlert("Erro", "Não foi possível iniciar a troca de PIN.");
+    }
+  };
+
+  const handleWipeData = () => {
+    setIsMenuOpen(false);
+    Alert.alert(
+      "Zerar Aplicativo",
+      "ATENÇÃO: Isso apagará todas as suas transações, categorias, nome, foto e PIN. Essa ação NÃO pode ser desfeita. Tem certeza?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Sim, apagar tudo",
+          style: "destructive",
+          onPress: () => {
+            try {
+              const db = SQLite.openDatabaseSync("meufinanceiro.db");
+              db.withTransactionSync(() => {
+                db.runSync("DROP TABLE IF EXISTS transactions");
+                db.runSync("DROP TABLE IF EXISTS categories");
+                db.runSync("DROP TABLE IF EXISTS users");
+                db.runSync("DROP TABLE IF EXISTS security");
+              });
+              router.replace("/" as any); // Volta para a tela de boas-vindas
+            } catch (error) {
+              console.log("Erro ao zerar dados:", error);
+              showAlert("Erro", "Não foi possível formatar o aplicativo.");
+            }
+          },
+        },
+      ],
+    );
+  };
+  // -----------------------------------------------------------------
+
   const filteredTransactions = transactions.filter((item) => {
     const searchLower = searchText.toLowerCase();
     return (
@@ -715,6 +761,8 @@ export default function DashboardScreen() {
         onPickImage={pickImage}
         onOpenEditName={() => setIsEditingName(true)}
         onExportPDF={handleExportPDF}
+        onChangePIN={handleChangePIN}
+        onWipeData={handleWipeData}
       />
 
       <EditNameModal

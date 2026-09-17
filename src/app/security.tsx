@@ -94,10 +94,10 @@ export default function SecurityScreen() {
       const db = SQLite.openDatabaseSync("meufinanceiro.db");
 
       if (isSettingUp) {
-        db.withTransactionSync(() => {
-          db.runSync("DELETE FROM security");
-          db.runSync("INSERT INTO security (pin) VALUES (?)", enteredPin);
-        });
+        db.runSync("DELETE FROM security");
+
+        // Interpolação direta do valor para driblar o bug do prepareSync no Android
+        db.runSync(`INSERT INTO security (pin) VALUES ('${enteredPin}')`);
 
         showAlert("Sucesso", "PIN de segurança cadastrado com sucesso!");
         setTimeout(() => {
@@ -117,7 +117,6 @@ export default function SecurityScreen() {
       setPin("");
     }
   };
-
   return (
     <View style={styles.container}>
       <Ionicons
