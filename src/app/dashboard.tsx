@@ -185,15 +185,6 @@ export default function DashboardScreen() {
 
       const rawCategories: any = db.getAllSync("SELECT * FROM categories");
 
-      const categoryColorMap: Record<string, string> = {};
-
-      rawCategories.forEach((cat: any) => {
-        if (cat.name) {
-          const cleanName = cat.name.trim().toLowerCase();
-          categoryColorMap[cleanName] = cat.color;
-        }
-      });
-
       const defaultSystemColors: Record<string, string> = {
         salário: "#10B981",
         investimentos: "#3B82F6",
@@ -205,7 +196,16 @@ export default function DashboardScreen() {
         outros: "#A8A29E",
       };
 
-      Object.assign(categoryColorMap, defaultSystemColors);
+      const categoryColorMap: Record<string, string> = {
+        ...defaultSystemColors,
+      };
+
+      rawCategories.forEach((cat: any) => {
+        if (cat.name) {
+          const cleanName = cat.name.trim().toLowerCase();
+          categoryColorMap[cleanName] = cat.color;
+        }
+      });
 
       const allTransactions = rawTransactions.map((item: any) => {
         const catKey = item.category_id

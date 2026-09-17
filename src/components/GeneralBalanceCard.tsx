@@ -106,7 +106,7 @@ export function GeneralBalanceCard({
                 cx={center}
                 cy={center}
                 r={radius}
-                stroke="#1E1E1E"
+                stroke="#2A2A2A"
                 strokeWidth={strokeWidth}
                 fill="none"
               />
@@ -137,8 +137,15 @@ export function GeneralBalanceCard({
 
           <View style={styles.donutCenterText}>
             <Text style={styles.donutLabel}>SALDO LIVRE</Text>
-            <Text style={styles.donutValue}>
-              R$ {(saldoLivre / 1000).toFixed(1)}k
+            <Text
+              style={[
+                styles.donutValue,
+                totalIncome === 0 && styles.donutValueEmpty,
+              ]}
+            >
+              {totalIncome > 0
+                ? `R$ ${(saldoLivre / 1000).toFixed(1)}k`
+                : "Sem dados"}
             </Text>
           </View>
         </View>
@@ -261,7 +268,10 @@ export function GeneralBalanceCard({
               <View
                 style={[
                   styles.barFill,
-                  { backgroundColor: item.color, width: `${item.percent}%` },
+                  {
+                    backgroundColor: item.color,
+                    width: `${Math.min(item.percent, 100)}%`,
+                  },
                 ]}
               />
             </View>
@@ -335,6 +345,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
   },
+  donutValueEmpty: {
+    color: "#A1A1AA",
+    fontSize: 11,
+  },
   legendContainer: {
     flex: 1,
     marginLeft: 20,
@@ -402,6 +416,7 @@ const styles = StyleSheet.create({
     height: 6,
     backgroundColor: "#121212",
     borderRadius: 3,
+    overflow: "hidden",
   },
   barFill: {
     height: "100%",
