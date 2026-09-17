@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Print from "expo-print";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as SQLite from "expo-sqlite";
 import { useEffect, useState } from "react";
@@ -182,29 +183,25 @@ export default function DashboardScreen() {
     }
   };
 
-  // Busca segura em memória para o ano inteiro e mês atual (Evita NullPointerException no Android)
+  // Busca segura em memória para o ano inteiro e mês atual
   const fetchTransactions = async () => {
     try {
       const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
 
-      // 1. Busca TODAS as transações cadastradas no banco sem usar LIKE vulnerável no Android
       const allTransactions: any = await db.getAllAsync(
         "SELECT * FROM transactions ORDER BY id DESC",
       );
 
-      // 2. Filtra no JavaScript apenas as transações que pertencem ao ano selecionado (ex: /2026)
       const allYearTransactions = allTransactions.filter(
         (item: any) => item.date && item.date.endsWith(`/${selectedYear}`),
       );
 
-      // 3. Filtra as transações correspondentes ao mês selecionado na UI
       const monthNumber = monthMap[selectedMonth] || currentMonthNum;
       const currentMonthTransactions = allYearTransactions.filter((item: any) =>
         item.date.includes(`/${monthNumber}/${selectedYear}`),
       );
       setTransactions(currentMonthTransactions);
 
-      // 4. Calcula totais do mês atual
       let income = 0;
       let expense = 0;
 
@@ -220,7 +217,6 @@ export default function DashboardScreen() {
       setTotalExpense(expense);
       setMonthlyBudget(income.toString());
 
-      // 5. Consolida dinamicamente os valores para os 12 meses do Panorama Anual
       const calculatedMonthsData = [
         { label: "JAN", income: 0, expense: 0 },
         { label: "FEV", income: 0, expense: 0 },
@@ -302,9 +298,11 @@ export default function DashboardScreen() {
 
         await db.runAsync(
           "INSERT OR IGNORE INTO users (id, name) VALUES (1, ?)",
-          userName,
+          [userName],
         );
-        await db.runAsync("UPDATE users SET avatar = ? WHERE id = 1", imageUri);
+        await db.runAsync("UPDATE users SET avatar = ? WHERE id = 1", [
+          imageUri,
+        ]);
 
         showAlert("Sucesso", "Foto de perfil atualizada com sucesso!");
       } catch (error) {
@@ -322,7 +320,7 @@ export default function DashboardScreen() {
 
     try {
       const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
-      await db.runAsync("UPDATE users SET name = ? WHERE id = 1", newName);
+      await db.runAsync("UPDATE users SET name = ? WHERE id = 1", [newName]);
       setUserName(newName);
       setNewName("");
       setIsEditingName(false);
@@ -331,6 +329,83 @@ export default function DashboardScreen() {
     } catch (error) {
       console.log("Erro ao atualizar nome:", error);
       showAlert("Erro", "Não foi possível atualizar o nome.");
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      if (transactions.length === 0) {
+        showAlert("Atenção", "Não há transações neste período para exportar.");
+        return;
+      }
+
+      const htmlContent = `
+        <html>
+          <head>
+            <style>
+              body { font-family: 'Helvetica', Arial, sans-serif; padding: 20px; color: #333; }
+              h1 { color: #1E1E1E; font-size: 22px; border-bottom: 2px solid #333; padding-bottom: 5px; }
+              .info { margin-bottom: 20px; font-size: 14px; color: #555; }
+              .summary { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f4f4f4; padding: 15px; border-radius: 8px; }
+              .summary-item { font-size: 14px; font-weight: bold; }
+              .income { color: #10B981; }
+              .expense { color: #EF4444; }
+              table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+              th { background-color: #2A2A2A; color: #fff; }
+              tr:nth-child(even) { background-color: #f9f9f9; }
+            </style>
+          </head>
+          <body>
+            <h1>Relatório Financeiro — ${selectedMonth} de ${selectedYear}</h1>
+            <div class="info">
+              <p><strong>Usuário:</strong> ${userName}</p>
+              <p><strong>Data de geração:</strong> ${new Date().toLocaleDateString("pt-BR")}</p>
+            </div>
+            
+            <div class="summary">
+              <div class="summary-item">Receitas: <span class="income">R$ ${totalIncome.toFixed(2)}</span></div>
+              <div class="summary-item">Despesas: <span class="expense">R$ ${totalExpense.toFixed(2)}</span></div>
+              <div class="summary-item">Saldo: R$ ${totalBalance.toFixed(2)}</div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Tipo</th>
+                  <th>Valor (R$)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${transactions
+                  .map(
+                    (t) => `
+                  <tr>
+                    <td>${t.date}</td>
+                    <td>${t.description}</td>
+                    <td>${t.category_id || "Geral"}</td>
+                    <td>${t.type === "income" ? "Receita" : "Despesa"}</td>
+                    <td class="${t.type === "income" ? "income" : "expense"}">
+                      ${t.type === "income" ? "+ " : "- "} ${t.amount.toFixed(2)}
+                    </td>
+                  </tr>
+                `,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+
+      // Abre diretamente a interface nativa de impressão/salvamento em PDF do sistema operacional
+      await Print.printAsync({ html: htmlContent });
+    } catch (error) {
+      console.log("Erro ao gerar PDF:", error);
+      showAlert("Erro", "Não foi possível gerar o arquivo PDF.");
     }
   };
 
@@ -350,7 +425,12 @@ export default function DashboardScreen() {
   };
 
   const handleSaveTransaction = async () => {
-    if (!transactionTitle.trim() || !transactionAmount.trim()) {
+    if (
+      !transactionTitle ||
+      !transactionTitle.trim() ||
+      !transactionAmount ||
+      !transactionAmount.trim()
+    ) {
       showAlert("Atenção", "Preencha o título e o valor da transação.");
       return;
     }
@@ -364,6 +444,14 @@ export default function DashboardScreen() {
       return;
     }
 
+    const safeTitle = transactionTitle.trim();
+    const safeDate =
+      transactionDate || `${currentDay}/${currentMonthNum}/${currentYearStr}`;
+    const safeType = transactionType || "income";
+    const safeCategory =
+      transactionCategory ||
+      (safeType === "income" ? "Salário" : "Alimentação");
+
     try {
       const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
 
@@ -371,10 +459,10 @@ export default function DashboardScreen() {
         await db.runAsync(
           "UPDATE transactions SET amount = ?, date = ?, description = ?, type = ?, category_id = ? WHERE id = ?",
           cleanNumericValue,
-          transactionDate,
-          transactionTitle,
-          transactionType,
-          transactionCategory,
+          safeDate,
+          safeTitle,
+          safeType,
+          safeCategory,
           editingTransactionId,
         );
         showAlert("Sucesso", "Transação atualizada com sucesso!");
@@ -382,10 +470,10 @@ export default function DashboardScreen() {
         await db.runAsync(
           "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, ?, ?)",
           cleanNumericValue,
-          transactionDate,
-          transactionTitle,
-          transactionType,
-          transactionCategory,
+          safeDate,
+          safeTitle,
+          safeType,
+          safeCategory,
         );
         showAlert("Sucesso", "Transação salva com sucesso!");
       }
@@ -404,7 +492,7 @@ export default function DashboardScreen() {
   const handleDeleteTransaction = async (id: string) => {
     try {
       const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
-      await db.runAsync("DELETE FROM transactions WHERE id = ?", id);
+      await db.runAsync("DELETE FROM transactions WHERE id = ?", [id]);
 
       await fetchTransactions();
       showAlert("Sucesso", "Transação excluída com sucesso.");
@@ -420,10 +508,9 @@ export default function DashboardScreen() {
       const monthNumber = monthMap[selectedMonth] || currentMonthNum;
       const dateSearchPattern = `%/${monthNumber}/${selectedYear}`;
 
-      await db.runAsync(
-        "DELETE FROM transactions WHERE date LIKE ?",
+      await db.runAsync("DELETE FROM transactions WHERE date LIKE ?", [
         dateSearchPattern,
-      );
+      ]);
       await fetchTransactions();
       showAlert(
         "Sucesso",
@@ -567,6 +654,7 @@ export default function DashboardScreen() {
         userImage={userImage}
         onPickImage={pickImage}
         onOpenEditName={() => setIsEditingName(true)}
+        onExportPDF={handleExportPDF}
       />
 
       <EditNameModal

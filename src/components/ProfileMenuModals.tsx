@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
-    Image,
-    Modal,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Image,
+  Modal,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { styles as menuStyles } from "../app/../styles/menuStyles";
 
@@ -16,6 +16,7 @@ interface ProfileMenuModalProps {
   userImage: string | null;
   onPickImage: () => void;
   onOpenEditName: () => void;
+  onExportPDF: () => void;
 }
 
 export function ProfileMenuModal({
@@ -25,6 +26,7 @@ export function ProfileMenuModal({
   userImage,
   onPickImage,
   onOpenEditName,
+  onExportPDF,
 }: ProfileMenuModalProps) {
   return (
     <Modal
@@ -62,6 +64,7 @@ export function ProfileMenuModal({
             </View>
 
             <View style={menuStyles.menuBody}>
+              {/* Botão de Alterar Nome */}
               <TouchableOpacity
                 style={{
                   backgroundColor: "#2A2A2A",
@@ -72,6 +75,7 @@ export function ProfileMenuModal({
                   alignItems: "center",
                   justifyContent: "center",
                   width: "100%",
+                  marginBottom: 12,
                 }}
                 onPress={onOpenEditName}
               >
@@ -79,6 +83,37 @@ export function ProfileMenuModal({
                   style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "bold" }}
                 >
                   Altere seu nome
+                </Text>
+              </TouchableOpacity>
+
+              {/* Botão de Exportar Relatório PDF (Com borda branca igual ao de cima) */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: "#2A2A2A",
+                  borderWidth: 1,
+                  borderColor: "#FFFFFF", // Alterado para branco
+                  height: 50,
+                  borderRadius: 12,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "100%",
+                  gap: 8,
+                }}
+                onPress={() => {
+                  onClose();
+                  onExportPDF();
+                }}
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={18}
+                  color="#FFFFFF"
+                />
+                <Text
+                  style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "bold" }}
+                >
+                  Exportar Relatório PDF
                 </Text>
               </TouchableOpacity>
             </View>
