@@ -19,11 +19,26 @@ import {
 } from "../components/ProfileMenuModals";
 import { SummaryCards } from "../components/SummaryCards";
 import { TransactionModal } from "../components/TransactionModal";
-import { TransactionsList } from "../components/TransactionsList";
+import { TransactionsHistoryList } from "../components/TransactionsHistoryList";
 import { UserProfileHeader } from "../components/UserProfileHeader";
 
 import { initDatabase } from "../database/sqlite";
 import { styles } from "../styles/dashboardStyles";
+
+const monthMap: Record<string, string> = {
+  Janeiro: "01",
+  Fevereiro: "02",
+  Março: "03",
+  Abril: "04",
+  Maio: "05",
+  Junho: "06",
+  Julho: "07",
+  Agosto: "08",
+  Setembro: "09",
+  Outubro: "10",
+  Novembro: "11",
+  Dezembro: "12",
+};
 
 const formatCurrency = (value: string) => {
   const numbers = value.replace(/\D/g, "");
@@ -36,6 +51,13 @@ const formatCurrency = (value: string) => {
 };
 
 export default function DashboardScreen() {
+  const today = new Date();
+  const currentMonthNamesList = Object.keys(monthMap);
+  const currentMonthName = currentMonthNamesList[today.getMonth()];
+  const currentYearStr = String(today.getFullYear());
+  const currentDay = String(today.getDate()).padStart(2, "0");
+  const currentMonthNum = String(today.getMonth() + 1).padStart(2, "0");
+
   const [userName, setUserName] = useState("Carregando...");
   const [userImage, setUserImage] = useState<string | null>(null);
   const [isPieView, setIsPieView] = useState(false);
@@ -45,27 +67,30 @@ export default function DashboardScreen() {
 
   const [isLandscapePanoramaOpen, setIsLandscapePanoramaOpen] = useState(false);
 
-  // Modal Transação
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthName);
+  const [selectedYear, setSelectedYear] = useState(currentYearStr);
+  const [isMonthModalOpen, setIsMonthModalOpen] = useState(false);
+  const [isYearModalOpen, setIsYearModalOpen] = useState(false);
+
+  // Estados de Transação e Edição
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState<
+    string | null
+  >(null);
   const [transactionType, setTransactionType] = useState<"income" | "expense">(
     "income",
   );
   const [transactionTitle, setTransactionTitle] = useState("");
   const [transactionAmount, setTransactionAmount] = useState("");
-  const [transactionDate, setTransactionDate] = useState("16/09/2026");
+  const [transactionDate, setTransactionDate] = useState(
+    `${currentDay}/${currentMonthNum}/${currentYearStr}`,
+  );
   const [transactionCategory, setTransactionCategory] = useState("Salário");
 
-  // Lista de transações do banco
   const [transactions, setTransactions] = useState<any[]>([]);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
   const totalBalance = totalIncome - totalExpense;
-
-  // Filtros
-  const [selectedMonth, setSelectedMonth] = useState("Setembro");
-  const [selectedYear, setSelectedYear] = useState("2026");
-  const [isMonthModalOpen, setIsMonthModalOpen] = useState(false);
-  const [isYearModalOpen, setIsYearModalOpen] = useState(false);
 
   const monthsList = [
     "Janeiro",
@@ -138,7 +163,7 @@ export default function DashboardScreen() {
       await fetchTransactions();
     }
     setupDashboard();
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
   const fetchUserData = async () => {
     try {
@@ -159,8 +184,12 @@ export default function DashboardScreen() {
   const fetchTransactions = async () => {
     try {
       const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+      const monthNumber = monthMap[selectedMonth] || currentMonthNum;
+      const dateSearchPattern = `%/${monthNumber}/${selectedYear}`;
+
       const result: any = await db.getAllAsync(
-        "SELECT * FROM transactions ORDER BY id DESC",
+        "SELECT * FROM transactions WHERE date LIKE ? ORDER BY id DESC",
+        dateSearchPattern,
       );
       setTransactions(result);
 
@@ -213,11 +242,10 @@ export default function DashboardScreen() {
 
         await db.runAsync(
           "INSERT OR IGNORE INTO users (id, name) VALUES (1, ?)",
-          [userName],
+          userName,
         );
-        await db.runAsync("UPDATE users SET avatar = ? WHERE id = 1", [
-          imageUri,
-        ]);
+        await db.runAsync("UPDATE users SET avatar = ? WHERE id = 1", imageUri);
+
         showAlert("Sucesso", "Foto de perfil atualizada com sucesso!");
       } catch (error) {
         console.log("Erro ao salvar foto no banco:", error);
@@ -246,6 +274,21 @@ export default function DashboardScreen() {
     }
   };
 
+  const handleOpenEditTransaction = (item: any) => {
+    setEditingTransactionId(item.id);
+    setTransactionType(item.type);
+    setTransactionTitle(item.description);
+    const formattedAmount = (item.amount * 100).toLocaleString("pt-BR", {
+      minimumFractionDigits: 0,
+    });
+    setTransactionAmount(formattedAmount);
+    setTransactionDate(item.date);
+    setTransactionCategory(
+      item.category || (item.type === "income" ? "Salário" : "Alimentação"),
+    );
+    setIsTransactionModalOpen(true);
+  };
+
   const handleSaveTransaction = async () => {
     if (!transactionTitle.trim() || !transactionAmount.trim()) {
       showAlert("Atenção", "Preencha o título e o valor da transação.");
@@ -263,26 +306,75 @@ export default function DashboardScreen() {
 
     try {
       const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
-      await db.runAsync(
-        "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, ?, ?)",
-        [
+
+      if (editingTransactionId) {
+        await db.runAsync(
+          "UPDATE transactions SET amount = ?, date = ?, description = ?, type = ?, category_id = ? WHERE id = ?",
           cleanNumericValue,
           transactionDate,
           transactionTitle,
           transactionType,
           transactionCategory,
-        ],
-      );
+          editingTransactionId,
+        );
+        showAlert("Sucesso", "Transação atualizada com sucesso!");
+      } else {
+        await db.runAsync(
+          "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, ?, ?)",
+          cleanNumericValue,
+          transactionDate,
+          transactionTitle,
+          transactionType,
+          transactionCategory,
+        );
+        showAlert("Sucesso", "Transação salva com sucesso!");
+      }
 
       await fetchTransactions();
-
-      showAlert("Sucesso", "Transação salva com sucesso!");
       setTransactionTitle("");
       setTransactionAmount("");
+      setEditingTransactionId(null);
       setIsTransactionModalOpen(false);
     } catch (error) {
       console.log("Erro ao salvar transação:", error);
       showAlert("Erro", "Não foi possível salvar a transação.");
+    }
+  };
+
+  // Função corrigida para apagar apenas UMA transação específica pelo ID (sem colchetes)
+  const handleDeleteTransaction = async (id: string) => {
+    try {
+      const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+
+      // PARÂMETRO PASSADO SEM COLCHETES DIRETAMENTE
+      await db.runAsync("DELETE FROM transactions WHERE id = ?", id);
+
+      await fetchTransactions();
+      showAlert("Sucesso", "Transação excluída com sucesso.");
+    } catch (error) {
+      console.log("Erro ao excluir transação:", error);
+      showAlert("Erro", "Não foi possível excluir a transação.");
+    }
+  };
+
+  const handleDeleteAllTransactions = async () => {
+    try {
+      const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+      const monthNumber = monthMap[selectedMonth] || currentMonthNum;
+      const dateSearchPattern = `%/${monthNumber}/${selectedYear}`;
+
+      await db.runAsync(
+        "DELETE FROM transactions WHERE date LIKE ?",
+        dateSearchPattern,
+      );
+      await fetchTransactions();
+      showAlert(
+        "Sucesso",
+        "Todas as transações deste período foram excluídas.",
+      );
+    } catch (error) {
+      console.log("Erro ao excluir transações:", error);
+      showAlert("Erro", "Não foi possível excluir as transações.");
     }
   };
 
@@ -292,7 +384,7 @@ export default function DashboardScreen() {
     amount: item.amount,
     type: item.type,
     date: item.date,
-    category: item.category_id, // <-- ESSA LINHA FAZ A MÁGICA DAS CORES!
+    category: item.category_id,
     icon: item.type === "income" ? "cash-outline" : "cart-outline",
   }));
 
@@ -333,15 +425,33 @@ export default function DashboardScreen() {
 
         <AnnualPanoramaCard onPress={openLandscapePanorama} />
 
-        <TransactionsList transactions={formattedTransactions} />
+        {/* Histórico de Transações com Lápis e Lixeira Unitária */}
+        <TransactionsHistoryList
+          transactions={formattedTransactions}
+          onEditTransaction={handleOpenEditTransaction}
+          onDeleteTransaction={handleDeleteTransaction}
+          onDeleteAll={handleDeleteAllTransactions}
+        />
       </ScrollView>
 
       {/* Botão Flutuante (FAB) */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => {
+          setEditingTransactionId(null);
           setTransactionType("income");
           setTransactionCategory("Salário");
+
+          const targetMonth = monthMap[selectedMonth] || currentMonthNum;
+          let dayToUse = "01";
+          if (
+            targetMonth === currentMonthNum &&
+            selectedYear === currentYearStr
+          ) {
+            dayToUse = currentDay;
+          }
+
+          setTransactionDate(`${dayToUse}/${targetMonth}/${selectedYear}`);
           setIsTransactionModalOpen(true);
         }}
       >
@@ -351,7 +461,10 @@ export default function DashboardScreen() {
       {/* Modais */}
       <TransactionModal
         visible={isTransactionModalOpen}
-        onClose={() => setIsTransactionModalOpen(false)}
+        onClose={() => {
+          setEditingTransactionId(null);
+          setIsTransactionModalOpen(false);
+        }}
         transactionType={transactionType}
         setTransactionType={setTransactionType}
         transactionTitle={transactionTitle}

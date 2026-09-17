@@ -35,7 +35,7 @@ export async function initDatabase() {
       );
     `);
 
-    console.log("Banco de dados e tabelas criados com sucesso!");
+    console.log("Banco de dados acessado com sucesso!");
   } catch (error) {
     console.error("Erro ao inicializar o banco de dados: ", error);
   }
