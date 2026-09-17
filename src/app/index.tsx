@@ -9,7 +9,6 @@ export default function WelcomeScreen() {
   const [name, setName] = useState("");
   const router = useRouter();
 
-  // Estados para o CustomAlert
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
@@ -20,56 +19,84 @@ export default function WelcomeScreen() {
     setAlertVisible(true);
   };
 
-  // Isso roda automaticamente quando a tela abre
   useEffect(() => {
     checkIfUserExists();
   }, []);
 
-  // Verifica se já tem usuário salvo para pular esta tela
-  const checkIfUserExists = async () => {
+  const checkIfUserExists = () => {
     try {
-      const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+      const db = SQLite.openDatabaseSync("meufinanceiro.db");
 
-      // Garante a criação da tabela caso venha de um app limpo
-      await db.execAsync(`
+      // 1. Garante que as tabelas existem
+      db.runSync(`
         CREATE TABLE IF NOT EXISTS users (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL
+          name TEXT NOT NULL,
+          avatar TEXT
         );
       `);
 
-      const user: any = await db.getFirstAsync("SELECT * FROM users LIMIT 1");
+      db.runSync(`
+        CREATE TABLE IF NOT EXISTS security (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          pin TEXT NOT NULL
+        );
+      `);
 
-      if (user) {
-        // Se o usuário já existe, pula essa tela e vai pra tela de Segurança!
+      // 2. Verifica se já existe um PIN salvo. Se sim, vai direto pedir a senha!
+      const security: any = db.getFirstSync("SELECT pin FROM security LIMIT 1");
+      if (security && security.pin) {
+        router.replace("/security");
+        return;
+      }
+
+      // 3. Se não tem PIN, verifica se já tem nome salvo (liberamos o nome Guilherme agora!)
+      const user: any = db.getFirstSync("SELECT * FROM users LIMIT 1");
+      if (
+        user &&
+        user.name &&
+        user.name.trim() !== "" &&
+        user.name !== "Meu Finanças"
+      ) {
         router.replace("/security");
       }
     } catch (error) {
-      console.log("Erro ao verificar usuário:", error);
+      console.log("Erro ao verificar usuário/PIN:", error);
     }
   };
 
-  const handleSaveName = async () => {
+  const handleSaveName = () => {
     if (name.trim() === "") {
       showAlert("Ops!", "Por favor, digite como gostaria de ser chamado.");
       return;
     }
 
     try {
-      const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+      const db = SQLite.openDatabaseSync("meufinanceiro.db");
 
-      await db.execAsync(`
+      // Comandos de criação de tabela (DDL) SEMPRE FORA da transação no Android
+      db.runSync(`
         CREATE TABLE IF NOT EXISTS users (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL
+          name TEXT NOT NULL,
+          avatar TEXT
         );
       `);
 
-      await db.runAsync("INSERT INTO users (name) VALUES (?)", name);
+      db.withTransactionSync(() => {
+        const existing: any = db.getFirstSync("SELECT id FROM users LIMIT 1");
+        if (existing) {
+          db.runSync(
+            "UPDATE users SET name = ? WHERE id = ?",
+            name.trim(),
+            existing.id,
+          );
+        } else {
+          db.runSync("INSERT INTO users (name) VALUES (?)", name.trim());
+        }
+      });
 
       showAlert("Sucesso!", `Bem-vindo(a), ${name}!`);
-
-      // Agora ele vai para a tela de Segurança depois de salvar!
       router.replace("/security");
     } catch (error) {
       console.error("Erro ao salvar o nome:", error);
@@ -95,7 +122,6 @@ export default function WelcomeScreen() {
         <Text style={styles.buttonText}>Começar</Text>
       </TouchableOpacity>
 
-      {/* ================= ALERTA CUSTOMIZADO ================= */}
       <CustomAlert
         visible={alertVisible}
         title={alertTitle}

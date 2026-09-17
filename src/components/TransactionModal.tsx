@@ -1,6 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
-import { Modal, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { getDatabase } from "../database/sqlite";
+import { CategoryModal } from "./CategoryModal";
 
 interface TransactionModalProps {
   visible: boolean;
@@ -8,27 +19,16 @@ interface TransactionModalProps {
   transactionType: "income" | "expense";
   setTransactionType: (type: "income" | "expense") => void;
   transactionTitle: string;
-  setTransactionTitle: (text: string) => void;
+  setTransactionTitle: (title: string) => void;
   transactionAmount: string;
-  setTransactionAmount: (text: string) => void;
+  setTransactionAmount: (amount: string) => void;
   transactionDate: string;
-  setTransactionDate: (text: string) => void;
+  setTransactionDate: (date: string) => void;
   transactionCategory: string;
   setTransactionCategory: (category: string) => void;
   formatCurrency: (value: string) => string;
   onSave: () => void;
 }
-
-// Mapa global de cores por categoria
-export const categoryColors: Record<string, string> = {
-  Salário: "#10B981",
-  Investimentos: "#3B82F6",
-  Alimentação: "#F59E0B",
-  Moradia: "#8B5CF6",
-  Transporte: "#06B6D4",
-  Lazer: "#EC4899",
-  Outros: "#A1A1AA",
-};
 
 export function TransactionModal({
   visible,
@@ -46,348 +46,331 @@ export function TransactionModal({
   formatCurrency,
   onSave,
 }: TransactionModalProps) {
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
 
-  const incomeCategories = ["Salário", "Investimentos"];
-  const expenseCategories = [
+  const fetchCategories = async () => {
+    try {
+      const db = await getDatabase();
+
+      await db.runAsync(`
+        CREATE TABLE IF NOT EXISTS categories (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, 
+          name TEXT NOT NULL, 
+          color TEXT NOT NULL, 
+          type TEXT NOT NULL DEFAULT 'expense'
+        )
+      `);
+
+      const result = await db.getAllAsync(
+        "SELECT * FROM categories ORDER BY id DESC",
+      );
+      setDbCategories(result);
+    } catch (error) {
+      console.log("Erro ao buscar categorias:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (visible) {
+      fetchCategories();
+    }
+  }, [visible]);
+
+  const defaultIncomeCategories = ["Salário", "Investimentos"];
+  const defaultExpenseCategories = [
     "Alimentação",
-    "Moradia",
     "Transporte",
     "Lazer",
-    "Outros",
+    "Moradia",
+    "Saúde",
   ];
-  const currentCategories =
-    transactionType === "income" ? incomeCategories : expenseCategories;
 
-  const activeCategoryColor = categoryColors[transactionCategory] || "#FFFFFF";
+  const customIncomeCategories = dbCategories
+    .filter((c) => String(c.type).trim().toLowerCase() === "income")
+    .map((c) => String(c.name).trim());
+
+  const customExpenseCategories = dbCategories
+    .filter((c) => String(c.type).trim().toLowerCase() !== "income")
+    .map((c) => String(c.name).trim());
+
+  let displayCategories =
+    transactionType === "income"
+      ? [...defaultIncomeCategories, ...customIncomeCategories]
+      : [...defaultExpenseCategories, ...customExpenseCategories];
+
+  displayCategories = Array.from(new Set(displayCategories));
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent>
       <View
         style={{
           flex: 1,
-          backgroundColor: "rgba(0, 0, 0, 0.7)",
-          justifyContent: "center",
-          alignItems: "center",
-          padding: 20,
+          backgroundColor: "rgba(0,0,0,0.6)",
+          justifyContent: "flex-end",
         }}
       >
-        <View
-          style={{
-            backgroundColor: "#1E1E1E",
-            borderColor: "#333333",
-            borderWidth: 1,
-            borderRadius: 20,
-            padding: 20,
-            width: "100%",
-            maxWidth: 380,
-          }}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: 12,
-              position: "relative",
+              backgroundColor: "#1E1E1E",
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: 24,
             }}
           >
-            <Text
-              style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "bold" }}
-            >
-              NOVA TRANSAÇÃO
-            </Text>
-            <TouchableOpacity
-              style={{ position: "absolute", right: 0 }}
-              onPress={onClose}
-            >
-              <Ionicons name="close" size={22} color="#A1A1AA" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Abas Receita / Despesa */}
-          <View
-            style={{
-              flexDirection: "row",
-              backgroundColor: "#121212",
-              borderRadius: 12,
-              padding: 4,
-              marginBottom: 16,
-            }}
-          >
-            <TouchableOpacity
+            <View
               style={{
-                flex: 1,
-                paddingVertical: 10,
+                flexDirection: "row",
+                justifyContent: "space-between",
                 alignItems: "center",
-                backgroundColor:
-                  transactionType === "income" ? "#10B981" : "transparent",
-                borderRadius: 10,
-              }}
-              onPress={() => {
-                setTransactionType("income");
-                setTransactionCategory("Salário");
-                setIsCategoryDropdownOpen(false);
+                marginBottom: 24,
               }}
             >
               <Text
-                style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 12 }}
+                style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "bold" }}
               >
-                RECEITA
+                Nova Transação
               </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                flex: 1,
-                paddingVertical: 10,
-                alignItems: "center",
-                backgroundColor:
-                  transactionType === "expense" ? "#EF4444" : "transparent",
-                borderRadius: 10,
-              }}
-              onPress={() => {
-                setTransactionType("expense");
-                setTransactionCategory("Alimentação");
-                setIsCategoryDropdownOpen(false);
-              }}
-            >
-              <Text
-                style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 12 }}
-              >
-                DESPESA
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={{ gap: 12 }}>
-            <View>
-              <Text
-                style={{
-                  color: "#A1A1AA",
-                  fontSize: 11,
-                  marginBottom: 4,
-                  fontWeight: "bold",
-                }}
-              >
-                TÍTULO
-              </Text>
-              <TextInput
-                style={{
-                  backgroundColor: "#121212",
-                  borderWidth: 1,
-                  borderColor: "#333333",
-                  borderRadius: 12,
-                  padding: 10,
-                  color: "#FFFFFF",
-                  fontSize: 14,
-                }}
-                placeholder="Ex: Aluguel, Salário..."
-                placeholderTextColor="#666"
-                value={transactionTitle}
-                onChangeText={setTransactionTitle}
-              />
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={24} color="#888" />
+              </TouchableOpacity>
             </View>
 
-            <View>
-              <Text
+            {/* ABAS RECEITA / DESPESA */}
+            <View style={{ flexDirection: "row", gap: 12, marginBottom: 20 }}>
+              <TouchableOpacity
                 style={{
-                  color: "#A1A1AA",
-                  fontSize: 11,
-                  marginBottom: 4,
-                  fontWeight: "bold",
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 12,
+                  alignItems: "center",
+                  backgroundColor:
+                    transactionType === "income"
+                      ? "rgba(16, 185, 129, 0.15)"
+                      : "#2A2A2A",
+                  borderWidth: 1,
+                  borderColor:
+                    transactionType === "income" ? "#10B981" : "#2A2A2A",
+                }}
+                onPress={() => {
+                  setTransactionType("income");
+                  // Se a categoria atual não pertencer às receitas, força para "Salário" ou "Investimentos" com segurança
+                  const validIncome = [
+                    ...defaultIncomeCategories,
+                    ...customIncomeCategories,
+                  ];
+                  if (!validIncome.includes(transactionCategory)) {
+                    setTransactionCategory("Salário");
+                  }
                 }}
               >
-                VALOR (R$)
+                <Text
+                  style={{
+                    color: transactionType === "income" ? "#10B981" : "#888",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Receita
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 12,
+                  alignItems: "center",
+                  backgroundColor:
+                    transactionType === "expense"
+                      ? "rgba(239, 68, 68, 0.15)"
+                      : "#2A2A2A",
+                  borderWidth: 1,
+                  borderColor:
+                    transactionType === "expense" ? "#EF4444" : "#2A2A2A",
+                }}
+                onPress={() => {
+                  setTransactionType("expense");
+                  if (
+                    !defaultExpenseCategories.includes(transactionCategory) &&
+                    !customExpenseCategories.includes(transactionCategory)
+                  ) {
+                    setTransactionCategory("Alimentação");
+                  }
+                }}
+              >
+                <Text
+                  style={{
+                    color: transactionType === "expense" ? "#EF4444" : "#888",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Despesa
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* CAMPOS DE TEXTO */}
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ color: "#888", fontSize: 13, marginBottom: 8 }}>
+                Valor (R$)
               </Text>
               <TextInput
                 style={{
-                  backgroundColor: "#121212",
-                  borderWidth: 1,
-                  borderColor: "#333333",
-                  borderRadius: 12,
-                  padding: 10,
+                  backgroundColor: "#2A2A2A",
                   color: "#FFFFFF",
-                  fontSize: 14,
+                  padding: 16,
+                  borderRadius: 12,
+                  fontSize: 18,
                 }}
-                placeholder="R$ 0,00"
-                placeholderTextColor="#666"
                 keyboardType="numeric"
                 value={transactionAmount}
                 onChangeText={(text) =>
                   setTransactionAmount(formatCurrency(text))
                 }
+                placeholder="0,00"
+                placeholderTextColor="#666"
               />
             </View>
 
-            <View>
-              <Text
-                style={{
-                  color: "#A1A1AA",
-                  fontSize: 11,
-                  marginBottom: 4,
-                  fontWeight: "bold",
-                }}
-              >
-                DATA
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ color: "#888", fontSize: 13, marginBottom: 8 }}>
+                Descrição
               </Text>
               <TextInput
                 style={{
-                  backgroundColor: "#121212",
-                  borderWidth: 1,
-                  borderColor: "#333333",
-                  borderRadius: 12,
-                  padding: 10,
+                  backgroundColor: "#2A2A2A",
                   color: "#FFFFFF",
-                  fontSize: 14,
+                  padding: 16,
+                  borderRadius: 12,
                 }}
-                value={transactionDate}
-                onChangeText={setTransactionDate}
+                value={transactionTitle}
+                onChangeText={setTransactionTitle}
+                placeholder="Ex: Supermercado"
+                placeholderTextColor="#666"
               />
             </View>
 
-            {/* Seletor de Categoria com Indicador de Cor */}
-            <View style={{ position: "relative" }}>
-              <Text
-                style={{
-                  color: "#A1A1AA",
-                  fontSize: 11,
-                  marginBottom: 4,
-                  fontWeight: "bold",
-                }}
-              >
-                CATEGORIA
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ color: "#888", fontSize: 13, marginBottom: 8 }}>
+                Data
               </Text>
-
-              <TouchableOpacity
+              <TextInput
                 style={{
-                  backgroundColor: "#121212",
-                  borderWidth: 1,
-                  borderColor: "#333333",
+                  backgroundColor: "#2A2A2A",
+                  color: "#FFFFFF",
+                  padding: 16,
                   borderRadius: 12,
-                  padding: 10,
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
                 }}
-                onPress={() =>
-                  setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
-                }
-              >
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-                >
-                  <View
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: 5,
-                      backgroundColor: activeCategoryColor,
-                    }}
-                  />
-                  <Text style={{ color: "#FFFFFF", fontSize: 14 }}>
-                    {transactionCategory}
-                  </Text>
-                </View>
-                <Ionicons
-                  name={isCategoryDropdownOpen ? "chevron-up" : "chevron-down"}
-                  size={18}
-                  color="#A1A1AA"
-                />
-              </TouchableOpacity>
+                value={transactionDate}
+                onChangeText={setTransactionDate}
+                placeholder="DD/MM/AAAA"
+                placeholderTextColor="#666"
+              />
+            </View>
 
-              {isCategoryDropdownOpen && (
+            {/* LISTA DE CATEGORIAS */}
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ color: "#888", fontSize: 13, marginBottom: 10 }}>
+                Categoria
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View
-                  style={{
-                    position: "absolute",
-                    top: 75,
-                    left: 0,
-                    right: 0,
-                    backgroundColor: "#121212",
-                    borderWidth: 1,
-                    borderColor: "#333333",
-                    borderRadius: 12,
-                    zIndex: 10,
-                    overflow: "hidden",
-                  }}
+                  style={{ flexDirection: "row", gap: 8, alignItems: "center" }}
                 >
-                  {currentCategories.map((cat, index) => {
-                    const itemColor = categoryColors[cat] || "#FFFFFF";
+                  <TouchableOpacity
+                    onPress={() => setIsCategoryModalVisible(true)}
+                    style={{
+                      backgroundColor: "#2A2A2A",
+                      borderWidth: 1,
+                      borderColor: "#FFFFFF",
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <Ionicons name="add" size={14} color="#FFFFFF" />
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        fontWeight: "bold",
+                        fontSize: 12,
+                      }}
+                    >
+                      Nova
+                    </Text>
+                  </TouchableOpacity>
+
+                  {displayCategories.map((catName, index) => {
+                    const isSelected = transactionCategory === catName;
                     return (
                       <TouchableOpacity
                         key={index}
+                        onPress={() => setTransactionCategory(catName)}
                         style={{
-                          padding: 12,
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 8,
-                          borderBottomWidth:
-                            index < currentCategories.length - 1 ? 1 : 0,
-                          borderBottomColor: "#222222",
-                          backgroundColor:
-                            transactionCategory === cat
-                              ? "#1E1E1E"
-                              : "transparent",
-                        }}
-                        onPress={() => {
-                          setTransactionCategory(cat);
-                          setIsCategoryDropdownOpen(false);
+                          backgroundColor: "#2A2A2A",
+                          borderWidth: 1,
+                          borderColor: "#FFFFFF",
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 8,
+                          opacity: isSelected ? 1 : 0.5,
                         }}
                       >
-                        <View
-                          style={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: 5,
-                            backgroundColor: itemColor,
-                          }}
-                        />
                         <Text
                           style={{
-                            color:
-                              transactionCategory === cat
-                                ? itemColor
-                                : "#FFFFFF",
-                            fontWeight:
-                              transactionCategory === cat ? "bold" : "normal",
-                            fontSize: 14,
+                            color: "#FFFFFF",
+                            fontSize: 12,
+                            fontWeight: "bold",
                           }}
                         >
-                          {cat}
+                          {catName}
                         </Text>
                       </TouchableOpacity>
                     );
                   })}
                 </View>
-              )}
+              </ScrollView>
             </View>
 
             <TouchableOpacity
+              onPress={onSave}
               style={{
                 backgroundColor: "#2A2A2A",
                 borderWidth: 1,
                 borderColor: "#FFFFFF",
+                padding: 16,
                 borderRadius: 12,
-                padding: 12,
                 alignItems: "center",
-                marginTop: 6,
               }}
-              onPress={onSave}
             >
               <Text
-                style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 15 }}
+                style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 16 }}
               >
-                SALVAR TRANSAÇÃO
+                Salvar Transação
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </View>
+
+      {/* MODAL DE CRIAR CATEGORIA */}
+      <CategoryModal
+        visible={isCategoryModalVisible}
+        onClose={() => setIsCategoryModalVisible(false)}
+        transactionType={transactionType}
+        onSave={(novaCategoria, tipoEscolhido) => {
+          setIsCategoryModalVisible(false);
+          setTransactionType(tipoEscolhido);
+          setTransactionCategory(String(novaCategoria).trim());
+          fetchCategories();
+        }}
+      />
     </Modal>
   );
 }

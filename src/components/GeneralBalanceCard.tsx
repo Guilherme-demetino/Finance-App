@@ -6,6 +6,7 @@ interface Transaction {
   amount: number;
   type: string;
   category?: string;
+  color?: string; // <-- Adicionado para ler a cor que vem do banco
 }
 
 interface GeneralBalanceCardProps {
@@ -15,12 +16,12 @@ interface GeneralBalanceCardProps {
 }
 
 const categoryColors: Record<string, string> = {
-  "Saldo Livre": "#10B981", // Verde
-  Moradia: "#3B82F6", // Azul
-  Alimentação: "#F59E0B", // Laranja
-  Transporte: "#8B5CF6", // Roxo
-  Lazer: "#EC4899", // Rosa
-  Outros: "#A1A1AA", // Cinza
+  "Saldo Livre": "#10B981",
+  Moradia: "#3B82F6",
+  Alimentação: "#F59E0B",
+  Transporte: "#8B5CF6",
+  Lazer: "#EC4899",
+  Outros: "#A1A1AA",
 };
 
 export function GeneralBalanceCard({
@@ -32,12 +33,19 @@ export function GeneralBalanceCard({
   const comprometidoPercent =
     totalIncome > 0 ? (totalExpense / totalIncome) * 100 : 0;
 
-  // Agrupar despesas por categoria
+  // Agrupar despesas por categoria somando valores e guardando a cor
   const expensesByCategory = transactions
     .filter((t) => t.type === "expense")
-    .reduce((acc: Record<string, number>, t) => {
+    .reduce((acc: Record<string, { amount: number; color: string }>, t) => {
       const cat = t.category || "Outros";
-      acc[cat] = (acc[cat] || 0) + t.amount;
+      if (!acc[cat]) {
+        acc[cat] = {
+          amount: 0,
+          // Pega a cor do banco (t.color), ou do dicionário fixo, ou uma cor padrão
+          color: t.color || categoryColors[cat] || "#A1A1AA",
+        };
+      }
+      acc[cat].amount += t.amount;
       return acc;
     }, {});
 
@@ -46,10 +54,12 @@ export function GeneralBalanceCard({
     .map((key) => ({
       name: key.toUpperCase(),
       originalName: key,
-      amount: expensesByCategory[key],
-      color: categoryColors[key] || "#A1A1AA",
+      amount: expensesByCategory[key].amount,
+      color: expensesByCategory[key].color,
       percent:
-        totalIncome > 0 ? (expensesByCategory[key] / totalIncome) * 100 : 0,
+        totalIncome > 0
+          ? (expensesByCategory[key].amount / totalIncome) * 100
+          : 0,
     }))
     .sort((a, b) => b.amount - a.amount);
 
@@ -65,7 +75,7 @@ export function GeneralBalanceCard({
   const center = size / 2;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  let currentOffset = 0; // Para desenhar as fatias no lugar certo
+  let currentOffset = 0;
 
   const formatCurrency = (val: number) =>
     `R$ ${val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -92,7 +102,6 @@ export function GeneralBalanceCard({
         <View style={styles.donutWrapper}>
           <Svg width={size} height={size}>
             <G rotation="-90" origin={`${center}, ${center}`}>
-              {/* Círculo base cinza (caso não tenha valores) */}
               <Circle
                 cx={center}
                 cy={center}
@@ -101,7 +110,6 @@ export function GeneralBalanceCard({
                 strokeWidth={strokeWidth}
                 fill="none"
               />
-              {/* Fatias Coloridas */}
               {totalIncome > 0 &&
                 pieData.map((slice, index) => {
                   const slicePercent = slice.value / totalIncome;
@@ -127,7 +135,6 @@ export function GeneralBalanceCard({
             </G>
           </Svg>
 
-          {/* Textos no centro do gráfico */}
           <View style={styles.donutCenterText}>
             <Text style={styles.donutLabel}>SALDO LIVRE</Text>
             <Text style={styles.donutValue}>
@@ -186,7 +193,6 @@ export function GeneralBalanceCard({
 
       {/* Barras de Progresso */}
       <View style={styles.barsContainer}>
-        {/* Barra Saldo Livre */}
         <View style={styles.barBlock}>
           <View style={styles.barHeader}>
             <View style={styles.barTitleGroup}>
@@ -235,7 +241,6 @@ export function GeneralBalanceCard({
           </View>
         </View>
 
-        {/* Barras de Despesas */}
         {expenseData.map((item, index) => (
           <View key={index} style={styles.barBlock}>
             <View style={styles.barHeader}>
@@ -269,8 +274,8 @@ export function GeneralBalanceCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#1E1E1E", // <-- Corrigido para trazer o painel de volta
-    borderWidth: 1, // <-- Corrigido para adicionar a borda
+    backgroundColor: "#1E1E1E",
+    borderWidth: 1,
     borderColor: "#333333",
     borderRadius: 20,
     padding: 20,
@@ -395,7 +400,7 @@ const styles = StyleSheet.create({
   barBackground: {
     width: "100%",
     height: 6,
-    backgroundColor: "#121212", // Fundo da barrinha mais escuro para contrastar
+    backgroundColor: "#121212",
     borderRadius: 3,
   },
   barFill: {

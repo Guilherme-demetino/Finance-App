@@ -44,11 +44,11 @@ const monthMap: Record<string, string> = {
 const formatCurrency = (value: string) => {
   const numbers = value.replace(/\D/g, "");
   if (!numbers) return "";
-  const amount = Number(numbers) / 100;
-  return amount.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+
+  const amount = (Number(numbers) / 100).toFixed(2);
+  const parts = amount.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return parts.join(",");
 };
 
 export default function DashboardScreen() {
@@ -72,7 +72,6 @@ export default function DashboardScreen() {
   const [isMonthModalOpen, setIsMonthModalOpen] = useState(false);
   const [isYearModalOpen, setIsYearModalOpen] = useState(false);
 
-  // Estados de Busca e Transações
   const [searchText, setSearchText] = useState("");
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<
@@ -154,18 +153,18 @@ export default function DashboardScreen() {
   useEffect(() => {
     async function setupDashboard() {
       await initDatabase();
-      await fetchUserData();
-      await fetchTransactions();
+      fetchUserData();
+      fetchTransactions();
     }
     setupDashboard();
   }, [selectedMonth, selectedYear]);
 
-  const fetchUserData = async () => {
+  const fetchUserData = () => {
     try {
-      const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
-      const result: any = await db.getAllAsync("SELECT * FROM users LIMIT 1");
+      const db = SQLite.openDatabaseSync("meufinanceiro.db");
+      const result: any = db.getAllSync("SELECT * FROM users LIMIT 1");
       if (result && result.length > 0) {
-        setUserName(result[0].name);
+        setUserName(result[0].name || "Meu Finanças");
         if (result[0].avatar) setUserImage(result[0].avatar);
       } else {
         setUserName("Meu Finanças");
@@ -176,13 +175,57 @@ export default function DashboardScreen() {
     }
   };
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = () => {
     try {
-      const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+      const db = SQLite.openDatabaseSync("meufinanceiro.db");
 
-      const allTransactions: any = await db.getAllAsync(
+      db.runSync(
+        `CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, color TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'expense')`,
+      );
+      db.runSync(
+        `CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, amount REAL NOT NULL, date TEXT NOT NULL, description TEXT NOT NULL, type TEXT NOT NULL, category_id TEXT NOT NULL)`,
+      );
+
+      const rawTransactions: any = db.getAllSync(
         "SELECT * FROM transactions ORDER BY id DESC",
       );
+
+      const rawCategories: any = db.getAllSync("SELECT * FROM categories");
+
+      const categoryColorMap: Record<string, string> = {};
+
+      rawCategories.forEach((cat: any) => {
+        if (cat.name) {
+          const cleanName = cat.name.trim().toLowerCase();
+          categoryColorMap[cleanName] = cat.color;
+        }
+      });
+
+      const defaultSystemColors: Record<string, string> = {
+        salário: "#10B981",
+        investimentos: "#3B82F6",
+        alimentação: "#F97316",
+        transporte: "#8B5CF6",
+        lazer: "#EC4899",
+        moradia: "#F59E0B",
+        saúde: "#EF4444",
+        outros: "#A8A29E",
+      };
+
+      Object.assign(categoryColorMap, defaultSystemColors);
+
+      const allTransactions = rawTransactions.map((item: any) => {
+        const catKey = item.category_id
+          ? item.category_id.trim().toLowerCase()
+          : "";
+        const matchedColor = categoryColorMap[catKey] || "#A1A1AA";
+
+        return {
+          ...item,
+          category: item.category_id,
+          color: matchedColor,
+        };
+      });
 
       const allYearTransactions = allTransactions.filter(
         (item: any) => item.date && item.date.endsWith(`/${selectedYear}`),
@@ -282,19 +325,17 @@ export default function DashboardScreen() {
       const imageUri = result.assets[0].uri;
       try {
         setUserImage(imageUri);
-        const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+        const db = SQLite.openDatabaseSync("meufinanceiro.db");
 
         try {
-          await db.execAsync(`ALTER TABLE users ADD COLUMN avatar TEXT;`);
+          db.runSync(`ALTER TABLE users ADD COLUMN avatar TEXT;`);
         } catch (e) {}
 
-        await db.runAsync(
+        db.runSync(
           "INSERT OR IGNORE INTO users (id, name) VALUES (1, ?)",
-          [userName],
+          userName,
         );
-        await db.runAsync("UPDATE users SET avatar = ? WHERE id = 1", [
-          imageUri,
-        ]);
+        db.runSync("UPDATE users SET avatar = ? WHERE id = 1", imageUri);
 
         showAlert("Sucesso", "Foto de perfil atualizada com sucesso!");
       } catch (error) {
@@ -304,15 +345,15 @@ export default function DashboardScreen() {
     }
   };
 
-  const handleUpdateName = async () => {
+  const handleUpdateName = () => {
     if (newName.trim() === "") {
       showAlert("Atenção", "O nome não pode ficar vazio.");
       return;
     }
 
     try {
-      const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
-      await db.runAsync("UPDATE users SET name = ? WHERE id = 1", [newName]);
+      const db = SQLite.openDatabaseSync("meufinanceiro.db");
+      db.runSync("UPDATE users SET name = ? WHERE id = 1", newName);
       setUserName(newName);
       setNewName("");
       setIsEditingName(false);
@@ -404,10 +445,10 @@ export default function DashboardScreen() {
     setEditingTransactionId(item.id);
     setTransactionType(item.type);
     setTransactionTitle(item.description);
-    const formattedAmount = (item.amount * 100).toLocaleString("pt-BR", {
-      minimumFractionDigits: 0,
-    });
-    setTransactionAmount(formattedAmount);
+
+    const rawCents = Math.round(item.amount * 100).toString();
+    setTransactionAmount(formatCurrency(rawCents));
+
     setTransactionDate(item.date);
     setTransactionCategory(
       item.category || (item.type === "income" ? "Salário" : "Alimentação"),
@@ -415,19 +456,19 @@ export default function DashboardScreen() {
     setIsTransactionModalOpen(true);
   };
 
-  const handleSaveTransaction = async () => {
+  const handleSaveTransaction = () => {
     if (
       !transactionTitle ||
-      !transactionTitle.trim() ||
+      !String(transactionTitle).trim() ||
       !transactionAmount ||
-      !transactionAmount.trim()
+      !String(transactionAmount).trim()
     ) {
       showAlert("Atenção", "Preencha o título e o valor da transação.");
       return;
     }
 
     const cleanNumericValue = Number(
-      transactionAmount.replace(/\./g, "").replace(",", "."),
+      String(transactionAmount).replace(/\./g, "").replace(",", "."),
     );
 
     if (isNaN(cleanNumericValue) || cleanNumericValue <= 0) {
@@ -435,30 +476,39 @@ export default function DashboardScreen() {
       return;
     }
 
-    const safeTitle = transactionTitle.trim();
+    const safeTitle = String(transactionTitle).trim();
     const safeDate =
-      transactionDate || `${currentDay}/${currentMonthNum}/${currentYearStr}`;
-    const safeType = transactionType || "income";
+      String(transactionDate).trim() ||
+      `${currentDay}/${currentMonthNum}/${currentYearStr}`;
+    const safeType =
+      String(transactionType) === "income" ? "income" : "expense";
+
+    const rawCat = String(transactionCategory || "").trim();
     const safeCategory =
-      transactionCategory ||
-      (safeType === "income" ? "Salário" : "Alimentação");
+      rawCat !== "" ? rawCat : safeType === "income" ? "Salário" : "Outros";
 
     try {
-      const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+      const db = SQLite.openDatabaseSync("meufinanceiro.db");
+
+      db.runSync(
+        `CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, color TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'expense')`,
+      );
+      db.runSync(
+        `CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, amount REAL NOT NULL, date TEXT NOT NULL, description TEXT NOT NULL, type TEXT NOT NULL, category_id TEXT NOT NULL)`,
+      );
 
       if (editingTransactionId) {
-        await db.runAsync(
+        db.runSync(
           "UPDATE transactions SET amount = ?, date = ?, description = ?, type = ?, category_id = ? WHERE id = ?",
           cleanNumericValue,
           safeDate,
           safeTitle,
           safeType,
           safeCategory,
-          editingTransactionId,
+          Number(editingTransactionId),
         );
-        showAlert("Sucesso", "Transação atualizada com sucesso!");
       } else {
-        await db.runAsync(
+        db.runSync(
           "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, ?, ?)",
           cleanNumericValue,
           safeDate,
@@ -466,10 +516,16 @@ export default function DashboardScreen() {
           safeType,
           safeCategory,
         );
-        showAlert("Sucesso", "Transação salva com sucesso!");
       }
 
-      await fetchTransactions();
+      showAlert(
+        "Sucesso",
+        editingTransactionId
+          ? "Transação atualizada com sucesso!"
+          : "Transação salva com sucesso!",
+      );
+
+      fetchTransactions();
       setTransactionTitle("");
       setTransactionAmount("");
       setEditingTransactionId(null);
@@ -480,12 +536,11 @@ export default function DashboardScreen() {
     }
   };
 
-  const handleDeleteTransaction = async (id: string) => {
+  const handleDeleteTransaction = (id: string) => {
     try {
-      const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
-      await db.runAsync("DELETE FROM transactions WHERE id = ?", [id]);
-
-      await fetchTransactions();
+      const db = SQLite.openDatabaseSync("meufinanceiro.db");
+      db.runSync("DELETE FROM transactions WHERE id = ?", id);
+      fetchTransactions();
       showAlert("Sucesso", "Transação excluída com sucesso.");
     } catch (error) {
       console.log("Erro ao excluir transação:", error);
@@ -493,16 +548,18 @@ export default function DashboardScreen() {
     }
   };
 
-  const handleDeleteAllTransactions = async () => {
+  const handleDeleteAllTransactions = () => {
     try {
-      const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+      const db = SQLite.openDatabaseSync("meufinanceiro.db");
       const monthNumber = monthMap[selectedMonth] || currentMonthNum;
       const dateSearchPattern = `%/${monthNumber}/${selectedYear}`;
 
-      await db.runAsync("DELETE FROM transactions WHERE date LIKE ?", [
+      db.runSync(
+        "DELETE FROM transactions WHERE date LIKE ?",
         dateSearchPattern,
-      ]);
-      await fetchTransactions();
+      );
+
+      fetchTransactions();
       showAlert(
         "Sucesso",
         "Todas as transações deste período foram excluídas.",
@@ -513,7 +570,6 @@ export default function DashboardScreen() {
     }
   };
 
-  // Filtra as transações com base no texto digitado na busca
   const filteredTransactions = transactions.filter((item) => {
     const searchLower = searchText.toLowerCase();
     return (
@@ -530,12 +586,12 @@ export default function DashboardScreen() {
     type: item.type,
     date: item.date,
     category: item.category_id,
+    color: item.color || "#A1A1AA",
     icon: item.type === "income" ? "cash-outline" : "cart-outline",
   }));
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Cabeçalho Fixo no Topo */}
       <DashboardStickyHeader
         userName={userName}
         userImage={userImage}
@@ -583,7 +639,6 @@ export default function DashboardScreen() {
         />
       </ScrollView>
 
-      {/* Botão Flutuante (FAB) */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => {
@@ -607,7 +662,6 @@ export default function DashboardScreen() {
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
 
-      {/* Modais */}
       <TransactionModal
         visible={isTransactionModalOpen}
         onClose={() => {

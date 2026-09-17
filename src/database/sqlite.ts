@@ -2,41 +2,41 @@ import * as SQLite from "expo-sqlite";
 
 export async function initDatabase() {
   try {
-    const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
+    const db = SQLite.openDatabaseSync("meufinanceiro.db");
 
-    await db.execAsync(`
-      PRAGMA journal_mode = WAL;
-      
-      -- Tabela do Usuário
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL
-      );
+    // Configuração do banco sempre FORA da transação
+    db.runSync("PRAGMA journal_mode = WAL;");
 
-      -- Tabela de Categorias
-      CREATE TABLE IF NOT EXISTS categories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        icon TEXT,
-        color TEXT,
-        type TEXT NOT NULL
-      );
+    db.withTransactionSync(() => {
+      db.runSync(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          avatar TEXT
+        );
+      `);
 
-      -- Tabela de Transações
-      CREATE TABLE IF NOT EXISTS transactions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        amount REAL NOT NULL,
-        date TEXT NOT NULL,
-        description TEXT,
-        category_id INTEGER,
-        type TEXT NOT NULL,
-        installment_info TEXT,
-        FOREIGN KEY (category_id) REFERENCES categories (id)
-      );
-    `);
+      db.runSync(`
+        CREATE TABLE IF NOT EXISTS categories (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          color TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'expense'
+        );
+      `);
 
-    console.log("Banco de dados acessado com sucesso!");
+      db.runSync(`
+        CREATE TABLE IF NOT EXISTS transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          amount REAL NOT NULL,
+          date TEXT NOT NULL,
+          description TEXT NOT NULL,
+          type TEXT NOT NULL,
+          category_id TEXT NOT NULL
+        );
+      `);
+    });
   } catch (error) {
-    console.error("Erro ao inicializar o banco de dados: ", error);
+    console.log("Erro crítico ao inicializar o banco de dados:", error);
   }
 }

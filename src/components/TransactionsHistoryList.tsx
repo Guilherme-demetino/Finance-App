@@ -40,14 +40,12 @@ export function TransactionsHistoryList({
     "recent" | "oldest" | "highest" | "lowest"
   >("recent");
 
-  // Filtro por tipo
   const filteredByType = transactions.filter((item) => {
     if (filter === "income") return item.type === "income";
     if (filter === "expense") return item.type === "expense";
     return true;
   });
 
-  // Ordenação blindada por data e ID
   const sortedTransactions = [...filteredByType].sort((a, b) => {
     if (sortBy === "highest") return b.amount - a.amount;
     if (sortBy === "lowest") return a.amount - b.amount;
@@ -67,20 +65,18 @@ export function TransactionsHistoryList({
     const timeA = parseDate(a.date);
     const timeB = parseDate(b.date);
 
-    // Se as datas forem iguais, usa o ID (maior ID = inserido mais recentemente)
     if (timeA === timeB) {
       const idA = Number(a.id) || 0;
       const idB = Number(b.id) || 0;
       return sortBy === "oldest" ? idA - idB : idB - idA;
     }
 
-    if (sortBy === "oldest") return timeA - timeB; // Mais antigo primeiro
-    return timeB - timeA; // "recent" (Mais recente primeiro - padrão)
+    if (sortBy === "oldest") return timeA - timeB;
+    return timeB - timeA;
   });
 
   return (
     <View style={{ marginTop: 20, paddingHorizontal: 16 }}>
-      {/* Cabeçalho da Seção */}
       <View
         style={{
           flexDirection: "row",
@@ -111,7 +107,6 @@ export function TransactionsHistoryList({
         )}
       </View>
 
-      {/* Campo de Busca */}
       <TextInput
         style={{
           backgroundColor: "#1E1E1E",
@@ -129,7 +124,6 @@ export function TransactionsHistoryList({
         onChangeText={setSearchText}
       />
 
-      {/* Botões de Filtro */}
       <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
         <TouchableOpacity
           style={{
@@ -186,7 +180,6 @@ export function TransactionsHistoryList({
         </TouchableOpacity>
       </View>
 
-      {/* Botões de Ordenação */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -290,7 +283,7 @@ export function TransactionsHistoryList({
               alignItems: "center",
               justifyContent: "space-between",
               borderWidth: 1,
-              borderColor: "#2A2A2A", // Borda cinza padrão
+              borderColor: "#2A2A2A",
             }}
           >
             <View
@@ -355,7 +348,6 @@ export function TransactionsHistoryList({
                 })}
               </Text>
 
-              {/* Botão de Editar */}
               <TouchableOpacity
                 onPress={() => onEditTransaction(item)}
                 style={{
@@ -372,7 +364,6 @@ export function TransactionsHistoryList({
                 <Ionicons name="pencil-outline" size={16} color="#FFFFFF" />
               </TouchableOpacity>
 
-              {/* Botão de Excluir */}
               <TouchableOpacity
                 onPress={() => onDeleteTransaction(item.id)}
                 style={{

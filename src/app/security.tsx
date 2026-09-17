@@ -1,17 +1,18 @@
+import { Ionicons } from "@expo/vector-icons";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
+import * as SQLite from "expo-sqlite";
 import { useEffect, useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CustomAlert } from "../components/CustomAlert";
-import { styles } from "../styles/securityStyles";
 
 export default function SecurityScreen() {
-  const [pin, setPin] = useState("");
-  const [isSetupMode, setIsSetupMode] = useState(true);
   const router = useRouter();
+  const [pin, setPin] = useState("");
+  const [storedPin, setStoredPin] = useState<string | null>(null);
+  const [isSettingUp, setIsSettingUp] = useState(false);
+  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
 
-  // Estados para o CustomAlert
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
@@ -23,98 +24,179 @@ export default function SecurityScreen() {
   };
 
   useEffect(() => {
-    checkExistingPin();
+    checkPinTable();
+    checkBiometrics();
   }, []);
 
-  // Verifica se o usuário já tem um PIN salvo
-  const checkExistingPin = async () => {
-    const savedPin = await SecureStore.getItemAsync("user_pin");
-    if (savedPin) {
-      setIsSetupMode(false); // Já tem PIN, então é modo "Login"
-      handleBiometricAuth(); // Tenta a biometria direto!
-    }
+  const checkBiometrics = async () => {
+    const compatible = await LocalAuthentication.hasHardwareAsync();
+    const enrolled = await LocalAuthentication.isEnrolledAsync();
+    setIsBiometricSupported(compatible && enrolled);
   };
 
-  // Função para chamar a Impressão Digital ou FaceID
   const handleBiometricAuth = async () => {
-    const hasHardware = await LocalAuthentication.hasHardwareAsync();
-    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-
-    if (hasHardware && isEnrolled) {
-      const auth = await LocalAuthentication.authenticateAsync({
-        promptMessage: "Acesse seu Financeiro",
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Desbloqueie o Meu Finanças",
         fallbackLabel: "Usar PIN",
       });
 
-      if (auth.success) {
-        router.replace("/dashboard");
+      if (result.success) {
+        router.replace("/dashboard" as any);
+      }
+    } catch (error) {
+      console.log("Erro na biometria:", error);
+    }
+  };
+
+  const checkPinTable = () => {
+    try {
+      const db = SQLite.openDatabaseSync("meufinanceiro.db");
+
+      db.runSync(`
+        CREATE TABLE IF NOT EXISTS security (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          pin TEXT NOT NULL
+        );
+      `);
+
+      const result: any = db.getFirstSync("SELECT pin FROM security LIMIT 1");
+      if (result && result.pin) {
+        setStoredPin(result.pin);
+        setIsSettingUp(false);
+        // Opcional: Chama a biometria automaticamente ao abrir a tela
+        // handleBiometricAuth();
+      } else {
+        setIsSettingUp(true);
+      }
+    } catch (error) {
+      console.log("Erro ao verificar PIN:", error);
+    }
+  };
+
+  const handlePressNumber = (num: string) => {
+    if (pin.length < 4) {
+      const newPin = pin + num;
+      setPin(newPin);
+
+      if (newPin.length === 4) {
+        processPin(newPin);
       }
     }
   };
 
-  // Lida com o botão de confirmar o PIN digitado
-  const handlePinSubmit = async () => {
-    if (pin.length !== 4) {
-      showAlert("Atenção", "O PIN deve ter exatamente 4 dígitos.");
-      return;
-    }
+  const handleDelete = () => {
+    setPin((prev) => prev.slice(0, -1));
+  };
 
-    if (isSetupMode) {
-      // Cria e salva o novo PIN
-      await SecureStore.setItemAsync("user_pin", pin);
-      showAlert("Sucesso", "PIN cadastrado com segurança!");
-      router.replace("/dashboard");
-    } else {
-      // Valida o PIN existente
-      const savedPin = await SecureStore.getItemAsync("user_pin");
-      if (pin === savedPin) {
-        router.replace("/dashboard");
+  const processPin = (enteredPin: string) => {
+    try {
+      const db = SQLite.openDatabaseSync("meufinanceiro.db");
+
+      if (isSettingUp) {
+        db.withTransactionSync(() => {
+          db.runSync("DELETE FROM security");
+          db.runSync("INSERT INTO security (pin) VALUES (?)", enteredPin);
+        });
+
+        showAlert("Sucesso", "PIN de segurança cadastrado com sucesso!");
+        setTimeout(() => {
+          router.replace("/dashboard" as any);
+        }, 1000);
       } else {
-        showAlert("Erro", "PIN incorreto. Tente novamente.");
-        setPin(""); // Limpa o campo
+        if (enteredPin === storedPin) {
+          router.replace("/dashboard" as any);
+        } else {
+          showAlert("Atenção", "PIN incorreto. Tente novamente.");
+          setPin("");
+        }
       }
+    } catch (error) {
+      console.log("Erro ao processar PIN:", error);
+      showAlert("Erro", "Não foi possível validar a segurança.");
+      setPin("");
     }
   };
 
   return (
     <View style={styles.container}>
+      <Ionicons
+        name="lock-closed-outline"
+        size={48}
+        color="#10B981"
+        style={{ marginBottom: 16 }}
+      />
       <Text style={styles.title}>
-        {isSetupMode ? "Crie seu PIN de Segurança" : "Digite seu PIN"}
+        {isSettingUp ? "Crie seu PIN de Segurança" : "Digite seu PIN"}
       </Text>
       <Text style={styles.subtitle}>
-        {isSetupMode
-          ? "Digite 4 números para proteger seus dados."
-          : "Use sua biometria ou digite o PIN."}
+        {isSettingUp
+          ? "Escolha uma senha de 4 dígitos"
+          : "Insira sua senha para desbloquear"}
       </Text>
 
-      <TextInput
-        style={styles.input}
-        keyboardType="numeric"
-        secureTextEntry={true} // Esconde os números (bolinhas)
-        maxLength={4}
-        value={pin}
-        onChangeText={setPin}
-        autoFocus={true}
-        placeholder="••••"
-        placeholderTextColor="#555"
-      />
+      <View style={styles.pinDotsContainer}>
+        {[0, 1, 2, 3].map((index) => (
+          <View
+            key={index}
+            style={[
+              styles.dot,
+              { backgroundColor: index < pin.length ? "#10B981" : "#2A2A2A" },
+            ]}
+          />
+        ))}
+      </View>
 
-      <TouchableOpacity style={styles.button} onPress={handlePinSubmit}>
-        <Text style={styles.buttonText}>
-          {isSetupMode ? "Salvar PIN" : "Entrar"}
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.keypad}>
+        {["1", "2", "3", "4", "5", "6", "7", "8", "9", "bio", "0", "back"].map(
+          (item, index) => {
+            // Lógica do botão de Biometria
+            if (item === "bio") {
+              if (!isSettingUp && isBiometricSupported) {
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.keyEmpty}
+                    onPress={handleBiometricAuth}
+                  >
+                    <Ionicons name="finger-print" size={36} color="#10B981" />
+                  </TouchableOpacity>
+                );
+              }
+              return <View key={index} style={styles.keyEmpty} />;
+            }
 
-      {!isSetupMode && (
-        <TouchableOpacity
-          style={styles.biometricButton}
-          onPress={handleBiometricAuth}
-        >
-          <Text style={styles.biometricText}>Usar Biometria</Text>
-        </TouchableOpacity>
-      )}
+            // Lógica do botão de Apagar
+            if (item === "back") {
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.key}
+                  onPress={handleDelete}
+                >
+                  <Ionicons
+                    name="backspace-outline"
+                    size={24}
+                    color="#FFFFFF"
+                  />
+                </TouchableOpacity>
+              );
+            }
 
-      {/* ================= ALERTA CUSTOMIZADO ================= */}
+            // Teclas numéricas padrão
+            return (
+              <TouchableOpacity
+                key={index}
+                style={styles.key}
+                onPress={() => handlePressNumber(item)}
+              >
+                <Text style={styles.keyText}>{item}</Text>
+              </TouchableOpacity>
+            );
+          },
+        )}
+      </View>
+
       <CustomAlert
         visible={alertVisible}
         title={alertTitle}
@@ -124,3 +206,65 @@ export default function SecurityScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#121212",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  title: {
+    color: "#FFFFFF",
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  subtitle: {
+    color: "#888888",
+    fontSize: 14,
+    marginBottom: 32,
+    textAlign: "center",
+  },
+  pinDotsContainer: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 48,
+  },
+  dot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#444",
+  },
+  keypad: {
+    width: "100%",
+    maxWidth: 280,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 16,
+  },
+  key: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#1E1E1E",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  keyEmpty: {
+    width: 70,
+    height: 70,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  keyText: {
+    color: "#FFFFFF",
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+});
