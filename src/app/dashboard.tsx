@@ -1,77 +1,353 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import * as Print from "expo-print";
 import { useRouter } from "expo-router";
-import * as SQLite from "expo-sqlite";
+import * as ScreenOrientation from "expo-screen-orientation";
 import { useEffect, useState } from "react";
+import { Alert, ScrollView, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { AnnualPanoramaCard } from "../components/AnnualPanoramaCard";
+import { BalanceCard } from "../components/BalanceCard";
+import { CustomAlert } from "../components/CustomAlert";
+import { DashboardStickyHeader } from "../components/DashboardStickyHeader";
+import { MonthModal, YearModal } from "../components/FilterModals";
+import { GeneralBalanceCard } from "../components/GeneralBalanceCard";
+import { LandscapePanoramaModal } from "../components/LandscapePanoramaModal";
+import { MonthlyBudgetCard } from "../components/MonthlyBudgetCard";
 import {
-  Alert,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+  EditNameModal,
+  ProfileMenuModal,
+} from "../components/ProfileMenuModals";
+import { SummaryCards } from "../components/SummaryCards";
+import { TransactionModal } from "../components/TransactionModal";
+import { TransactionsHistoryList } from "../components/TransactionsHistoryList";
+
+import { getDatabase } from "../database/sqlite";
+import { styles } from "../styles/dashboardStyles";
+
+const monthMap: Record<string, string> = {
+  Janeiro: "01",
+  Fevereiro: "02",
+  Março: "03",
+  Abril: "04",
+  Maio: "05",
+  Junho: "06",
+  Julho: "07",
+  Agosto: "08",
+  Setembro: "09",
+  Outubro: "10",
+  Novembro: "11",
+  Dezembro: "12",
+};
+
+const formatCurrency = (value: string) => {
+  const numbers = value.replace(/\D/g, "");
+  if (!numbers) return "";
+
+  const amount = (Number(numbers) / 100).toFixed(2);
+  const parts = amount.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return parts.join(",");
+};
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const [userName, setUserName] = useState("Usuário");
+  const today = new Date();
+  const currentMonthNamesList = Object.keys(monthMap);
+  const currentMonthName = currentMonthNamesList[today.getMonth()];
+  const currentYearStr = String(today.getFullYear());
+  const currentDay = String(today.getDate()).padStart(2, "0");
+  const currentMonthNum = String(today.getMonth() + 1).padStart(2, "0");
+
+  const [userName, setUserName] = useState("Carregando...");
+  const [userImage, setUserImage] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState("");
 
+  const [isLandscapePanoramaOpen, setIsLandscapePanoramaOpen] = useState(false);
+
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthName);
+  const [selectedYear, setSelectedYear] = useState(currentYearStr);
+  const [isMonthModalOpen, setIsMonthModalOpen] = useState(false);
+  const [isYearModalOpen, setIsYearModalOpen] = useState(false);
+
+  const [searchText, setSearchText] = useState("");
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState<
+    string | null
+  >(null);
+  const [transactionType, setTransactionType] = useState<"income" | "expense">(
+    "income",
+  );
+  const [transactionTitle, setTransactionTitle] = useState("");
+  const [transactionAmount, setTransactionAmount] = useState("");
+  const [transactionDate, setTransactionDate] = useState(
+    `${currentDay}/${currentMonthNum}/${currentYearStr}`,
+  );
+  const [transactionCategory, setTransactionCategory] = useState("Salário");
+
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [totalIncome, setTotalIncome] = useState(0);
+  const [totalExpense, setTotalExpense] = useState(0);
+  const totalBalance = totalIncome - totalExpense;
+
+  const [monthsData, setMonthsData] = useState([
+    { label: "JAN", income: 0, expense: 0 },
+    { label: "FEV", income: 0, expense: 0 },
+    { label: "MAR", income: 0, expense: 0 },
+    { label: "ABR", income: 0, expense: 0 },
+    { label: "MAI", income: 0, expense: 0 },
+    { label: "JUN", income: 0, expense: 0 },
+    { label: "JUL", income: 0, expense: 0 },
+    { label: "AGO", income: 0, expense: 0 },
+    { label: "SET", income: 0, expense: 0 },
+    { label: "OUT", income: 0, expense: 0 },
+    { label: "NOV", income: 0, expense: 0 },
+    { label: "DEZ", income: 0, expense: 0 },
+  ]);
+
+  const monthsList = [
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
+  ];
+  const yearsList = ["2024", "2025", "2026", "2027", "2028"];
+
+  const [monthlyBudget, setMonthlyBudget] = useState("0");
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+
   const showAlert = (title: string, message: string) => {
-    Alert.alert(title, message);
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertVisible(true);
+  };
+
+  const openLandscapePanorama = async () => {
+    await ScreenOrientation.lockAsync(
+      ScreenOrientation.OrientationLock.LANDSCAPE,
+    );
+    setIsLandscapePanoramaOpen(true);
+  };
+
+  const closeLandscapePanorama = async () => {
+    await ScreenOrientation.lockAsync(
+      ScreenOrientation.OrientationLock.PORTRAIT_UP,
+    );
+    setIsLandscapePanoramaOpen(false);
   };
 
   useEffect(() => {
-    loadUserData();
-  }, []);
+    async function setupDashboard() {
+      await fetchUserData();
+      await fetchTransactions();
+    }
+    setupDashboard();
+  }, [selectedMonth, selectedYear]);
 
-  const loadUserData = () => {
+  const fetchUserData = async () => {
     try {
-      const db = SQLite.openDatabaseSync("meufinanceiro.db");
-      db.runSync(
-        `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, avatar TEXT)`,
-      );
-      const result: any = db.getAllSync("SELECT name FROM users LIMIT 1");
+      const db = await getDatabase();
+      const result: any = db.getAllSync("SELECT * FROM users LIMIT 1");
       if (result && result.length > 0) {
-        setUserName(result[0].name);
+        setUserName(result[0].name || "Meu Finanças");
+        if (result[0].avatar) setUserImage(result[0].avatar);
+      } else {
+        setUserName("Meu Finanças");
       }
     } catch (error) {
-      console.log("Erro ao carregar dados do usuário:", error);
+      console.log("Erro ao buscar usuário:", error);
+      setUserName("Meu Finanças");
     }
   };
 
-  const handleUpdateName = () => {
+  const fetchTransactions = async () => {
+    try {
+      const db = await getDatabase();
+
+      const rawTransactions: any = db.getAllSync(
+        "SELECT * FROM transactions ORDER BY id DESC",
+      );
+
+      const rawCategories: any = db.getAllSync("SELECT * FROM categories");
+
+      const categoryColorMap: Record<string, string> = {};
+
+      rawCategories.forEach((cat: any) => {
+        if (cat.name) {
+          const cleanName = cat.name.trim().toLowerCase();
+          categoryColorMap[cleanName] = cat.color;
+        }
+      });
+
+      const defaultSystemColors: Record<string, string> = {
+        salário: "#10B981",
+        investimentos: "#3B82F6",
+        alimentação: "#F97316",
+        transporte: "#8B5CF6",
+        lazer: "#EC4899",
+        moradia: "#F59E0B",
+        saúde: "#EF4444",
+        outros: "#A8A29E",
+      };
+
+      Object.assign(categoryColorMap, defaultSystemColors);
+
+      const allTransactions = rawTransactions.map((item: any) => {
+        const catKey = item.category_id
+          ? item.category_id.trim().toLowerCase()
+          : "";
+        const matchedColor = categoryColorMap[catKey] || "#A1A1AA";
+
+        return {
+          ...item,
+          category: item.category_id,
+          color: matchedColor,
+        };
+      });
+
+      const allYearTransactions = allTransactions.filter(
+        (item: any) => item.date && item.date.endsWith(`/${selectedYear}`),
+      );
+
+      const monthNumber = monthMap[selectedMonth] || currentMonthNum;
+      const currentMonthTransactions = allYearTransactions.filter((item: any) =>
+        item.date.includes(`/${monthNumber}/${selectedYear}`),
+      );
+      setTransactions(currentMonthTransactions);
+
+      let income = 0;
+      let expense = 0;
+
+      currentMonthTransactions.forEach((item: any) => {
+        if (item.type === "income") {
+          income += item.amount;
+        } else {
+          expense += item.amount;
+        }
+      });
+
+      setTotalIncome(income);
+      setTotalExpense(expense);
+      setMonthlyBudget(income.toString());
+
+      const calculatedMonthsData = [
+        { label: "JAN", income: 0, expense: 0 },
+        { label: "FEV", income: 0, expense: 0 },
+        { label: "MAR", income: 0, expense: 0 },
+        { label: "ABR", income: 0, expense: 0 },
+        { label: "MAI", income: 0, expense: 0 },
+        { label: "JUN", income: 0, expense: 0 },
+        { label: "JUL", income: 0, expense: 0 },
+        { label: "AGO", income: 0, expense: 0 },
+        { label: "SET", income: 0, expense: 0 },
+        { label: "OUT", income: 0, expense: 0 },
+        { label: "NOV", income: 0, expense: 0 },
+        { label: "DEZ", income: 0, expense: 0 },
+      ];
+
+      const monthIndexMap: Record<string, number> = {
+        "01": 0,
+        "02": 1,
+        "03": 2,
+        "04": 3,
+        "05": 4,
+        "06": 5,
+        "07": 6,
+        "08": 7,
+        "09": 8,
+        "10": 9,
+        "11": 10,
+        "12": 11,
+      };
+
+      allYearTransactions.forEach((item: any) => {
+        const parts = item.date.split("/");
+        if (parts.length === 3) {
+          const mNum = parts[1];
+          const idx = monthIndexMap[mNum];
+          if (idx !== undefined) {
+            if (item.type === "income") {
+              calculatedMonthsData[idx].income += item.amount;
+            } else {
+              calculatedMonthsData[idx].expense += item.amount;
+            }
+          }
+        }
+      });
+
+      setMonthsData(calculatedMonthsData);
+    } catch (error) {
+      console.log("Erro ao buscar transações anuais:", error);
+    }
+  };
+
+  const pickImage = async () => {
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      showAlert(
+        "Permissão negada",
+        "Precisamos de acesso à galeria para alterar sua foto.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0].uri) {
+      const imageUri = result.assets[0].uri;
+      try {
+        setUserImage(imageUri);
+        const db = await getDatabase();
+
+        try {
+          db.runSync(`ALTER TABLE users ADD COLUMN avatar TEXT;`);
+        } catch (e) {}
+
+        db.runSync(
+          "INSERT OR IGNORE INTO users (id, name) VALUES (1, ?)",
+          userName,
+        );
+        db.runSync("UPDATE users SET avatar = ? WHERE id = 1", imageUri);
+
+        showAlert("Sucesso", "Foto de perfil atualizada com sucesso!");
+      } catch (error) {
+        console.log("Erro ao salvar foto no banco:", error);
+        showAlert("Erro", "Não foi possível salvar a imagem.");
+      }
+    }
+  };
+
+  const handleUpdateName = async () => {
     if (newName.trim() === "") {
       showAlert("Atenção", "O nome não pode ficar vazio.");
       return;
     }
 
     try {
-      const db = SQLite.openDatabaseSync("meufinanceiro.db");
-
-      db.runSync(
-        `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, avatar TEXT)`,
-      );
-
-      const existingUser: any = db.getAllSync("SELECT id FROM users LIMIT 1");
-
-      if (existingUser && existingUser.length > 0) {
-        db.runSync(
-          "UPDATE users SET name = ? WHERE id = ?",
-          newName.trim(),
-          existingUser[0].id,
-        );
-      } else {
-        db.runSync(
-          "INSERT INTO users (id, name) VALUES (1, ?)",
-          newName.trim(),
-        );
-      }
-
-      setUserName(newName.trim());
+      const db = await getDatabase();
+      db.runSync("UPDATE users SET name = ? WHERE id = 1", newName);
+      setUserName(newName);
       setNewName("");
       setIsEditingName(false);
       setIsMenuOpen(false);
@@ -82,251 +358,411 @@ export default function DashboardScreen() {
     }
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Cabeçalho */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.welcomeText}>Olá, bem-vindo(a)</Text>
-          <Text style={styles.userNameText}>{userName}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => setIsMenuOpen(true)}
-        >
-          <Ionicons name="menu" size={26} color="#333" />
-        </TouchableOpacity>
-      </View>
+  const handleExportPDF = async () => {
+    try {
+      if (transactions.length === 0) {
+        showAlert("Atenção", "Não há transações neste período para exportar.");
+        return;
+      }
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Card de Saldo */}
-        <View style={styles.cardBalance}>
-          <Text style={styles.cardLabel}>Saldo Total</Text>
-          <Text style={styles.cardValue}>R$ 0,00</Text>
-        </View>
+      const htmlContent = `
+        <html>
+          <head>
+            <style>
+              body { font-family: 'Helvetica', Arial, sans-serif; padding: 20px; color: #333; }
+              h1 { color: #1E1E1E; font-size: 22px; border-bottom: 2px solid #333; padding-bottom: 5px; }
+              .info { margin-bottom: 20px; font-size: 14px; color: #555; }
+              .summary { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f4f4f4; padding: 15px; border-radius: 8px; }
+              .summary-item { font-size: 14px; font-weight: bold; }
+              .income { color: #10B981; }
+              .expense { color: #EF4444; }
+              table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+              th { background-color: #2A2A2A; color: #fff; }
+              tr:nth-child(even) { background-color: #f9f9f9; }
+            </style>
+          </head>
+          <body>
+            <h1>Relatório Financeiro — ${selectedMonth} de ${selectedYear}</h1>
+            <div class="info">
+              <p><strong>Usuário:</strong> ${userName}</p>
+              <p><strong>Data de geração:</strong> ${new Date().toLocaleDateString("pt-BR")}</p>
+            </div>
+            
+            <div class="summary">
+              <div class="summary-item">Receitas: <span class="income">R$ ${totalIncome.toFixed(2)}</span></div>
+              <div class="summary-item">Despesas: <span class="expense">R$ ${totalExpense.toFixed(2)}</span></div>
+              <div class="summary-item">Saldo: R$ ${totalBalance.toFixed(2)}</div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Tipo</th>
+                  <th>Valor (R$)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${transactions
+                  .map(
+                    (t) => `
+                  <tr>
+                    <td>${t.date}</td>
+                    <td>${t.description}</td>
+                    <td>${t.category_id || "Geral"}</td>
+                    <td>${t.type === "income" ? "Receita" : "Despesa"}</td>
+                    <td class="${t.type === "income" ? "income" : "expense"}">
+                      ${t.type === "income" ? "+ " : "- "} ${t.amount.toFixed(2)}
+                    </td>
+                  </tr>
+                `,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+
+      await Print.printAsync({ html: htmlContent });
+    } catch (error) {
+      console.log("Erro ao gerar PDF:", error);
+      showAlert("Erro", "Não foi possível gerar o arquivo PDF.");
+    }
+  };
+
+  const handleOpenEditTransaction = (item: any) => {
+    setEditingTransactionId(item.id);
+    setTransactionType(item.type);
+    setTransactionTitle(item.description);
+
+    const rawCents = Math.round(item.amount * 100).toString();
+    setTransactionAmount(formatCurrency(rawCents));
+
+    setTransactionDate(item.date);
+    setTransactionCategory(
+      item.category || (item.type === "income" ? "Salário" : "Alimentação"),
+    );
+    setIsTransactionModalOpen(true);
+  };
+
+  const handleSaveTransaction = async () => {
+    if (
+      !transactionTitle ||
+      !String(transactionTitle).trim() ||
+      !transactionAmount ||
+      !String(transactionAmount).trim()
+    ) {
+      showAlert("Atenção", "Preencha o título e o valor da transação.");
+      return;
+    }
+
+    const cleanNumericValue = Number(
+      String(transactionAmount).replace(/\./g, "").replace(",", "."),
+    );
+
+    if (isNaN(cleanNumericValue) || cleanNumericValue <= 0) {
+      showAlert("Atenção", "Insira um valor válido.");
+      return;
+    }
+
+    const safeTitle = String(transactionTitle).trim();
+    const safeDate =
+      String(transactionDate).trim() ||
+      `${currentDay}/${currentMonthNum}/${currentYearStr}`;
+    const safeType =
+      String(transactionType) === "income" ? "income" : "expense";
+
+    const rawCat = String(transactionCategory || "").trim();
+    const safeCategory =
+      rawCat !== "" ? rawCat : safeType === "income" ? "Salário" : "Outros";
+
+    try {
+      const db = await getDatabase();
+
+      if (editingTransactionId) {
+        db.runSync(
+          "UPDATE transactions SET amount = ?, date = ?, description = ?, type = ?, category_id = ? WHERE id = ?",
+          cleanNumericValue,
+          safeDate,
+          safeTitle,
+          safeType,
+          safeCategory,
+          Number(editingTransactionId),
+        );
+      } else {
+        db.runSync(
+          "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, ?, ?)",
+          cleanNumericValue,
+          safeDate,
+          safeTitle,
+          safeType,
+          safeCategory,
+        );
+      }
+
+      showAlert(
+        "Sucesso",
+        editingTransactionId
+          ? "Transação atualizada com sucesso!"
+          : "Transação salva com sucesso!",
+      );
+
+      fetchTransactions();
+      setTransactionTitle("");
+      setTransactionAmount("");
+      setEditingTransactionId(null);
+      setIsTransactionModalOpen(false);
+    } catch (error) {
+      console.log("Erro ao salvar transação:", error);
+      showAlert("Erro", "Não foi possível salvar a transação.");
+    }
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    try {
+      const db = await getDatabase();
+      db.runSync("DELETE FROM transactions WHERE id = ?", id);
+      fetchTransactions();
+      showAlert("Sucesso", "Transação excluída com sucesso.");
+    } catch (error) {
+      console.log("Erro ao excluir transação:", error);
+      showAlert("Erro", "Não foi possível excluir a transação.");
+    }
+  };
+
+  const handleDeleteAllTransactions = async () => {
+    try {
+      const db = await getDatabase();
+      const monthNumber = monthMap[selectedMonth] || currentMonthNum;
+      const dateSearchPattern = `%/${monthNumber}/${selectedYear}`;
+
+      db.runSync(
+        "DELETE FROM transactions WHERE date LIKE ?",
+        dateSearchPattern,
+      );
+
+      fetchTransactions();
+      showAlert(
+        "Sucesso",
+        "Todas as transações deste período foram excluídas.",
+      );
+    } catch (error) {
+      console.log("Erro ao excluir transações:", error);
+      showAlert("Erro", "Não foi possível excluir as transações.");
+    }
+  };
+
+  // ------------------ NOVAS FUNÇÕES DE SEGURANÇA ------------------
+  const handleChangePIN = async () => {
+    setIsMenuOpen(false);
+    try {
+      const db = await getDatabase();
+      db.runSync("DELETE FROM security"); // Apaga o PIN atual
+      router.replace("/security" as any); // Manda criar um novo
+    } catch (error) {
+      console.log("Erro ao alterar PIN:", error);
+      showAlert("Erro", "Não foi possível iniciar a troca de PIN.");
+    }
+  };
+
+  const handleWipeData = () => {
+    setIsMenuOpen(false);
+    Alert.alert(
+      "Zerar Aplicativo",
+      "ATENÇÃO: Isso apagará todas as suas transações, categorias, nome, foto e PIN. Essa ação NÃO pode ser desfeita. Tem certeza?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Sim, apagar tudo",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const db = await getDatabase();
+              db.withTransactionSync(() => {
+                db.runSync("DROP TABLE IF EXISTS transactions");
+                db.runSync("DROP TABLE IF EXISTS categories");
+                db.runSync("DROP TABLE IF EXISTS users");
+                db.runSync("DROP TABLE IF EXISTS security");
+              });
+              router.replace("/" as any); // Volta para a tela de boas-vindas
+            } catch (error) {
+              console.log("Erro ao zerar dados:", error);
+              showAlert("Erro", "Não foi possível formatar o aplicativo.");
+            }
+          },
+        },
+      ],
+    );
+  };
+  // -----------------------------------------------------------------
+
+  const filteredTransactions = transactions.filter((item) => {
+    const searchLower = searchText.toLowerCase();
+    return (
+      (item.description &&
+        item.description.toLowerCase().includes(searchLower)) ||
+      (item.category_id && item.category_id.toLowerCase().includes(searchLower))
+    );
+  });
+
+  const formattedTransactions = filteredTransactions.map((item) => ({
+    id: String(item.id),
+    description: item.description || "Sem descrição",
+    amount: item.amount,
+    type: item.type,
+    date: item.date,
+    category: item.category_id,
+    color: item.color || "#A1A1AA",
+    icon: item.type === "income" ? "cash-outline" : "cart-outline",
+  }));
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <DashboardStickyHeader
+        userName={userName}
+        userImage={userImage}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        onOpenMonthModal={() => setIsMonthModalOpen(true)}
+        onOpenYearModal={() => setIsYearModalOpen(true)}
+        onOpenMenu={() => setIsMenuOpen(true)}
+      />
+
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingTop: 10 }]}
+      >
+        <BalanceCard
+          totalBalance={totalBalance}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+        />
+
+        <SummaryCards totalIncome={totalIncome} totalExpense={totalExpense} />
+
+        <MonthlyBudgetCard
+          monthlyBudget={monthlyBudget}
+          setMonthlyBudget={setMonthlyBudget}
+          isEditingBudget={isEditingBudget}
+          setIsEditingBudget={setIsEditingBudget}
+          formatCurrency={formatCurrency}
+        />
+
+        <GeneralBalanceCard
+          totalIncome={totalIncome}
+          totalExpense={totalExpense}
+          transactions={formattedTransactions}
+        />
+
+        <AnnualPanoramaCard onPress={openLandscapePanorama} />
+
+        <TransactionsHistoryList
+          transactions={formattedTransactions}
+          searchText={searchText}
+          setSearchText={setSearchText}
+          onEditTransaction={handleOpenEditTransaction}
+          onDeleteTransaction={handleDeleteTransaction}
+          onDeleteAll={handleDeleteAllTransactions}
+        />
       </ScrollView>
 
-      {/* Modal do Menu de Opções / Alteração de Nome */}
-      <Modal visible={isMenuOpen} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Menu de Opções</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setIsMenuOpen(false);
-                  setIsEditingName(false);
-                }}
-              >
-                <Ionicons name="close" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          setEditingTransactionId(null);
+          setTransactionType("income");
+          setTransactionCategory("Salário");
 
-            {!isEditingName ? (
-              <View style={styles.menuOptionsList}>
-                <TouchableOpacity
-                  style={styles.menuOptionItem}
-                  onPress={() => setIsEditingName(true)}
-                >
-                  <Ionicons name="person-outline" size={20} color="#007AFF" />
-                  <Text style={styles.menuOptionText}>
-                    Alterar Nome de Exibição
-                  </Text>
-                </TouchableOpacity>
+          const targetMonth = monthMap[selectedMonth] || currentMonthNum;
+          let dayToUse = "01";
+          if (
+            targetMonth === currentMonthNum &&
+            selectedYear === currentYearStr
+          ) {
+            dayToUse = currentDay;
+          }
 
-                <TouchableOpacity
-                  style={styles.menuOptionItem}
-                  onPress={() => {
-                    setIsMenuOpen(false);
-                    router.push("/security");
-                  }}
-                >
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={20}
-                    color="#007AFF"
-                  />
-                  <Text style={styles.menuOptionText}>
-                    Configurações de Segurança
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.editNameContainer}>
-                <Text style={styles.inputLabel}>Novo Nome:</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Digite seu nome"
-                  placeholderTextColor="#999"
-                  value={newName}
-                  onChangeText={setNewName}
-                  autoFocus
-                />
-                <View style={styles.editButtonsRow}>
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.cancelButton]}
-                    onPress={() => setIsEditingName(false)}
-                  >
-                    <Text style={styles.cancelButtonText}>Voltar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.saveButton]}
-                    onPress={handleUpdateName}
-                  >
-                    <Text style={styles.saveButtonText}>Salvar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
-    </View>
+          setTransactionDate(`${dayToUse}/${targetMonth}/${selectedYear}`);
+          setIsTransactionModalOpen(true);
+        }}
+      >
+        <Ionicons name="add" size={28} color="#FFFFFF" />
+      </TouchableOpacity>
+
+      <TransactionModal
+        visible={isTransactionModalOpen}
+        onClose={() => {
+          setEditingTransactionId(null);
+          setIsTransactionModalOpen(false);
+        }}
+        transactionType={transactionType}
+        setTransactionType={setTransactionType}
+        transactionTitle={transactionTitle}
+        setTransactionTitle={setTransactionTitle}
+        transactionAmount={transactionAmount}
+        setTransactionAmount={setTransactionAmount}
+        transactionDate={transactionDate}
+        setTransactionDate={setTransactionDate}
+        transactionCategory={transactionCategory}
+        setTransactionCategory={setTransactionCategory}
+        formatCurrency={formatCurrency}
+        onSave={handleSaveTransaction}
+      />
+
+      <MonthModal
+        visible={isMonthModalOpen}
+        onClose={() => setIsMonthModalOpen(false)}
+        months={monthsList}
+        selectedMonth={selectedMonth}
+        onSelectMonth={setSelectedMonth}
+      />
+
+      <YearModal
+        visible={isYearModalOpen}
+        onClose={() => setIsYearModalOpen(false)}
+        years={yearsList}
+        selectedYear={selectedYear}
+        onSelectYear={setSelectedYear}
+      />
+
+      <LandscapePanoramaModal
+        visible={isLandscapePanoramaOpen}
+        selectedYear={selectedYear}
+        totalIncome={totalIncome}
+        totalExpense={totalExpense}
+        monthsData={monthsData}
+        onClose={closeLandscapePanorama}
+      />
+
+      <ProfileMenuModal
+        visible={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        userName={userName}
+        userImage={userImage}
+        onPickImage={pickImage}
+        onOpenEditName={() => setIsEditingName(true)}
+        onExportPDF={handleExportPDF}
+        onChangePIN={handleChangePIN}
+        onWipeData={handleWipeData}
+      />
+
+      <EditNameModal
+        visible={isEditingName}
+        onClose={() => setIsEditingName(false)}
+        newName={newName}
+        setNewName={setNewName}
+        onSave={handleUpdateName}
+      />
+
+      <CustomAlert
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        onClose={() => setAlertVisible(false)}
+      />
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8F9FA",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEE",
-  },
-  welcomeText: {
-    fontSize: 14,
-    color: "#666",
-  },
-  userNameText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#111",
-  },
-  menuButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: "#F0F0F0",
-  },
-  scrollContent: {
-    padding: 20,
-  },
-  cardBalance: {
-    backgroundColor: "#007AFF",
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardLabel: {
-    color: "rgba(255, 255, 255, 0.8)",
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  cardValue: {
-    color: "#FFF",
-    fontSize: 32,
-    fontWeight: "bold",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  modalContent: {
-    width: "100%",
-    maxWidth: 340,
-    backgroundColor: "#FFF",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  menuOptionsList: {
-    gap: 12,
-  },
-  menuOptionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: "#F8F9FA",
-    borderRadius: 10,
-    gap: 12,
-  },
-  menuOptionText: {
-    fontSize: 15,
-    color: "#333",
-    fontWeight: "500",
-  },
-  editNameContainer: {
-    gap: 12,
-  },
-  inputLabel: {
-    fontSize: 14,
-    color: "#555",
-    fontWeight: "500",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#DDD",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    height: 48,
-    fontSize: 15,
-    backgroundColor: "#FAFAFA",
-    color: "#333",
-  },
-  editButtonsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 10,
-  },
-  actionButton: {
-    flex: 1,
-    height: 44,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cancelButton: {
-    backgroundColor: "#F0F0F0",
-  },
-  cancelButtonText: {
-    color: "#333",
-    fontWeight: "600",
-  },
-  saveButton: {
-    backgroundColor: "#007AFF",
-  },
-  saveButtonText: {
-    color: "#FFF",
-    fontWeight: "600",
-  },
-});

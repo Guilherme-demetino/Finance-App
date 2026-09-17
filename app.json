@@ -42,17 +42,18 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "4a1d7faf-1aeb-4ecb-b527-d427e9ec3bae"
-      }
-    },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/4a1d7faf-1aeb-4ecb-b527-d427e9ec3bae"
-    }
+      "url": "https://u.expo.dev/ec1426bd-20eb-4494-baa6-8d1489ef84f5"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ec1426bd-20eb-4494-baa6-8d1489ef84f5"
+      }
+    },
+    "owner": "guilhermedemetino"
   }
 }

@@ -1,8 +1,8 @@
 import { useRouter } from "expo-router";
-import * as SQLite from "expo-sqlite";
 import { useEffect, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { CustomAlert } from "../components/CustomAlert";
+import { getDatabase } from "../database/sqlite";
 import { styles } from "../styles/indexStyles";
 
 export default function WelcomeScreen() {
@@ -23,27 +23,11 @@ export default function WelcomeScreen() {
     checkIfUserExists();
   }, []);
 
-  const checkIfUserExists = () => {
+  const checkIfUserExists = async () => {
     try {
-      const db = SQLite.openDatabaseSync("meufinanceiro.db");
+      const db = await getDatabase();
 
-      // 1. Garante que as tabelas existem
-      db.runSync(`
-        CREATE TABLE IF NOT EXISTS users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          avatar TEXT
-        );
-      `);
-
-      db.runSync(`
-        CREATE TABLE IF NOT EXISTS security (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          pin TEXT NOT NULL
-        );
-      `);
-
-      // 2. Verifica se já existe um PIN salvo. Se sim, vai direto pedir a senha!
+      // Verifica se já existe um PIN salvo. Se sim, vai direto pedir a senha!
       const security: any = db.getFirstSync("SELECT pin FROM security LIMIT 1");
       if (security && security.pin) {
         router.replace("/security");
@@ -65,23 +49,14 @@ export default function WelcomeScreen() {
     }
   };
 
-  const handleSaveName = () => {
+  const handleSaveName = async () => {
     if (name.trim() === "") {
       showAlert("Ops!", "Por favor, digite como gostaria de ser chamado.");
       return;
     }
 
     try {
-      const db = SQLite.openDatabaseSync("meufinanceiro.db");
-
-      // Comandos de criação de tabela (DDL) SEMPRE FORA da transação no Android
-      db.runSync(`
-        CREATE TABLE IF NOT EXISTS users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          avatar TEXT
-        );
-      `);
+      const db = await getDatabase();
 
       db.withTransactionSync(() => {
         const existing: any = db.getFirstSync("SELECT id FROM users LIMIT 1");

@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useRouter } from "expo-router";
-import * as SQLite from "expo-sqlite";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CustomAlert } from "../components/CustomAlert";
+import { getDatabase } from "../database/sqlite";
 
 export default function SecurityScreen() {
   const router = useRouter();
@@ -49,16 +49,9 @@ export default function SecurityScreen() {
     }
   };
 
-  const checkPinTable = () => {
+  const checkPinTable = async () => {
     try {
-      const db = SQLite.openDatabaseSync("meufinanceiro.db");
-
-      db.runSync(`
-        CREATE TABLE IF NOT EXISTS security (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          pin TEXT NOT NULL
-        );
-      `);
+      const db = await getDatabase();
 
       const result: any = db.getFirstSync("SELECT pin FROM security LIMIT 1");
       if (result && result.pin) {
@@ -89,9 +82,9 @@ export default function SecurityScreen() {
     setPin((prev) => prev.slice(0, -1));
   };
 
-  const processPin = (enteredPin: string) => {
+  const processPin = async (enteredPin: string) => {
     try {
-      const db = SQLite.openDatabaseSync("meufinanceiro.db");
+      const db = await getDatabase();
 
       if (isSettingUp) {
         db.runSync("DELETE FROM security");
