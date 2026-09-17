@@ -72,7 +72,8 @@ export default function DashboardScreen() {
   const [isMonthModalOpen, setIsMonthModalOpen] = useState(false);
   const [isYearModalOpen, setIsYearModalOpen] = useState(false);
 
-  // Estados de Transação e Edição
+  // Estados de Busca e Transações
+  const [searchText, setSearchText] = useState("");
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | null
@@ -92,7 +93,6 @@ export default function DashboardScreen() {
   const [totalExpense, setTotalExpense] = useState(0);
   const totalBalance = totalIncome - totalExpense;
 
-  // Estado dinâmico para alimentar o Panorama Anual mês a mês
   const [monthsData, setMonthsData] = useState([
     { label: "JAN", income: 0, expense: 0 },
     { label: "FEV", income: 0, expense: 0 },
@@ -513,7 +513,17 @@ export default function DashboardScreen() {
     }
   };
 
-  const formattedTransactions = transactions.map((item) => ({
+  // Filtra as transações com base no texto digitado na busca
+  const filteredTransactions = transactions.filter((item) => {
+    const searchLower = searchText.toLowerCase();
+    return (
+      (item.description &&
+        item.description.toLowerCase().includes(searchLower)) ||
+      (item.category_id && item.category_id.toLowerCase().includes(searchLower))
+    );
+  });
+
+  const formattedTransactions = filteredTransactions.map((item) => ({
     id: String(item.id),
     description: item.description || "Sem descrição",
     amount: item.amount,
@@ -525,7 +535,7 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Cabeçalho Fixo no Topo (Fora do ScrollView, garantindo 100% de interatividade ao toque) */}
+      {/* Cabeçalho Fixo no Topo */}
       <DashboardStickyHeader
         userName={userName}
         userImage={userImage}
@@ -565,6 +575,8 @@ export default function DashboardScreen() {
 
         <TransactionsHistoryList
           transactions={formattedTransactions}
+          searchText={searchText}
+          setSearchText={setSearchText}
           onEditTransaction={handleOpenEditTransaction}
           onDeleteTransaction={handleDeleteTransaction}
           onDeleteAll={handleDeleteAllTransactions}
