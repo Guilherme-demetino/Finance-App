@@ -10,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AnnualPanoramaCard } from "../components/AnnualPanoramaCard";
 import { BalanceCard } from "../components/BalanceCard";
 import { CustomAlert } from "../components/CustomAlert";
+import { DashboardStickyHeader } from "../components/DashboardStickyHeader";
 import { MonthModal, YearModal } from "../components/FilterModals";
 import { GeneralBalanceCard } from "../components/GeneralBalanceCard";
 import { LandscapePanoramaModal } from "../components/LandscapePanoramaModal";
@@ -21,7 +22,6 @@ import {
 import { SummaryCards } from "../components/SummaryCards";
 import { TransactionModal } from "../components/TransactionModal";
 import { TransactionsHistoryList } from "../components/TransactionsHistoryList";
-import { UserProfileHeader } from "../components/UserProfileHeader";
 
 import { initDatabase } from "../database/sqlite";
 import { styles } from "../styles/dashboardStyles";
@@ -61,7 +61,6 @@ export default function DashboardScreen() {
 
   const [userName, setUserName] = useState("Carregando...");
   const [userImage, setUserImage] = useState<string | null>(null);
-  const [isPieView, setIsPieView] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState("");
@@ -138,12 +137,6 @@ export default function DashboardScreen() {
     setAlertVisible(true);
   };
 
-  const totalMoney = totalIncome + totalExpense;
-  const incomePercentage =
-    totalMoney > 0 ? (totalIncome / totalMoney) * 100 : 50;
-  const expensePercentage =
-    totalMoney > 0 ? (totalExpense / totalMoney) * 100 : 50;
-
   const openLandscapePanorama = async () => {
     await ScreenOrientation.lockAsync(
       ScreenOrientation.OrientationLock.LANDSCAPE,
@@ -183,7 +176,6 @@ export default function DashboardScreen() {
     }
   };
 
-  // Busca segura em memória para o ano inteiro e mês atual
   const fetchTransactions = async () => {
     try {
       const db = await SQLite.openDatabaseAsync("meufinanceiro.db");
@@ -401,7 +393,6 @@ export default function DashboardScreen() {
         </html>
       `;
 
-      // Abre diretamente a interface nativa de impressão/salvamento em PDF do sistema operacional
       await Print.printAsync({ html: htmlContent });
     } catch (error) {
       console.log("Erro ao gerar PDF:", error);
@@ -534,17 +525,20 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <UserProfileHeader
-          userName={userName}
-          userImage={userImage}
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-          onOpenMonthModal={() => setIsMonthModalOpen(true)}
-          onOpenYearModal={() => setIsYearModalOpen(true)}
-          onOpenMenu={() => setIsMenuOpen(true)}
-        />
+      {/* Cabeçalho Fixo no Topo (Fora do ScrollView, garantindo 100% de interatividade ao toque) */}
+      <DashboardStickyHeader
+        userName={userName}
+        userImage={userImage}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        onOpenMonthModal={() => setIsMonthModalOpen(true)}
+        onOpenYearModal={() => setIsYearModalOpen(true)}
+        onOpenMenu={() => setIsMenuOpen(true)}
+      />
 
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingTop: 10 }]}
+      >
         <BalanceCard
           totalBalance={totalBalance}
           selectedMonth={selectedMonth}
