@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   Text,
@@ -101,13 +100,21 @@ export function TransactionModal({
 
   displayCategories = Array.from(new Set(displayCategories));
 
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <>
       <View
         style={{
-          flex: 1,
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           backgroundColor: "rgba(0,0,0,0.6)",
           justifyContent: "flex-end",
+          zIndex: 999,
+          elevation: 999,
         }}
       >
         <KeyboardAvoidingView
@@ -375,6 +382,6 @@ export function TransactionModal({
           fetchCategories();
         }}
       />
-    </Modal>
+    </>
   );
 }
