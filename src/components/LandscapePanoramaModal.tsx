@@ -1,176 +1,293 @@
-import { Modal, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
+import {
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+interface MonthData {
+  label: string;
+  income: number;
+  expense: number;
+}
 
 interface LandscapePanoramaModalProps {
   visible: boolean;
   selectedYear: string;
   totalIncome: number;
   totalExpense: number;
-  monthsData: Array<{ label: string; income: number; expense: number }>;
+  monthsData: MonthData[];
   onClose: () => void;
 }
 
 export function LandscapePanoramaModal({
   visible,
   selectedYear,
-  totalIncome,
-  totalExpense,
   monthsData,
   onClose,
 }: LandscapePanoramaModalProps) {
+  // Estado para armazenar qual valor e tipo (receita ou despesa) foi tocado no momento
+  const [selectedTooltip, setSelectedTooltip] = useState<{
+    month: string;
+    type: "Receita" | "Despesa";
+    amount: number;
+  } | null>(null);
+
+  const formatCurrency = (val: number) =>
+    `R$ ${val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  // Encontra o maior valor entre todas as receitas e despesas do ano para dimensionar proporcionalmente as barras
+  const maxAmount = Math.max(
+    ...monthsData.map((m) => Math.max(m.income, m.expense)),
+    100, // Valor mínimo para evitar divisão por zero
+  );
+
+  const chartHeight = 140; // Altura máxima útil em pixels para as barras
+
   return (
-    <Modal
-      visible={visible}
-      transparent={false}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <SafeAreaView
-        style={{
-          flex: 1,
-          backgroundColor: "#121212",
-          padding: 20,
-          justifyContent: "center",
-        }}
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 20,
-          }}
-        >
-          <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "bold" }}>
-            TENDÊNCIA ANUAL ({selectedYear})
-          </Text>
-          <TouchableOpacity
-            style={{
-              backgroundColor: "#2A2A2A",
-              borderWidth: 1,
-              borderColor: "#FFFFFF",
-              paddingVertical: 8,
-              paddingHorizontal: 16,
-              borderRadius: 8,
-            }}
-            onPress={onClose}
-          >
-            <Text style={{ color: "#FFFFFF", fontWeight: "bold" }}>Fechar</Text>
+    <Modal visible={visible} animationType="fade" transparent={false}>
+      <View style={styles.container}>
+        {/* Cabeçalho do Panorama */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>PANORAMA ANUAL — {selectedYear}</Text>
+            <Text style={styles.subtitle}>
+              Toque em qualquer barra para ver o valor exato
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <Ionicons name="close" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
-        <View
-          style={{
-            backgroundColor: "#1E1E1E",
-            borderRadius: 16,
-            padding: 16,
-            borderWidth: 1,
-            borderColor: "#333333",
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              marginBottom: 12,
-            }}
-          >
-            <View>
-              <Text
-                style={{ color: "#10B981", fontSize: 14, fontWeight: "bold" }}
-              >
-                + R$ {totalIncome.toFixed(2).replace(".", ",")}
+        {/* Tooltip flutuante de Valor Selecionado */}
+        <View style={styles.tooltipContainer}>
+          {selectedTooltip ? (
+            <View style={styles.tooltipBox}>
+              <Text style={styles.tooltipTitle}>
+                {selectedTooltip.month} ({selectedTooltip.type})
               </Text>
               <Text
-                style={{ color: "#EF4444", fontSize: 14, fontWeight: "bold" }}
+                style={[
+                  styles.tooltipAmount,
+                  {
+                    color:
+                      selectedTooltip.type === "Receita"
+                        ? "#10B981"
+                        : "#EF4444",
+                  },
+                ]}
               >
-                - R$ {totalExpense.toFixed(2).replace(".", ",")}
+                {formatCurrency(selectedTooltip.amount)}
               </Text>
             </View>
-            <View
-              style={{ flexDirection: "row", gap: 12, alignItems: "center" }}
-            >
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-              >
-                <View
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: "#10B981",
-                  }}
-                />
-                <Text style={{ color: "#A1A1AA", fontSize: 10 }}>RECEITAS</Text>
-              </View>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-              >
-                <View
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: "#EF4444",
-                  }}
-                />
-                <Text style={{ color: "#A1A1AA", fontSize: 10 }}>DESPESAS</Text>
-              </View>
-            </View>
-          </View>
+          ) : (
+            <Text style={styles.tooltipPlaceholder}>
+              Toque em uma barra do gráfico abaixo
+            </Text>
+          )}
+        </View>
 
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-              height: 160,
-              borderBottomWidth: 1,
-              borderBottomColor: "#333333",
-              paddingBottom: 4,
-            }}
-          >
-            {monthsData.map((m, index) => {
-              const incomeHeight = m.income > 0 ? 110 : 4;
-              const expenseHeight = m.expense > 0 ? 45 : 4;
+        {/* Gráfico de Barras dos 12 Meses */}
+        <ScrollView
+          horizontal
+          contentContainerStyle={styles.chartScrollContent}
+          showsHorizontalScrollIndicator={false}
+        >
+          <View style={styles.chartArea}>
+            {monthsData.map((item, index) => {
+              // Calcula a altura proporcional da barra (limitada à altura máxima)
+              const incomeHeight = (item.income / maxAmount) * chartHeight;
+              const expenseHeight = (item.expense / maxAmount) * chartHeight;
+
               return (
-                <View key={index} style={{ alignItems: "center", flex: 1 }}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "flex-end",
-                      height: 120,
-                      gap: 3,
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 6,
-                        height: incomeHeight,
-                        backgroundColor: m.income > 0 ? "#10B981" : "#222222",
-                        borderRadius: 3,
-                      }}
+                <View key={index} style={styles.monthColumn}>
+                  {/* Container das Barras */}
+                  <View style={styles.barsWrapper}>
+                    {/* Barra de Receita */}
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={[
+                        styles.bar,
+                        {
+                          height: Math.max(incomeHeight, 4), // Mínimo de 4px para aparecer mesmo se for 0
+                          backgroundColor: "#10B981",
+                        },
+                      ]}
+                      onPress={() =>
+                        setSelectedTooltip({
+                          month: item.label,
+                          type: "Receita",
+                          amount: item.income,
+                        })
+                      }
                     />
-                    <View
-                      style={{
-                        width: 6,
-                        height: expenseHeight,
-                        backgroundColor: m.expense > 0 ? "#EF4444" : "#222222",
-                        borderRadius: 3,
-                      }}
+
+                    {/* Barra de Despesa */}
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={[
+                        styles.bar,
+                        {
+                          height: Math.max(expenseHeight, 4),
+                          backgroundColor: "#EF4444",
+                        },
+                      ]}
+                      onPress={() =>
+                        setSelectedTooltip({
+                          month: item.label,
+                          type: "Despesa",
+                          amount: item.expense,
+                        })
+                      }
                     />
                   </View>
-                  <Text
-                    style={{ color: "#A1A1AA", fontSize: 10, marginTop: 6 }}
-                  >
-                    {m.label}
-                  </Text>
+
+                  {/* Rótulo do Mês */}
+                  <Text style={styles.monthLabel}>{item.label}</Text>
                 </View>
               );
             })}
           </View>
+        </ScrollView>
+
+        {/* Legenda Explicativa */}
+        <View style={styles.legendContainer}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: "#10B981" }]} />
+            <Text style={styles.legendText}>Receitas</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: "#EF4444" }]} />
+            <Text style={styles.legendText}>Despesas</Text>
+          </View>
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#121212",
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 10,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  title: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
+    letterSpacing: 1,
+  },
+  subtitle: {
+    color: "#A1A1AA",
+    fontSize: 11,
+    marginTop: 2,
+  },
+  closeButton: {
+    backgroundColor: "#1E1E1E",
+    borderWidth: 1,
+    borderColor: "#333333",
+    borderRadius: 8,
+    padding: 6,
+  },
+  tooltipContainer: {
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 4,
+  },
+  tooltipBox: {
+    backgroundColor: "#1E1E1E",
+    borderWidth: 1,
+    borderColor: "#444444",
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  tooltipTitle: {
+    color: "#A1A1AA",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  tooltipAmount: {
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  tooltipPlaceholder: {
+    color: "#666666",
+    fontSize: 11,
+    fontStyle: "italic",
+  },
+  chartScrollContent: {
+    paddingHorizontal: 10,
+  },
+  chartArea: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    height: 180,
+    gap: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#333333",
+  },
+  monthColumn: {
+    alignItems: "center",
+    width: 45,
+    justifyContent: "flex-end",
+    height: "100%",
+  },
+  barsWrapper: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 4,
+    height: 140,
+    justifyContent: "center",
+  },
+  bar: {
+    width: 14,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+  },
+  monthLabel: {
+    color: "#A1A1AA",
+    fontSize: 10,
+    fontWeight: "bold",
+    marginTop: 8,
+  },
+  legendContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 24,
+    marginTop: 14,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendText: {
+    color: "#A1A1AA",
+    fontSize: 12,
+  },
+});
