@@ -111,8 +111,13 @@ export function TransactionModal({
         }}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ maxHeight: "90%" }}
         >
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
           <View
             style={{
               backgroundColor: "#1E1E1E",
@@ -215,6 +220,24 @@ export function TransactionModal({
             {/* CAMPOS DE TEXTO */}
             <View style={{ marginBottom: 16 }}>
               <Text style={{ color: "#888", fontSize: 13, marginBottom: 8 }}>
+                Descrição
+              </Text>
+              <TextInput
+                style={{
+                  backgroundColor: "#2A2A2A",
+                  color: "#FFFFFF",
+                  padding: 16,
+                  borderRadius: 12,
+                }}
+                value={transactionTitle}
+                onChangeText={setTransactionTitle}
+                placeholder="Ex: Supermercado"
+                placeholderTextColor="#666"
+              />
+            </View>
+
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ color: "#888", fontSize: 13, marginBottom: 8 }}>
                 Valor (R$)
               </Text>
               <TextInput
@@ -231,24 +254,6 @@ export function TransactionModal({
                   setTransactionAmount(formatCurrency(text))
                 }
                 placeholder="0,00"
-                placeholderTextColor="#666"
-              />
-            </View>
-
-            <View style={{ marginBottom: 16 }}>
-              <Text style={{ color: "#888", fontSize: 13, marginBottom: 8 }}>
-                Descrição
-              </Text>
-              <TextInput
-                style={{
-                  backgroundColor: "#2A2A2A",
-                  color: "#FFFFFF",
-                  padding: 16,
-                  borderRadius: 12,
-                }}
-                value={transactionTitle}
-                onChangeText={setTransactionTitle}
-                placeholder="Ex: Supermercado"
                 placeholderTextColor="#666"
               />
             </View>
@@ -356,6 +361,7 @@ export function TransactionModal({
               </Text>
             </TouchableOpacity>
           </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </View>
 
