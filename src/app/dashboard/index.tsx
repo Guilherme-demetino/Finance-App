@@ -5,6 +5,7 @@ import Animated, {
 import { AnnualPanoramaCard } from "../../components/AnnualPanoramaCard";
 import { BalanceCard } from "../../components/BalanceCard";
 import { GeneralBalanceCard } from "../../components/GeneralBalanceCard";
+import { MonthComparisonCard } from "../../components/MonthComparisonCard";
 import { SummaryCards } from "../../components/SummaryCards";
 
 import { useDashboardContext } from "../../context/DashboardContext";
@@ -19,6 +20,8 @@ export default function DashboardHomeScreen() {
     totalExpense,
     formattedTransactions,
     openLandscapePanorama,
+    comparison,
+    isLoadingComparison,
     scrollY,
   } = useDashboardContext();
 
@@ -44,6 +47,12 @@ export default function DashboardHomeScreen() {
         totalIncome={totalIncome}
         totalExpense={totalExpense}
         transactions={formattedTransactions}
+      />
+
+      <MonthComparisonCard
+        comparison={comparison}
+        isLoading={isLoadingComparison}
+        selectedMonth={selectedMonth}
       />
 
       <AnnualPanoramaCard onPress={openLandscapePanorama} />

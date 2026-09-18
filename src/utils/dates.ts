@@ -24,6 +24,24 @@ export function getMonthNumber(monthName: string): string {
 }
 
 /**
+ * Mês/ano anterior ao informado, tratando a virada de ano — o mês anterior
+ * a Janeiro é Dezembro do ano passado. Usado no comparativo mês a mês.
+ */
+export function getPreviousMonth(
+  monthName: string,
+  year: string,
+): { month: string; year: string } {
+  const monthIndex = MONTH_NAMES.indexOf(monthName);
+  if (monthIndex === -1) {
+    return { month: monthName, year };
+  }
+  if (monthIndex === 0) {
+    return { month: MONTH_NAMES[11], year: String(Number(year) - 1) };
+  }
+  return { month: MONTH_NAMES[monthIndex - 1], year };
+}
+
+/**
  * Soma meses a uma data no formato DD/MM/AAAA, usada para gerar as
  * ocorrências futuras de transações recorrentes/parceladas. Quando o dia
  * não existe no mês de destino (ex: dia 31 num mês de 30 dias), usa o

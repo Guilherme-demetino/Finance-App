@@ -18,6 +18,7 @@ import { resetDatabase } from "../database/sqlite";
 import { getAllTransactions } from "../database/transactions";
 import { useBudget } from "../hooks/useBudget";
 import { useCategoryBudgets } from "../hooks/useCategoryBudgets";
+import { useMonthComparison } from "../hooks/useMonthComparison";
 import { useTransactions } from "../hooks/useTransactions";
 import { useUserProfile } from "../hooks/useUserProfile";
 import type {
@@ -106,6 +107,9 @@ interface DashboardContextValue {
   refreshCategoryBudgets: ReturnType<
     typeof useCategoryBudgets
   >["refreshCategoryBudgets"];
+
+  comparison: ReturnType<typeof useMonthComparison>["comparison"];
+  isLoadingComparison: boolean;
 
   alertVisible: boolean;
   alertTitle: string;
@@ -198,6 +202,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     removeCategory,
     refreshCategoryBudgets,
   } = useCategoryBudgets(selectedMonth, selectedYear, transactions);
+
+  const { comparison, isLoadingComparison } = useMonthComparison(
+    selectedMonth,
+    selectedYear,
+  );
 
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
@@ -628,6 +637,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     saveCategoryGoal,
     handleDeleteCategory,
     refreshCategoryBudgets,
+
+    comparison,
+    isLoadingComparison,
 
     alertVisible,
     alertTitle,

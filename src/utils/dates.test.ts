@@ -1,6 +1,7 @@
 import {
   addMonthsToDateString,
   getMonthNumber,
+  getPreviousMonth,
   MONTH_NAME_TO_NUMBER,
   MONTH_NAMES,
 } from "./dates";
@@ -67,5 +68,28 @@ describe("addMonthsToDateString", () => {
 
   it("somar zero meses retorna a mesma data", () => {
     expect(addMonthsToDateString("05/07/2026", 0)).toBe("05/07/2026");
+  });
+});
+
+describe("getPreviousMonth", () => {
+  it("retorna o mês anterior dentro do mesmo ano", () => {
+    expect(getPreviousMonth("Setembro", "2026")).toEqual({
+      month: "Agosto",
+      year: "2026",
+    });
+  });
+
+  it("vira pro ano anterior quando o mês é Janeiro", () => {
+    expect(getPreviousMonth("Janeiro", "2026")).toEqual({
+      month: "Dezembro",
+      year: "2025",
+    });
+  });
+
+  it("retorna o próprio nome quando o mês não é reconhecido", () => {
+    expect(getPreviousMonth("mes-invalido", "2026")).toEqual({
+      month: "mes-invalido",
+      year: "2026",
+    });
   });
 });
