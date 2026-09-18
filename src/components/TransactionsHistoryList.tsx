@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useState, type ComponentProps } from "react";
 import {
   ActivityIndicator,
-  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -10,8 +9,40 @@ import {
 } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { colors } from "../constants/colors";
+import { SortModal, type SortOption } from "./FilterModals";
 import type { DisplayTransaction } from "../types";
 import { formatCurrency } from "../utils/currency";
+
+type TypeFilter = "all" | "income" | "expense";
+type SortKey = "recent" | "oldest" | "highest" | "lowest";
+
+const TYPE_FILTERS: {
+  key: TypeFilter;
+  label: string;
+  icon: ComponentProps<typeof Ionicons>["name"];
+  activeColor: string;
+}[] = [
+  { key: "all", label: "Todas", icon: "apps-outline", activeColor: colors.accent },
+  {
+    key: "income",
+    label: "Receitas",
+    icon: "arrow-down-circle-outline",
+    activeColor: colors.income,
+  },
+  {
+    key: "expense",
+    label: "Despesas",
+    icon: "arrow-up-circle-outline",
+    activeColor: colors.expense,
+  },
+];
+
+const SORT_OPTIONS: SortOption<SortKey>[] = [
+  { key: "recent", label: "Mais recente", icon: "time-outline" },
+  { key: "oldest", label: "Mais antigo", icon: "hourglass-outline" },
+  { key: "highest", label: "Maior valor", icon: "trending-up-outline" },
+  { key: "lowest", label: "Menor valor", icon: "trending-down-outline" },
+];
 
 interface TransactionsHistoryListProps {
   transactions: DisplayTransaction[];
@@ -34,10 +65,11 @@ export function TransactionsHistoryList({
   onDeleteTransaction,
   onDeleteAll,
 }: TransactionsHistoryListProps) {
-  const [filter, setFilter] = useState<"all" | "income" | "expense">("all");
-  const [sortBy, setSortBy] = useState<
-    "recent" | "oldest" | "highest" | "lowest"
-  >("recent");
+  const [filter, setFilter] = useState<TypeFilter>("all");
+  const [sortBy, setSortBy] = useState<SortKey>("recent");
+  const [isSortModalOpen, setIsSortModalOpen] = useState(false);
+  const currentSortOption =
+    SORT_OPTIONS.find((option) => option.key === sortBy) ?? SORT_OPTIONS[0];
 
   const filteredByType = transactions.filter((item) => {
     if (filter === "income") return item.type === "income";
@@ -123,145 +155,94 @@ export function TransactionsHistoryList({
         onChangeText={setSearchText}
       />
 
-      <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
-        <TouchableOpacity
-          style={{
-            flex: 1,
-            backgroundColor: colors.surfaceAlt,
-            borderWidth: 1,
-            borderColor: colors.textPrimary,
-            paddingVertical: 8,
-            borderRadius: 8,
-            alignItems: "center",
-            opacity: filter === "all" ? 1 : 0.6,
-          }}
-          onPress={() => setFilter("all")}
-        >
-          <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "bold" }}>
-            Todas
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={{
-            flex: 1,
-            backgroundColor: colors.surfaceAlt,
-            borderWidth: 1,
-            borderColor: colors.textPrimary,
-            paddingVertical: 8,
-            borderRadius: 8,
-            alignItems: "center",
-            opacity: filter === "income" ? 1 : 0.6,
-          }}
-          onPress={() => setFilter("income")}
-        >
-          <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "bold" }}>
-            Receitas
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={{
-            flex: 1,
-            backgroundColor: colors.surfaceAlt,
-            borderWidth: 1,
-            borderColor: colors.textPrimary,
-            paddingVertical: 8,
-            borderRadius: 8,
-            alignItems: "center",
-            opacity: filter === "expense" ? 1 : 0.6,
-          }}
-          onPress={() => setFilter("expense")}
-        >
-          <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "bold" }}>
-            Despesas
-          </Text>
-        </TouchableOpacity>
+      <View
+        style={{
+          flexDirection: "row",
+          backgroundColor: colors.surface,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: colors.surfaceAlt,
+          padding: 4,
+          gap: 4,
+          marginBottom: 10,
+        }}
+      >
+        {TYPE_FILTERS.map((option) => {
+          const isActive = filter === option.key;
+          return (
+            <TouchableOpacity
+              key={option.key}
+              onPress={() => setFilter(option.key)}
+              style={{
+                flex: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                paddingVertical: 10,
+                borderRadius: 10,
+                backgroundColor: isActive
+                  ? `${option.activeColor}26`
+                  : "transparent",
+              }}
+            >
+              <Ionicons
+                name={option.icon}
+                size={16}
+                color={isActive ? option.activeColor : colors.textMuted}
+              />
+              <Text
+                style={{
+                  color: isActive ? option.activeColor : colors.textMuted,
+                  fontSize: 13,
+                  fontWeight: "700",
+                }}
+              >
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ marginBottom: 16 }}
+      <TouchableOpacity
+        onPress={() => setIsSortModalOpen(true)}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.surfaceAlt,
+          borderRadius: 12,
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          marginBottom: 16,
+        }}
       >
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <TouchableOpacity
-            style={{
-              backgroundColor: colors.surfaceAlt,
-              borderWidth: 1,
-              borderColor: colors.textPrimary,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 8,
-              opacity: sortBy === "recent" ? 1 : 0.6,
-            }}
-            onPress={() => setSortBy("recent")}
-          >
-            <Text
-              style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "bold" }}
-            >
-              Mais recente
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Ionicons
+            name="swap-vertical-outline"
+            size={18}
+            color={colors.textSecondary}
+          />
+          <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+            Ordenar por{" "}
+            <Text style={{ color: colors.textPrimary, fontWeight: "bold" }}>
+              {currentSortOption.label}
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={{
-              backgroundColor: colors.surfaceAlt,
-              borderWidth: 1,
-              borderColor: colors.textPrimary,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 8,
-              opacity: sortBy === "oldest" ? 1 : 0.6,
-            }}
-            onPress={() => setSortBy("oldest")}
-          >
-            <Text
-              style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "bold" }}
-            >
-              Mais antigo
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={{
-              backgroundColor: colors.surfaceAlt,
-              borderWidth: 1,
-              borderColor: colors.textPrimary,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 8,
-              opacity: sortBy === "highest" ? 1 : 0.6,
-            }}
-            onPress={() => setSortBy("highest")}
-          >
-            <Text
-              style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "bold" }}
-            >
-              Maior valor
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={{
-              backgroundColor: colors.surfaceAlt,
-              borderWidth: 1,
-              borderColor: colors.textPrimary,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 8,
-              opacity: sortBy === "lowest" ? 1 : 0.6,
-            }}
-            onPress={() => setSortBy("lowest")}
-          >
-            <Text
-              style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "bold" }}
-            >
-              Menor valor
-            </Text>
-          </TouchableOpacity>
+          </Text>
         </View>
-      </ScrollView>
+        <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+      </TouchableOpacity>
+
+      <SortModal
+        visible={isSortModalOpen}
+        onClose={() => setIsSortModalOpen(false)}
+        options={SORT_OPTIONS}
+        selectedKey={sortBy}
+        onSelect={setSortBy}
+      />
 
       {isLoading ? (
         <Animated.View

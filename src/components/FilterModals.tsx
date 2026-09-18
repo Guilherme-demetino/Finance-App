@@ -1,3 +1,5 @@
+import { Ionicons } from "@expo/vector-icons";
+import type { ComponentProps } from "react";
 import {
   DimensionValue,
   Modal,
@@ -134,5 +136,91 @@ export function YearModal({
       selectedItem={selectedYear}
       onSelectItem={onSelectYear}
     />
+  );
+}
+
+export interface SortOption<T extends string = string> {
+  key: T;
+  label: string;
+  icon: ComponentProps<typeof Ionicons>["name"];
+}
+
+interface SortModalProps<T extends string> {
+  visible: boolean;
+  onClose: () => void;
+  title?: string;
+  options: SortOption<T>[];
+  selectedKey: T;
+  onSelect: (key: T) => void;
+}
+
+export function SortModal<T extends string>({
+  visible,
+  onClose,
+  title = "Ordenar por",
+  options,
+  selectedKey,
+  onSelect,
+}: SortModalProps<T>) {
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={menuStyles.overlay}>
+        <View style={[menuStyles.menuContainer, { height: "auto", maxHeight: "60%" }]}>
+          <Text style={[menuStyles.menuTitle, { marginBottom: 16 }]}>{title}</Text>
+          <ScrollView>
+            {options.map((option) => {
+              const isSelected = option.key === selectedKey;
+              return (
+                <TouchableOpacity
+                  key={option.key}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    paddingVertical: 14,
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.border,
+                  }}
+                  onPress={() => {
+                    onSelect(option.key);
+                    onClose();
+                  }}
+                >
+                  <Ionicons
+                    name={option.icon}
+                    size={20}
+                    color={isSelected ? colors.income : colors.textSecondary}
+                  />
+                  <Text
+                    style={{
+                      flex: 1,
+                      color: isSelected ? colors.income : colors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: isSelected ? "bold" : "normal",
+                    }}
+                  >
+                    {option.label}
+                  </Text>
+                  {isSelected && (
+                    <Ionicons name="checkmark" size={20} color={colors.income} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          <TouchableOpacity
+            style={[menuStyles.closeButton, { marginTop: 16 }]}
+            onPress={onClose}
+          >
+            <Text style={menuStyles.closeButtonText}>Fechar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   );
 }

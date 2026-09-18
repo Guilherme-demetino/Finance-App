@@ -1,33 +1,17 @@
-import { Ionicons } from "@expo/vector-icons";
 import { File, Paths } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import * as Print from "expo-print";
 import { useRouter } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as Sharing from "expo-sharing";
-import { useState } from "react";
-import { Alert, TouchableOpacity } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, {
-  useAnimatedScrollHandler,
-  useSharedValue,
-} from "react-native-reanimated";
-
-import { AnnualPanoramaCard } from "../components/AnnualPanoramaCard";
-import { BalanceCard } from "../components/BalanceCard";
-import { CustomAlert } from "../components/CustomAlert";
-import { MonthModal, YearModal } from "../components/FilterModals";
-import { GeneralBalanceCard } from "../components/GeneralBalanceCard";
-import { LandscapePanoramaModal } from "../components/LandscapePanoramaModal";
-import { MonthlyBudgetCard } from "../components/MonthlyBudgetCard";
 import {
-  EditNameModal,
-  ProfileMenuModal,
-} from "../components/ProfileMenuModals";
-import { SummaryCards } from "../components/SummaryCards";
-import { TransactionModal } from "../components/TransactionModal";
-import { TransactionsHistoryList } from "../components/TransactionsHistoryList";
-import { UserProfileHeader } from "../components/UserProfileHeader";
+  createContext,
+  useContext,
+  useState,
+  type ReactNode,
+} from "react";
+import { Alert } from "react-native";
+import { useSharedValue, type SharedValue } from "react-native-reanimated";
 
 import { colors } from "../constants/colors";
 import { resetDatabase } from "../database/sqlite";
@@ -35,7 +19,6 @@ import { getAllTransactions } from "../database/transactions";
 import { useBudget } from "../hooks/useBudget";
 import { useTransactions } from "../hooks/useTransactions";
 import { useUserProfile } from "../hooks/useUserProfile";
-import { styles } from "../styles/dashboardStyles";
 import type {
   DisplayTransaction,
   TransactionRepeatMode,
@@ -49,9 +32,96 @@ import {
 } from "../utils/export";
 import { clearPin } from "../utils/security";
 
-const YEARS_LIST = ["2024", "2025", "2026", "2027", "2028"];
+export const YEARS_LIST = ["2024", "2025", "2026", "2027", "2028"];
 
-export default function DashboardScreen() {
+interface DashboardContextValue {
+  userName: string;
+  userImage: string | null;
+  isMenuOpen: boolean;
+  setIsMenuOpen: (value: boolean) => void;
+  isEditingName: boolean;
+  setIsEditingName: (value: boolean) => void;
+  newName: string;
+  setNewName: (value: string) => void;
+  pickImage: () => Promise<void>;
+  handleUpdateName: () => Promise<void>;
+
+  isLandscapePanoramaOpen: boolean;
+  openLandscapePanorama: () => Promise<void>;
+  closeLandscapePanorama: () => Promise<void>;
+
+  scrollY: SharedValue<number>;
+
+  selectedMonth: string;
+  setSelectedMonth: (value: string) => void;
+  selectedYear: string;
+  setSelectedYear: (value: string) => void;
+  isMonthModalOpen: boolean;
+  setIsMonthModalOpen: (value: boolean) => void;
+  isYearModalOpen: boolean;
+  setIsYearModalOpen: (value: boolean) => void;
+
+  searchText: string;
+  setSearchText: (value: string) => void;
+
+  isTransactionModalOpen: boolean;
+  setIsTransactionModalOpen: (value: boolean) => void;
+  editingTransactionId: string | null;
+  setEditingTransactionId: (value: string | null) => void;
+  transactionType: TransactionType;
+  setTransactionType: (value: TransactionType) => void;
+  transactionTitle: string;
+  setTransactionTitle: (value: string) => void;
+  transactionAmount: string;
+  setTransactionAmount: (value: string) => void;
+  transactionDate: string;
+  setTransactionDate: (value: string) => void;
+  transactionCategory: string;
+  setTransactionCategory: (value: string) => void;
+  isRecurring: boolean;
+  setIsRecurring: (value: boolean) => void;
+  recurringMonths: number;
+  setRecurringMonths: (value: number) => void;
+  installmentCount: number;
+  setInstallmentCount: (value: number) => void;
+
+  transactions: ReturnType<typeof useTransactions>["transactions"];
+  isLoadingTransactions: boolean;
+  totalIncome: number;
+  totalExpense: number;
+  totalBalance: number;
+  monthsData: ReturnType<typeof useTransactions>["monthsData"];
+  formattedTransactions: DisplayTransaction[];
+
+  budget: ReturnType<typeof useBudget>["budget"];
+  updateBudget: ReturnType<typeof useBudget>["updateBudget"];
+  isEditingBudget: boolean;
+  setIsEditingBudget: (value: boolean) => void;
+
+  alertVisible: boolean;
+  alertTitle: string;
+  alertMessage: string;
+  setAlertVisible: (value: boolean) => void;
+  showAlert: (title: string, message: string) => void;
+
+  handleExportPDF: () => Promise<void>;
+  handleExportCSV: () => Promise<void>;
+  handleOpenEditTransaction: (item: DisplayTransaction) => void;
+  handleSaveTransaction: () => Promise<void>;
+  handleDeleteTransaction: (id: string) => Promise<void>;
+  handleDeleteAllTransactions: () => Promise<void>;
+  handleChangePIN: () => void;
+  handleWipeData: () => void;
+  openNewTransactionModal: () => void;
+
+  currentMonthNum: string;
+  currentYearStr: string;
+  currentDay: string;
+}
+
+const DashboardContext = createContext<DashboardContextValue | null>(null);
+
+export function DashboardProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const today = new Date();
   const currentMonthName = MONTH_NAMES[today.getMonth()];
@@ -67,10 +137,9 @@ export default function DashboardScreen() {
   const [isLandscapePanoramaOpen, setIsLandscapePanoramaOpen] = useState(false);
 
   // Acompanha o quanto a tela rolou pra animar a borda do cabeçalho fixo.
+  // Compartilhado entre as abas pra o cabeçalho (renderizado uma vez no
+  // layout) reagir ao scroll de qualquer uma delas.
   const scrollY = useSharedValue(0);
-  const scrollHandler = useAnimatedScrollHandler((event) => {
-    scrollY.value = event.contentOffset.y;
-  });
 
   const [selectedMonth, setSelectedMonth] = useState(currentMonthName);
   const [selectedYear, setSelectedYear] = useState(currentYearStr);
@@ -354,7 +423,6 @@ export default function DashboardScreen() {
     }
   };
 
-  // ------------------ NOVAS FUNÇÕES DE SEGURANÇA ------------------
   const handleChangePIN = () => {
     setIsMenuOpen(false);
     // O PIN atual só é sobrescrito quando o novo for confirmado na tela
@@ -386,7 +454,24 @@ export default function DashboardScreen() {
       ],
     );
   };
-  // -----------------------------------------------------------------
+
+  const openNewTransactionModal = () => {
+    setEditingTransactionId(null);
+    setTransactionType("income");
+    setTransactionCategory("Salário");
+    setIsRecurring(false);
+    setRecurringMonths(12);
+    setInstallmentCount(1);
+
+    const targetMonth = getMonthNumber(selectedMonth);
+    let dayToUse = "01";
+    if (targetMonth === currentMonthNum && selectedYear === currentYearStr) {
+      dayToUse = currentDay;
+    }
+
+    setTransactionDate(`${dayToUse}/${targetMonth}/${selectedYear}`);
+    setIsTransactionModalOpen(true);
+  };
 
   const filteredTransactions = transactions.filter((item) => {
     const searchLower = searchText.toLowerCase();
@@ -411,164 +496,104 @@ export default function DashboardScreen() {
     }),
   );
 
+  const value: DashboardContextValue = {
+    userName,
+    userImage,
+    isMenuOpen,
+    setIsMenuOpen,
+    isEditingName,
+    setIsEditingName,
+    newName,
+    setNewName,
+    pickImage,
+    handleUpdateName,
+
+    isLandscapePanoramaOpen,
+    openLandscapePanorama,
+    closeLandscapePanorama,
+
+    scrollY,
+
+    selectedMonth,
+    setSelectedMonth,
+    selectedYear,
+    setSelectedYear,
+    isMonthModalOpen,
+    setIsMonthModalOpen,
+    isYearModalOpen,
+    setIsYearModalOpen,
+
+    searchText,
+    setSearchText,
+
+    isTransactionModalOpen,
+    setIsTransactionModalOpen,
+    editingTransactionId,
+    setEditingTransactionId,
+    transactionType,
+    setTransactionType,
+    transactionTitle,
+    setTransactionTitle,
+    transactionAmount,
+    setTransactionAmount,
+    transactionDate,
+    setTransactionDate,
+    transactionCategory,
+    setTransactionCategory,
+    isRecurring,
+    setIsRecurring,
+    recurringMonths,
+    setRecurringMonths,
+    installmentCount,
+    setInstallmentCount,
+
+    transactions,
+    isLoadingTransactions,
+    totalIncome,
+    totalExpense,
+    totalBalance,
+    monthsData,
+    formattedTransactions,
+
+    budget,
+    updateBudget,
+    isEditingBudget,
+    setIsEditingBudget,
+
+    alertVisible,
+    alertTitle,
+    alertMessage,
+    setAlertVisible,
+    showAlert,
+
+    handleExportPDF,
+    handleExportCSV,
+    handleOpenEditTransaction,
+    handleSaveTransaction,
+    handleDeleteTransaction,
+    handleDeleteAllTransactions,
+    handleChangePIN,
+    handleWipeData,
+    openNewTransactionModal,
+
+    currentMonthNum,
+    currentYearStr,
+    currentDay,
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <UserProfileHeader
-        userName={userName}
-        userImage={userImage}
-        selectedMonth={selectedMonth}
-        selectedYear={selectedYear}
-        onOpenMonthModal={() => setIsMonthModalOpen(true)}
-        onOpenYearModal={() => setIsYearModalOpen(true)}
-        onOpenMenu={() => setIsMenuOpen(true)}
-        scrollY={scrollY}
-      />
-
-      <Animated.ScrollView
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: 10 }]}
-      >
-        <BalanceCard
-          totalBalance={totalBalance}
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-        />
-
-        <SummaryCards totalIncome={totalIncome} totalExpense={totalExpense} />
-
-        <MonthlyBudgetCard
-          budget={budget}
-          totalExpense={totalExpense}
-          isEditingBudget={isEditingBudget}
-          setIsEditingBudget={setIsEditingBudget}
-          onSaveBudget={updateBudget}
-          formatCurrency={formatCurrencyInput}
-        />
-
-        <GeneralBalanceCard
-          totalIncome={totalIncome}
-          totalExpense={totalExpense}
-          transactions={formattedTransactions}
-        />
-
-        <AnnualPanoramaCard onPress={openLandscapePanorama} />
-
-        <TransactionsHistoryList
-          transactions={formattedTransactions}
-          hasAnyTransactions={transactions.length > 0}
-          isLoading={isLoadingTransactions}
-          searchText={searchText}
-          setSearchText={setSearchText}
-          onEditTransaction={handleOpenEditTransaction}
-          onDeleteTransaction={handleDeleteTransaction}
-          onDeleteAll={handleDeleteAllTransactions}
-        />
-      </Animated.ScrollView>
-
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => {
-          setEditingTransactionId(null);
-          setTransactionType("income");
-          setTransactionCategory("Salário");
-          setIsRecurring(false);
-          setRecurringMonths(12);
-          setInstallmentCount(1);
-
-          const targetMonth = getMonthNumber(selectedMonth);
-          let dayToUse = "01";
-          if (
-            targetMonth === currentMonthNum &&
-            selectedYear === currentYearStr
-          ) {
-            dayToUse = currentDay;
-          }
-
-          setTransactionDate(`${dayToUse}/${targetMonth}/${selectedYear}`);
-          setIsTransactionModalOpen(true);
-        }}
-      >
-        <Ionicons name="add" size={28} color={colors.textPrimary} />
-      </TouchableOpacity>
-
-      <TransactionModal
-        visible={isTransactionModalOpen}
-        onClose={() => {
-          setEditingTransactionId(null);
-          setIsTransactionModalOpen(false);
-        }}
-        transactionType={transactionType}
-        setTransactionType={setTransactionType}
-        transactionTitle={transactionTitle}
-        setTransactionTitle={setTransactionTitle}
-        transactionAmount={transactionAmount}
-        setTransactionAmount={setTransactionAmount}
-        transactionDate={transactionDate}
-        setTransactionDate={setTransactionDate}
-        transactionCategory={transactionCategory}
-        setTransactionCategory={setTransactionCategory}
-        isRecurring={isRecurring}
-        setIsRecurring={setIsRecurring}
-        recurringMonths={recurringMonths}
-        setRecurringMonths={setRecurringMonths}
-        installmentCount={installmentCount}
-        setInstallmentCount={setInstallmentCount}
-        isEditing={!!editingTransactionId}
-        formatCurrency={formatCurrencyInput}
-        onSave={handleSaveTransaction}
-      />
-
-      <MonthModal
-        visible={isMonthModalOpen}
-        onClose={() => setIsMonthModalOpen(false)}
-        months={MONTH_NAMES}
-        selectedMonth={selectedMonth}
-        onSelectMonth={setSelectedMonth}
-      />
-
-      <YearModal
-        visible={isYearModalOpen}
-        onClose={() => setIsYearModalOpen(false)}
-        years={YEARS_LIST}
-        selectedYear={selectedYear}
-        onSelectYear={setSelectedYear}
-      />
-
-      <LandscapePanoramaModal
-        visible={isLandscapePanoramaOpen}
-        selectedYear={selectedYear}
-        monthsData={monthsData}
-        onClose={closeLandscapePanorama}
-      />
-
-      <ProfileMenuModal
-        visible={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
-        userName={userName}
-        userImage={userImage}
-        onPickImage={pickImage}
-        onOpenEditName={() => setIsEditingName(true)}
-        onExportPDF={handleExportPDF}
-        onExportCSV={handleExportCSV}
-        onChangePIN={handleChangePIN}
-        onWipeData={handleWipeData}
-      />
-
-      <EditNameModal
-        visible={isEditingName}
-        onClose={() => setIsEditingName(false)}
-        newName={newName}
-        setNewName={setNewName}
-        onSave={handleUpdateName}
-      />
-
-      <CustomAlert
-        visible={alertVisible}
-        title={alertTitle}
-        message={alertMessage}
-        onClose={() => setAlertVisible(false)}
-      />
-    </SafeAreaView>
+    <DashboardContext.Provider value={value}>
+      {children}
+    </DashboardContext.Provider>
   );
+}
+
+export function useDashboardContext() {
+  const ctx = useContext(DashboardContext);
+  if (!ctx) {
+    throw new Error(
+      "useDashboardContext deve ser usado dentro de um DashboardProvider",
+    );
+  }
+  return ctx;
 }
