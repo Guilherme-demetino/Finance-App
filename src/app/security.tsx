@@ -115,8 +115,13 @@ export default function SecurityScreen() {
         await savePin(enteredPin);
 
         showAlert("Sucesso", "PIN de segurança cadastrado com sucesso!");
+        // Primeiro acesso (nem troca de PIN, nem PIN já existente) passa
+        // pelo pré-cadastro antes de cair no dashboard.
+        const isFirstTimeSetup = !isChangeFlow && !hadExistingPin;
         setTimeout(() => {
-          router.replace("/dashboard" as any);
+          router.replace(
+            (isFirstTimeSetup ? "/onboarding" : "/dashboard") as any,
+          );
         }, 1000);
       } else {
         if (enteredPin === storedPin) {

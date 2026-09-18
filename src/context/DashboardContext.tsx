@@ -34,7 +34,7 @@ import {
   buildTransactionsCsv,
   buildTransactionsHtmlReport,
 } from "../utils/export";
-import { clearPin, suppressAppLockOnce } from "../utils/security";
+import { clearPin } from "../utils/security";
 
 export const YEARS_LIST = ["2024", "2025", "2026", "2027", "2028"];
 
@@ -118,6 +118,8 @@ interface DashboardContextValue {
   totalToReceive: number;
   totalToPay: number;
   isLoadingDebts: boolean;
+  isDebtModalOpen: boolean;
+  setIsDebtModalOpen: (value: boolean) => void;
   handleAddDebt: (data: DebtInput) => Promise<void>;
   handleSettleDebt: (debt: DebtRow) => Promise<void>;
   handleDeleteDebt: (id: number) => Promise<void>;
@@ -163,6 +165,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState("");
   const [isWipeConfirmOpen, setIsWipeConfirmOpen] = useState(false);
+  const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
 
   const [isLandscapePanoramaOpen, setIsLandscapePanoramaOpen] = useState(false);
 
@@ -270,10 +273,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Abrir a galeria manda o app pro background e ele volta em seguida —
-    // sem isso, o listener de AppState acharia que é uma troca de app de
-    // verdade e pediria PIN/biometria de novo.
-    suppressAppLockOnce();
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
@@ -327,7 +326,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         transactions,
       });
 
-      suppressAppLockOnce();
       await Print.printAsync({ html: htmlContent });
     } catch (error) {
       console.log("Erro ao gerar PDF:", error);
@@ -353,8 +351,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       file.write(csvContent);
 
       if (await Sharing.isAvailableAsync()) {
-        suppressAppLockOnce();
-        await Sharing.shareAsync(file.uri, {
+          await Sharing.shareAsync(file.uri, {
           mimeType: "text/csv",
           dialogTitle: "Exportar backup em CSV",
           UTI: "public.comma-separated-values-text",
@@ -712,6 +709,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     totalToReceive,
     totalToPay,
     isLoadingDebts,
+    isDebtModalOpen,
+    setIsDebtModalOpen,
     handleAddDebt,
     handleSettleDebt,
     handleDeleteDebt,

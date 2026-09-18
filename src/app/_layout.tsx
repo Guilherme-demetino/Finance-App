@@ -1,15 +1,18 @@
 import { Stack, usePathname, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, AppStateStatus, View } from "react-native";
+import { ActivityIndicator, AppState, View } from "react-native";
 import { initDatabase } from "../database/sqlite";
-import { consumeAppLockSuppression, hasPinConfigured } from "../utils/security";
+import { hasPinConfigured } from "../utils/security";
 import { colors } from "../constants/colors";
+
+// Tempo fora do app a partir do qual ele volta pedindo PIN/biometria.
+const LOCK_AFTER_BACKGROUND_MS = 60_000;
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const backgroundedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     async function setup() {
@@ -22,22 +25,36 @@ export default function RootLayout() {
     setup();
   }, []);
 
-  // Re-bloqueia o app (pede PIN/biometria de novo) sempre que ele volta
-  // do background, evitando que alguém acesse o dashboard sem autenticar
-  // só porque o app já tinha sido desbloqueado antes.
+  // Re-bloqueia o app (pede PIN/biometria de novo) quando ele volta do
+  // background depois de 1 minuto ou mais fora. Sair por pouco tempo (ex:
+  // escolher uma foto na galeria) não trava, mas deixar o app parado no
+  // background não permite que alguém o abra já desbloqueado.
   useEffect(() => {
     const subscription = AppState.addEventListener(
       "change",
       async (nextState) => {
-        const cameFromBackground =
-          appStateRef.current.match(/background/) && nextState === "active";
-        appStateRef.current = nextState;
+        if (nextState === "background") {
+          if (backgroundedAtRef.current === null) {
+            backgroundedAtRef.current = Date.now();
+          }
+          return;
+        }
 
-        if (!cameFromBackground) return;
-        if (pathname === "/security" || pathname === "/") return;
-        // Voltou do background porque o próprio app abriu a galeria (ou
-        // outra tela do sistema) — não é uma troca de app de verdade.
-        if (consumeAppLockSuppression()) return;
+        if (nextState !== "active") return;
+
+        const leftAt = backgroundedAtRef.current;
+        backgroundedAtRef.current = null;
+        if (leftAt === null) return;
+        if (Date.now() - leftAt < LOCK_AFTER_BACKGROUND_MS) return;
+
+        // No onboarding o usuário pode sair pra consultar valores (ex: app
+        // do banco) e voltar — não faz sentido travar e perder o progresso.
+        if (
+          pathname === "/security" ||
+          pathname === "/" ||
+          pathname === "/onboarding"
+        )
+          return;
 
         const pinConfigured = await hasPinConfigured();
         if (pinConfigured) {
@@ -71,6 +88,7 @@ export default function RootLayout() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="dashboard" options={{ headerShown: false }} />
       <Stack.Screen name="security" options={{ headerShown: false }} />
+      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
     </Stack>
   );
 }

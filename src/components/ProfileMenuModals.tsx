@@ -113,7 +113,7 @@ export function EditNameModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
+      <View style={styles.topOverlay}>
         <View style={styles.modalContainer}>
           <Text style={styles.modalTitle}>Como devemos te chamar?</Text>
           <TextInput
@@ -145,6 +145,15 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
+  },
+  // Fica no topo pra o teclado (que abre na hora, por causa do autoFocus)
+  // não cobrir o campo nem os botões.
+  topOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    paddingTop: 100,
   },
   menuContainer: {
     width: "85%",

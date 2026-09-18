@@ -1,7 +1,8 @@
 import { getDatabase } from "./sqlite";
 import type { TransactionRow, TransactionType } from "../types";
-import { addMonthsToDateString } from "../utils/dates";
+import { addMonthsToDateString, getMonthlyDates } from "../utils/dates";
 import { splitAmountIntoInstallments } from "../utils/currency";
+import { planRemainingInstallments } from "../utils/installments";
 
 // Menor número de meses aceito para uma recorrência — abaixo disso não
 // faz sentido chamar de "recorrente".
@@ -137,6 +138,75 @@ export async function createRecurringTransactions(
         data.category,
         groupId,
         "recurring",
+      );
+    }
+  });
+}
+
+/**
+ * Cria uma transação recorrente num dia fixo do mês, a partir do mês atual
+ * (usado no onboarding, onde o usuário informa só o "dia do mês").
+ */
+export async function createRecurringOnDay(
+  data: Omit<TransactionInput, "date">,
+  dayOfMonth: number,
+  months: number,
+): Promise<void> {
+  const db = await getDatabase();
+  const groupId = generateRecurrenceGroupId();
+  const dates = getMonthlyDates(
+    dayOfMonth,
+    Math.max(MIN_RECURRING_MONTHS, months),
+  );
+
+  db.withTransactionSync(() => {
+    for (const date of dates) {
+      db.runSync(
+        "INSERT INTO transactions (amount, date, description, type, category_id, recurrence_group_id, recurrence_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        data.amount,
+        date,
+        data.description,
+        data.type,
+        data.category,
+        groupId,
+        "recurring",
+      );
+    }
+  });
+}
+
+/**
+ * Cria as parcelas que ainda faltam de uma compra parcelada já em
+ * andamento. `data.amount` é o valor de CADA parcela e `data.date` a data da
+ * próxima parcela (a de número `startNumber`, de `total`).
+ */
+export async function createRemainingInstallments(
+  data: TransactionInput,
+  startNumber: number,
+  total: number,
+): Promise<void> {
+  const db = await getDatabase();
+  const groupId = generateRecurrenceGroupId();
+  const plan = planRemainingInstallments(
+    data.description,
+    startNumber,
+    total,
+    data.date,
+  );
+
+  db.withTransactionSync(() => {
+    for (const item of plan) {
+      db.runSync(
+        "INSERT INTO transactions (amount, date, description, type, category_id, recurrence_group_id, recurrence_type, installment_number, installment_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        data.amount,
+        item.date,
+        item.description,
+        data.type,
+        data.category,
+        groupId,
+        "installment",
+        item.number,
+        total,
       );
     }
   });

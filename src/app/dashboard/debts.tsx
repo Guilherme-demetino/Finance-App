@@ -6,7 +6,6 @@ import { DebtsList } from "../../components/DebtsList";
 
 import { useDashboardContext } from "../../context/DashboardContext";
 import { styles } from "../../styles/dashboardStyles";
-import { formatCurrencyInput } from "../../utils/currency";
 
 export default function DashboardDebtsScreen() {
   const {
@@ -15,7 +14,7 @@ export default function DashboardDebtsScreen() {
     totalToReceive,
     totalToPay,
     isLoadingDebts,
-    handleAddDebt,
+    setIsDebtModalOpen,
     handleSettleDebt,
     handleDeleteDebt,
     currentDay,
@@ -40,10 +39,9 @@ export default function DashboardDebtsScreen() {
         totalToReceive={totalToReceive}
         totalToPay={totalToPay}
         isLoading={isLoadingDebts}
-        onAddDebt={handleAddDebt}
+        onOpenAddDebt={() => setIsDebtModalOpen(true)}
         onSettleDebt={handleSettleDebt}
         onDeleteDebt={handleDeleteDebt}
-        formatCurrency={formatCurrencyInput}
         today={`${currentDay}/${currentMonthNum}/${currentYearStr}`}
       />
     </Animated.ScrollView>

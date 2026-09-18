@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { CustomAlert } from "../../components/CustomAlert";
+import { DebtModal } from "../../components/DebtModal";
 import { MonthModal, YearModal } from "../../components/FilterModals";
 import { LandscapePanoramaModal } from "../../components/LandscapePanoramaModal";
 import {
@@ -55,6 +56,12 @@ function DashboardChrome() {
     isWipeConfirmOpen,
     setIsWipeConfirmOpen,
     confirmWipeData,
+    isDebtModalOpen,
+    setIsDebtModalOpen,
+    handleAddDebt,
+    currentDay,
+    currentMonthNum,
+    currentYearStr,
     isTransactionModalOpen,
     setIsTransactionModalOpen,
     setEditingTransactionId,
@@ -213,6 +220,19 @@ function DashboardChrome() {
         isEditing={!!editingTransactionId}
         formatCurrency={formatCurrencyInput}
         onSave={handleSaveTransaction}
+      />
+
+      <DebtModal
+        visible={isDebtModalOpen}
+        onClose={() => setIsDebtModalOpen(false)}
+        formatCurrency={formatCurrencyInput}
+        onSave={(data) => {
+          setIsDebtModalOpen(false);
+          handleAddDebt({
+            ...data,
+            date: `${currentDay}/${currentMonthNum}/${currentYearStr}`,
+          });
+        }}
       />
 
       <MonthModal

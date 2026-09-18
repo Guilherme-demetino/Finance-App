@@ -5,8 +5,11 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    justifyContent: "center",
-    padding: 24,
+    // Ancorado no topo (e não centralizado) pra o teclado não cobrir o campo
+    // do nome nem o botão.
+    justifyContent: "flex-start",
+    paddingHorizontal: 24,
+    paddingTop: 110,
   },
   title: {
     fontSize: 28,

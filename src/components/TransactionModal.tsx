@@ -11,6 +11,10 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import {
+  DEFAULT_EXPENSE_CATEGORIES,
+  DEFAULT_INCOME_CATEGORIES,
+} from "../constants/categories";
 import { colors } from "../constants/colors";
 import { getAllCategories } from "../database/categories";
 import type { CategoryRow } from "../types";
@@ -92,15 +96,6 @@ export function TransactionModal({
     }
   }, [visible]);
 
-  const defaultIncomeCategories = ["Salário", "Investimentos"];
-  const defaultExpenseCategories = [
-    "Alimentação",
-    "Transporte",
-    "Lazer",
-    "Moradia",
-    "Saúde",
-  ];
-
   const customIncomeCategories = dbCategories
     .filter((c) => String(c.type).trim().toLowerCase() === "income")
     .map((c) => String(c.name).trim());
@@ -111,8 +106,8 @@ export function TransactionModal({
 
   let displayCategories =
     transactionType === "income"
-      ? [...defaultIncomeCategories, ...customIncomeCategories]
-      : [...defaultExpenseCategories, ...customExpenseCategories];
+      ? [...DEFAULT_INCOME_CATEGORIES, ...customIncomeCategories]
+      : [...DEFAULT_EXPENSE_CATEGORIES, ...customExpenseCategories];
 
   displayCategories = Array.from(new Set(displayCategories));
 
@@ -193,7 +188,7 @@ export function TransactionModal({
                   setTransactionType("income");
                   // Se a categoria atual não pertencer às receitas, força para "Salário" ou "Investimentos" com segurança
                   const validIncome = [
-                    ...defaultIncomeCategories,
+                    ...DEFAULT_INCOME_CATEGORIES,
                     ...customIncomeCategories,
                   ];
                   if (!validIncome.includes(transactionCategory)) {
@@ -228,7 +223,7 @@ export function TransactionModal({
                 onPress={() => {
                   setTransactionType("expense");
                   if (
-                    !defaultExpenseCategories.includes(transactionCategory) &&
+                    !DEFAULT_EXPENSE_CATEGORIES.includes(transactionCategory) &&
                     !customExpenseCategories.includes(transactionCategory)
                   ) {
                     setTransactionCategory("Alimentação");

@@ -66,6 +66,36 @@ export function addMonthsToDateString(
   return `${String(targetDay).padStart(2, "0")}/${String(targetMonth + 1).padStart(2, "0")}/${targetYear}`;
 }
 
+/**
+ * Datas (DD/MM/AAAA) de um dia fixo do mês, mês a mês a partir do mês de
+ * referência. Em meses que não têm aquele dia (ex: 31 em abril) usa o
+ * último dia válido só naquele mês — os seguintes voltam ao dia original.
+ */
+export function getMonthlyDates(
+  day: number,
+  count: number,
+  reference: Date = new Date(),
+): string[] {
+  const dates: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const monthStart = new Date(
+      reference.getFullYear(),
+      reference.getMonth() + i,
+      1,
+    );
+    const lastDay = new Date(
+      monthStart.getFullYear(),
+      monthStart.getMonth() + 1,
+      0,
+    ).getDate();
+    const safeDay = Math.min(Math.max(1, Math.floor(day)), lastDay);
+    dates.push(
+      `${String(safeDay).padStart(2, "0")}/${String(monthStart.getMonth() + 1).padStart(2, "0")}/${monthStart.getFullYear()}`,
+    );
+  }
+  return dates;
+}
+
 /** Converte uma data DD/MM/AAAA em Date, com fallback pra hoje quando o texto é inválido/vazio. */
 export function parseDateString(value: string): Date {
   const [day, month, year] = String(value).split("/").map(Number);

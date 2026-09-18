@@ -66,6 +66,35 @@ export interface DebtRow {
   due_date: string | null; // DD/MM/AAAA — dia combinado pra receber/pagar
 }
 
+/** Rascunhos do onboarding — ficam só em memória até o usuário concluir. */
+export interface RecurringDraft {
+  id: string;
+  type: TransactionType;
+  title: string;
+  amount: number;
+  day: number; // dia do mês em que se repete
+  category: string;
+}
+
+export interface InstallmentDraft {
+  id: string;
+  title: string;
+  installmentAmount: number; // valor de cada parcela
+  startNumber: number; // número da próxima parcela a pagar
+  total: number;
+  firstDate: string; // DD/MM/AAAA — data da próxima parcela
+  category: string;
+}
+
+export interface DebtDraft {
+  id: string;
+  person: string;
+  amount: number;
+  type: DebtType;
+  description: string | null;
+  dueDate: string | null;
+}
+
 /** Transação já enriquecida com a cor da categoria, usada na tela do dashboard. */
 export interface EnrichedTransaction extends TransactionRow {
   category: string;

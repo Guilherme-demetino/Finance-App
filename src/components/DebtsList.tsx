@@ -2,12 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { colors } from "../constants/colors";
-import type { DebtRow, DebtType } from "../types";
+import type { DebtRow } from "../types";
 import { styles } from "../styles/dashboardStyles";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
 import { parseDateString } from "../utils/dates";
 import { ConfirmModal } from "./ConfirmModal";
-import { DebtModal } from "./DebtModal";
 
 function isOverdue(dueDate: string, today: string): boolean {
   return parseDateString(dueDate).getTime() < parseDateString(today).getTime();
@@ -19,17 +18,9 @@ interface DebtsListProps {
   totalToReceive: number;
   totalToPay: number;
   isLoading: boolean;
-  onAddDebt: (data: {
-    person: string;
-    amount: number;
-    type: DebtType;
-    description: string | null;
-    date: string;
-    dueDate: string | null;
-  }) => void;
+  onOpenAddDebt: () => void;
   onSettleDebt: (debt: DebtRow) => void;
   onDeleteDebt: (id: number) => void;
-  formatCurrency: (val: string) => string;
   today: string;
 }
 
@@ -39,13 +30,11 @@ export function DebtsList({
   totalToReceive,
   totalToPay,
   isLoading,
-  onAddDebt,
+  onOpenAddDebt,
   onSettleDebt,
   onDeleteDebt,
-  formatCurrency,
   today,
 }: DebtsListProps) {
-  const [isAddOpen, setIsAddOpen] = useState(false);
   const [debtToDelete, setDebtToDelete] = useState<DebtRow | null>(null);
 
   return (
@@ -70,7 +59,7 @@ export function DebtsList({
               justifyContent: "center",
               alignItems: "center",
             }}
-            onPress={() => setIsAddOpen(true)}
+            onPress={onOpenAddDebt}
           >
             <Ionicons name="add" size={20} color={colors.textPrimary} />
           </TouchableOpacity>
@@ -328,16 +317,6 @@ export function DebtsList({
           </View>
         </View>
       )}
-
-      <DebtModal
-        visible={isAddOpen}
-        onClose={() => setIsAddOpen(false)}
-        formatCurrency={formatCurrency}
-        onSave={(data) => {
-          setIsAddOpen(false);
-          onAddDebt({ ...data, date: today });
-        }}
-      />
 
       <ConfirmModal
         visible={!!debtToDelete}

@@ -1,5 +1,6 @@
 import {
   addMonthsToDateString,
+  getMonthlyDates,
   getMonthNumber,
   getPreviousMonth,
   MONTH_NAME_TO_NUMBER,
@@ -68,6 +69,39 @@ describe("addMonthsToDateString", () => {
 
   it("somar zero meses retorna a mesma data", () => {
     expect(addMonthsToDateString("05/07/2026", 0)).toBe("05/07/2026");
+  });
+});
+
+describe("getMonthlyDates", () => {
+  it("gera o mesmo dia em meses consecutivos a partir do mês de referência", () => {
+    expect(getMonthlyDates(5, 3, new Date(2026, 8, 18))).toEqual([
+      "05/09/2026",
+      "05/10/2026",
+      "05/11/2026",
+    ]);
+  });
+
+  it("vira o ano quando passa de dezembro", () => {
+    expect(getMonthlyDates(10, 3, new Date(2026, 10, 1))).toEqual([
+      "10/11/2026",
+      "10/12/2026",
+      "10/01/2027",
+    ]);
+  });
+
+  it("ajusta só nos meses curtos, sem deslocar os meses seguintes", () => {
+    // 31 em fevereiro cai no 28, mas março volta ao dia 31
+    expect(getMonthlyDates(31, 3, new Date(2026, 1, 10))).toEqual([
+      "28/02/2026",
+      "31/03/2026",
+      "30/04/2026",
+    ]);
+  });
+
+  it("respeita ano bissexto", () => {
+    expect(getMonthlyDates(30, 1, new Date(2028, 1, 1))).toEqual([
+      "29/02/2028",
+    ]);
   });
 });
 
