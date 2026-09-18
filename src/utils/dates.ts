@@ -22,3 +22,28 @@ export function getMonthNumber(monthName: string): string {
     String(new Date().getMonth() + 1).padStart(2, "0")
   );
 }
+
+/**
+ * Soma meses a uma data no formato DD/MM/AAAA, usada para gerar as
+ * ocorrências futuras de transações recorrentes/parceladas. Quando o dia
+ * não existe no mês de destino (ex: dia 31 num mês de 30 dias), usa o
+ * último dia válido daquele mês em vez de estourar pro mês seguinte.
+ */
+export function addMonthsToDateString(
+  dateString: string,
+  monthsToAdd: number,
+): string {
+  const [day, month, year] = dateString.split("/").map(Number);
+  const targetMonthIndex = month - 1 + monthsToAdd;
+  const targetYear = year + Math.floor(targetMonthIndex / 12);
+  const targetMonth = ((targetMonthIndex % 12) + 12) % 12;
+
+  const lastDayOfTargetMonth = new Date(
+    targetYear,
+    targetMonth + 1,
+    0,
+  ).getDate();
+  const targetDay = Math.min(day, lastDayOfTargetMonth);
+
+  return `${String(targetDay).padStart(2, "0")}/${String(targetMonth + 1).padStart(2, "0")}/${targetYear}`;
+}

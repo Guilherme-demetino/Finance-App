@@ -1,5 +1,15 @@
 import { getDatabase } from "./sqlite";
 import type { TransactionRow, TransactionType } from "../types";
+import { addMonthsToDateString } from "../utils/dates";
+import { splitAmountIntoInstallments } from "../utils/currency";
+
+// Menor número de meses aceito para uma recorrência — abaixo disso não
+// faz sentido chamar de "recorrente".
+export const MIN_RECURRING_MONTHS = 2;
+
+function generateRecurrenceGroupId(): string {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
 
 export async function getAllTransactions(): Promise<TransactionRow[]> {
   const db = await getDatabase();
@@ -61,4 +71,67 @@ export async function deleteTransactionsByMonth(
     "DELETE FROM transactions WHERE date LIKE ?",
     `%/${monthNumber}/${year}`,
   );
+}
+
+/**
+ * Cria uma transação recorrente: gera a ocorrência atual + as próximas
+ * `monthsAhead - 1`, mesmo dia todo mês (ajustado quando o mês de destino
+ * não tem esse dia), todas com o mesmo valor e categoria.
+ */
+export async function createRecurringTransactions(
+  data: TransactionInput,
+  monthsAhead: number,
+): Promise<void> {
+  const db = await getDatabase();
+  const groupId = generateRecurrenceGroupId();
+  const totalMonths = Math.max(MIN_RECURRING_MONTHS, monthsAhead);
+
+  db.withTransactionSync(() => {
+    for (let i = 0; i < totalMonths; i++) {
+      const date = i === 0 ? data.date : addMonthsToDateString(data.date, i);
+      db.runSync(
+        "INSERT INTO transactions (amount, date, description, type, category_id, recurrence_group_id, recurrence_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        data.amount,
+        date,
+        data.description,
+        data.type,
+        data.category,
+        groupId,
+        "recurring",
+      );
+    }
+  });
+}
+
+/**
+ * Cria uma compra parcelada: divide `data.amount` (valor total da compra)
+ * em `installmentCount` parcelas, uma por mês, com a descrição marcada
+ * "(k/N)" pra identificar cada parcela na listagem.
+ */
+export async function createInstallmentTransactions(
+  data: TransactionInput,
+  installmentCount: number,
+): Promise<void> {
+  const db = await getDatabase();
+  const groupId = generateRecurrenceGroupId();
+  const amounts = splitAmountIntoInstallments(data.amount, installmentCount);
+
+  db.withTransactionSync(() => {
+    for (let i = 0; i < installmentCount; i++) {
+      const date = i === 0 ? data.date : addMonthsToDateString(data.date, i);
+      const description = `${data.description} (${i + 1}/${installmentCount})`;
+      db.runSync(
+        "INSERT INTO transactions (amount, date, description, type, category_id, recurrence_group_id, recurrence_type, installment_number, installment_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        amounts[i],
+        date,
+        description,
+        data.type,
+        data.category,
+        groupId,
+        "installment",
+        i + 1,
+        installmentCount,
+      );
+    }
+  });
 }

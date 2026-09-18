@@ -1,4 +1,8 @@
-import { formatCurrency, formatCurrencyInput } from "./currency";
+import {
+  formatCurrency,
+  formatCurrencyInput,
+  splitAmountIntoInstallments,
+} from "./currency";
 
 describe("formatCurrency", () => {
   it("formata valores positivos com separador de milhar e duas casas", () => {
@@ -55,5 +59,24 @@ describe("formatCurrencyInput", () => {
 
   it("ignora caracteres não numéricos já presentes no valor", () => {
     expect(formatCurrencyInput("R$ 1.500")).toBe("15,00");
+  });
+});
+
+describe("splitAmountIntoInstallments", () => {
+  it("divide igualmente quando o total é múltiplo do número de parcelas", () => {
+    expect(splitAmountIntoInstallments(300, 3)).toEqual([100, 100, 100]);
+  });
+
+  it("joga o resto do arredondamento pra última parcela", () => {
+    const parcelas = splitAmountIntoInstallments(100, 3);
+    expect(parcelas).toEqual([33.33, 33.33, 33.34]);
+    // a soma tem que bater exatamente com o total, sem perder centavo
+    const soma = parcelas.reduce((acc, v) => acc + v, 0);
+    expect(Math.round(soma * 100)).toBe(10000);
+  });
+
+  it("retorna o valor cheio numa lista de 1 elemento quando count <= 1", () => {
+    expect(splitAmountIntoInstallments(150, 1)).toEqual([150]);
+    expect(splitAmountIntoInstallments(150, 0)).toEqual([150]);
   });
 });

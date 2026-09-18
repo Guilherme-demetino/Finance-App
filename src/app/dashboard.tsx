@@ -31,7 +31,11 @@ import { getAllTransactions } from "../database/transactions";
 import { useTransactions } from "../hooks/useTransactions";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { styles } from "../styles/dashboardStyles";
-import type { DisplayTransaction, TransactionType } from "../types";
+import type {
+  DisplayTransaction,
+  TransactionRepeatMode,
+  TransactionType,
+} from "../types";
 import { formatCurrencyInput } from "../utils/currency";
 import { getMonthNumber, MONTH_NAMES } from "../utils/dates";
 import {
@@ -75,6 +79,9 @@ export default function DashboardScreen() {
     `${currentDay}/${currentMonthNum}/${currentYearStr}`,
   );
   const [transactionCategory, setTransactionCategory] = useState("Salário");
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringMonths, setRecurringMonths] = useState(12);
+  const [installmentCount, setInstallmentCount] = useState(1);
 
   const {
     transactions,
@@ -239,6 +246,11 @@ export default function DashboardScreen() {
     setTransactionCategory(
       item.category || (item.type === "income" ? "Salário" : "Alimentação"),
     );
+    // Editar sempre mexe só nessa ocorrência — nunca reabre como
+    // recorrente/parcelada, mesmo se a transação original era uma delas.
+    setIsRecurring(false);
+    setRecurringMonths(12);
+    setInstallmentCount(1);
     setIsTransactionModalOpen(true);
   };
 
@@ -273,6 +285,12 @@ export default function DashboardScreen() {
     const safeCategory =
       rawCat !== "" ? rawCat : safeType === "income" ? "Salário" : "Outros";
 
+    const repeatMode: TransactionRepeatMode = isRecurring
+      ? { kind: "recurring", months: recurringMonths }
+      : installmentCount > 1
+        ? { kind: "installment", count: installmentCount }
+        : { kind: "single" };
+
     try {
       await saveTransaction(
         editingTransactionId ? Number(editingTransactionId) : null,
@@ -283,18 +301,24 @@ export default function DashboardScreen() {
           type: safeType,
           category: safeCategory,
         },
+        repeatMode,
       );
 
-      showAlert(
-        "Sucesso",
-        editingTransactionId
-          ? "Transação atualizada com sucesso!"
-          : "Transação salva com sucesso!",
-      );
+      const successMessage = editingTransactionId
+        ? "Transação atualizada com sucesso!"
+        : repeatMode.kind === "recurring"
+          ? `Transação recorrente cadastrada! Ela vai aparecer todo mês pelos próximos ${repeatMode.months} meses.`
+          : repeatMode.kind === "installment"
+            ? `Compra parcelada em ${repeatMode.count}x cadastrada com sucesso!`
+            : "Transação salva com sucesso!";
+      showAlert("Sucesso", successMessage);
 
       setTransactionTitle("");
       setTransactionAmount("");
       setEditingTransactionId(null);
+      setIsRecurring(false);
+      setRecurringMonths(12);
+      setInstallmentCount(1);
       setIsTransactionModalOpen(false);
     } catch (error) {
       console.log("Erro ao salvar transação:", error);
@@ -378,6 +402,7 @@ export default function DashboardScreen() {
       category: item.category_id,
       color: item.color || colors.textSecondary,
       icon: item.type === "income" ? "cash-outline" : "cart-outline",
+      recurrenceType: item.recurrence_type,
     }),
   );
 
@@ -438,6 +463,9 @@ export default function DashboardScreen() {
           setEditingTransactionId(null);
           setTransactionType("income");
           setTransactionCategory("Salário");
+          setIsRecurring(false);
+          setRecurringMonths(12);
+          setInstallmentCount(1);
 
           const targetMonth = getMonthNumber(selectedMonth);
           let dayToUse = "01";
@@ -471,6 +499,13 @@ export default function DashboardScreen() {
         setTransactionDate={setTransactionDate}
         transactionCategory={transactionCategory}
         setTransactionCategory={setTransactionCategory}
+        isRecurring={isRecurring}
+        setIsRecurring={setIsRecurring}
+        recurringMonths={recurringMonths}
+        setRecurringMonths={setRecurringMonths}
+        installmentCount={installmentCount}
+        setInstallmentCount={setInstallmentCount}
+        isEditing={!!editingTransactionId}
         formatCurrency={formatCurrencyInput}
         onSave={handleSaveTransaction}
       />

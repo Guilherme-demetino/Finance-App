@@ -1,5 +1,8 @@
 export type TransactionType = "income" | "expense";
 
+/** Como uma transação se repete: recorrente (todo mês) ou parcelada (N vezes). */
+export type RecurrenceType = "recurring" | "installment";
+
 /** Linha crua da tabela `transactions` no SQLite. */
 export interface TransactionRow {
   id: number;
@@ -8,6 +11,10 @@ export interface TransactionRow {
   description: string;
   type: TransactionType;
   category_id: string;
+  recurrence_group_id?: string | null;
+  recurrence_type?: RecurrenceType | null;
+  installment_number?: number | null;
+  installment_total?: number | null;
 }
 
 /** Linha crua da tabela `categories` no SQLite. */
@@ -31,6 +38,12 @@ export interface EnrichedTransaction extends TransactionRow {
   color: string;
 }
 
+/** Como uma transação nova deve ser salva: única, recorrente ou parcelada. */
+export type TransactionRepeatMode =
+  | { kind: "single" }
+  | { kind: "recurring"; months: number }
+  | { kind: "installment"; count: number };
+
 /** Formato usado para exibição na listagem (id como string, ícone resolvido). */
 export interface DisplayTransaction {
   id: string;
@@ -41,4 +54,5 @@ export interface DisplayTransaction {
   category?: string;
   color: string;
   icon: string;
+  recurrenceType?: RecurrenceType | null;
 }

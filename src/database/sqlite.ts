@@ -31,7 +31,11 @@ function createTables(db: SQLite.SQLiteDatabase) {
         date TEXT NOT NULL,
         description TEXT NOT NULL,
         type TEXT NOT NULL,
-        category_id TEXT NOT NULL
+        category_id TEXT NOT NULL,
+        recurrence_group_id TEXT,
+        recurrence_type TEXT,
+        installment_number INTEGER,
+        installment_total INTEGER
       );
     `);
 
@@ -42,6 +46,23 @@ function createTables(db: SQLite.SQLiteDatabase) {
       );
     `);
   });
+
+  // Migração: instalações existentes já têm a tabela `transactions` sem
+  // essas colunas (CREATE TABLE IF NOT EXISTS não altera tabelas já
+  // criadas). ALTER TABLE falha se a coluna já existir — ignoramos o erro.
+  const recurrenceColumns = [
+    "recurrence_group_id TEXT",
+    "recurrence_type TEXT",
+    "installment_number INTEGER",
+    "installment_total INTEGER",
+  ];
+  for (const column of recurrenceColumns) {
+    try {
+      db.runSync(`ALTER TABLE transactions ADD COLUMN ${column};`);
+    } catch {
+      // coluna já existe — instalação recente, nada a fazer
+    }
+  }
 }
 
 /**

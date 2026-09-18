@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { colors } from "../constants/colors";
 import { getAllCategories } from "../database/categories";
 import {
+  createInstallmentTransactions,
+  createRecurringTransactions,
   createTransaction,
   deleteTransaction,
   deleteTransactionsByMonth,
@@ -9,7 +11,7 @@ import {
   TransactionInput,
   updateTransaction,
 } from "../database/transactions";
-import type { EnrichedTransaction } from "../types";
+import type { EnrichedTransaction, TransactionRepeatMode } from "../types";
 import { getMonthNumber } from "../utils/dates";
 
 export interface MonthDatum {
@@ -154,9 +156,15 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
   const saveTransaction = async (
     editingId: number | null,
     data: TransactionInput,
+    repeatMode: TransactionRepeatMode = { kind: "single" },
   ) => {
     if (editingId) {
+      // Editar sempre afeta só essa ocorrência, nunca a série toda.
       await updateTransaction(editingId, data);
+    } else if (repeatMode.kind === "recurring") {
+      await createRecurringTransactions(data, repeatMode.months);
+    } else if (repeatMode.kind === "installment") {
+      await createInstallmentTransactions(data, repeatMode.count);
     } else {
       await createTransaction(data);
     }
