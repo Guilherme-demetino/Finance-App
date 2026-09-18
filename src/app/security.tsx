@@ -4,7 +4,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CustomAlert } from "../components/CustomAlert";
-import { getDatabase } from "../database/sqlite";
+import { colors } from "../constants/colors";
+import { clearLegacyPin, getLegacyPin } from "../database/security";
 import { getStoredPin, savePin } from "../utils/security";
 
 export default function SecurityScreen() {
@@ -14,6 +15,11 @@ export default function SecurityScreen() {
   const [pin, setPin] = useState("");
   const [storedPin, setStoredPin] = useState<string | null>(null);
   const [isSettingUp, setIsSettingUp] = useState(false);
+  // Só é possível estar em isSettingUp com um PIN já existente através do
+  // fluxo de troca (o cadastro inicial nunca chega em isSettingUp tendo
+  // um PIN salvo). Usar isso pro botão de voltar em vez do parâmetro de
+  // rota evita depender de o "mode=change" sobreviver à navegação.
+  const [hadExistingPin, setHadExistingPin] = useState(false);
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
 
   const [alertVisible, setAlertVisible] = useState(false);
@@ -53,14 +59,16 @@ export default function SecurityScreen() {
   };
 
   const checkPin = async () => {
-    if (isChangeFlow) {
-      // Troca de PIN: o usuário já está autenticado, sempre pede um novo.
-      setIsSettingUp(true);
-      return;
-    }
-
     try {
       const existingPin = await getStoredPin();
+
+      if (isChangeFlow) {
+        // Troca de PIN: o usuário já está autenticado, sempre pede um novo.
+        setHadExistingPin(!!existingPin);
+        setIsSettingUp(true);
+        return;
+      }
+
       if (existingPin) {
         setStoredPin(existingPin);
         setIsSettingUp(false);
@@ -70,14 +78,11 @@ export default function SecurityScreen() {
       // Migração: PIN antigo pode existir em texto puro no SQLite
       // (versão anterior, antes do expo-secure-store). Move para o
       // SecureStore e limpa o registro legado.
-      const db = await getDatabase();
-      const legacy: any = await db.getFirstAsync(
-        "SELECT pin FROM security LIMIT 1",
-      );
-      if (legacy && legacy.pin) {
-        await savePin(String(legacy.pin));
-        db.runSync("DELETE FROM security");
-        setStoredPin(String(legacy.pin));
+      const legacyPin = await getLegacyPin();
+      if (legacyPin) {
+        await savePin(legacyPin);
+        await clearLegacyPin();
+        setStoredPin(legacyPin);
         setIsSettingUp(false);
       } else {
         setIsSettingUp(true);
@@ -128,18 +133,18 @@ export default function SecurityScreen() {
   };
   return (
     <View style={styles.container}>
-      {isChangeFlow && (
+      {isSettingUp && hadExistingPin && (
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.replace("/dashboard" as any)}
         >
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       )}
       <Ionicons
         name="lock-closed-outline"
         size={48}
-        color="#10B981"
+        color={colors.income}
         style={{ marginBottom: 16 }}
       />
       <Text style={styles.title}>
@@ -157,7 +162,7 @@ export default function SecurityScreen() {
             key={index}
             style={[
               styles.dot,
-              { backgroundColor: index < pin.length ? "#10B981" : "#2A2A2A" },
+              { backgroundColor: index < pin.length ? colors.income : colors.surfaceAlt },
             ]}
           />
         ))}
@@ -175,7 +180,7 @@ export default function SecurityScreen() {
                     style={styles.keyEmpty}
                     onPress={handleBiometricAuth}
                   >
-                    <Ionicons name="finger-print" size={36} color="#10B981" />
+                    <Ionicons name="finger-print" size={36} color={colors.income} />
                   </TouchableOpacity>
                 );
               }
@@ -193,7 +198,7 @@ export default function SecurityScreen() {
                   <Ionicons
                     name="backspace-outline"
                     size={24}
-                    color="#FFFFFF"
+                    color={colors.textPrimary}
                   />
                 </TouchableOpacity>
               );
@@ -226,7 +231,7 @@ export default function SecurityScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121212",
+    backgroundColor: colors.background,
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
@@ -238,19 +243,19 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     justifyContent: "center",
     alignItems: "center",
   },
   title: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 22,
     fontWeight: "bold",
     marginBottom: 8,
     textAlign: "center",
   },
   subtitle: {
-    color: "#888888",
+    color: colors.textMuted,
     fontSize: 14,
     marginBottom: 32,
     textAlign: "center",
@@ -265,7 +270,7 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#444",
+    borderColor: colors.borderSubtle,
   },
   keypad: {
     width: "100%",
@@ -279,7 +284,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -290,7 +295,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   keyText: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 24,
     fontWeight: "bold",
   },

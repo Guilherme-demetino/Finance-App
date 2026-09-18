@@ -1,9 +1,10 @@
 import { StyleSheet } from "react-native";
+import { colors } from "../constants/colors";
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121212",
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: 24,
@@ -18,33 +19,33 @@ export const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    color: "#A1A1AA",
+    color: colors.textSecondary,
   },
   userName: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: colors.textPrimary,
   },
   profileButton: {
     padding: 4,
   },
   balanceCard: {
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 24,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#333333",
+    borderColor: colors.border,
   },
   balanceLabel: {
     fontSize: 16,
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   balanceAmount: {
     fontSize: 36,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: colors.textPrimary,
   },
   summaryContainer: {
     flexDirection: "row",
@@ -53,11 +54,11 @@ export const styles = StyleSheet.create({
   },
   summaryCard: {
     flex: 1,
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#333333",
+    borderColor: colors.border,
   },
   summaryHeader: {
     flexDirection: "row",
@@ -66,26 +67,26 @@ export const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     marginLeft: 8,
   },
   summaryValueIncome: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#10B981",
+    color: colors.income,
   },
   summaryValueExpense: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#EF4444",
+    color: colors.expense,
   },
   chartCard: {
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: "#333333",
+    borderColor: colors.border,
   },
   chartHeader: {
     flexDirection: "row",
@@ -96,17 +97,17 @@ export const styles = StyleSheet.create({
   chartTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: colors.textPrimary,
   },
   chartSubtitle: {
     fontSize: 12,
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     marginTop: 2,
   },
   toggleButton: {
-    backgroundColor: "#2A2A2A", // Fundo escuro igual aos botões de login/PIN
+    backgroundColor: colors.surfaceAlt, // Fundo escuro igual aos botões de login/PIN
     borderWidth: 1,
-    borderColor: "#FFFFFF", // Borda branca
+    borderColor: colors.textPrimary, // Borda branca
     borderRadius: 12, // Cantos arredondados padronizados
     width: 40,
     height: 40,
@@ -125,16 +126,16 @@ export const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     overflow: "hidden",
-    backgroundColor: "#333333",
+    backgroundColor: colors.border,
     width: "100%",
   },
   progressIncome: {
     height: "100%",
-    backgroundColor: "#10B981",
+    backgroundColor: colors.income,
   },
   progressExpense: {
     height: "100%",
-    backgroundColor: "#EF4444",
+    backgroundColor: colors.expense,
   },
   pieContainer: {
     flexDirection: "row",
@@ -148,8 +149,8 @@ export const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 10,
-    borderColor: "#10B981",
-    borderTopColor: "#EF4444",
+    borderColor: colors.income,
+    borderTopColor: colors.expense,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -157,18 +158,18 @@ export const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     justifyContent: "center",
     alignItems: "center",
   },
   donutCenterText: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: colors.textPrimary,
   },
   donutCenterSub: {
     fontSize: 10,
-    color: "#A1A1AA",
+    color: colors.textSecondary,
   },
   pieInfoSide: {
     flex: 1,
@@ -177,19 +178,19 @@ export const styles = StyleSheet.create({
   pieInfoTitle: {
     fontSize: 14,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   pieInfoDesc: {
     fontSize: 12,
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     lineHeight: 16,
   },
   legendContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
     borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
+    borderTopColor: colors.surfaceAlt,
     paddingTop: 12,
   },
   legendItem: {
@@ -204,12 +205,12 @@ export const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 14,
-    color: "#A1A1AA",
+    color: colors.textSecondary,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     marginBottom: 16,
   },
   transactionsList: {
@@ -218,7 +219,7 @@ export const styles = StyleSheet.create({
   transactionItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 12,
   },
@@ -226,7 +227,7 @@ export const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#333333",
+    backgroundColor: colors.border,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
@@ -237,12 +238,12 @@ export const styles = StyleSheet.create({
   transactionDescription: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   transactionDate: {
     fontSize: 14,
-    color: "#A1A1AA",
+    color: colors.textSecondary,
   },
   transactionAmount: {
     fontSize: 16,
@@ -252,16 +253,16 @@ export const styles = StyleSheet.create({
     position: "absolute",
     right: 24,
     bottom: 24,
-    backgroundColor: "#2A2A2A", // Fundo escuro igual aos outros botões
+    backgroundColor: colors.surfaceAlt, // Fundo escuro igual aos outros botões
     borderWidth: 1,
-    borderColor: "#FFFFFF", // Borda branca
+    borderColor: colors.textPrimary, // Borda branca
     width: 56,
     height: 56,
     borderRadius: 16, // Cantos arredondados padronizados
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
-    shadowColor: "#000",
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,

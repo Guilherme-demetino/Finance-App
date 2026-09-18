@@ -9,25 +9,17 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
+import { colors } from "../constants/colors";
+import type { DisplayTransaction } from "../types";
 import { formatCurrency } from "../utils/currency";
 
-interface TransactionItem {
-  id: string;
-  description: string;
-  amount: number;
-  type: "income" | "expense";
-  date: string;
-  category?: string;
-  icon: string;
-}
-
 interface TransactionsHistoryListProps {
-  transactions: TransactionItem[];
+  transactions: DisplayTransaction[];
   hasAnyTransactions?: boolean;
   isLoading?: boolean;
   searchText: string;
   setSearchText: (text: string) => void;
-  onEditTransaction: (item: any) => void;
+  onEditTransaction: (item: DisplayTransaction) => void;
   onDeleteTransaction: (id: string) => void;
   onDeleteAll: () => void;
 }
@@ -92,16 +84,16 @@ export function TransactionsHistoryList({
           marginBottom: 12,
         }}
       >
-        <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "bold" }}>
+        <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "bold" }}>
           Histórico de Transações
         </Text>
         {transactions.length > 0 && (
           <TouchableOpacity
             onPress={onDeleteAll}
             style={{
-              backgroundColor: "#2A2A2A",
+              backgroundColor: colors.surfaceAlt,
               borderWidth: 1,
-              borderColor: "#FFFFFF",
+              borderColor: colors.textPrimary,
               borderRadius: 8,
               width: 36,
               height: 36,
@@ -109,24 +101,24 @@ export function TransactionsHistoryList({
               justifyContent: "center",
             }}
           >
-            <Ionicons name="trash-outline" size={18} color="#EF4444" />
+            <Ionicons name="trash-outline" size={18} color={colors.expense} />
           </TouchableOpacity>
         )}
       </View>
 
       <TextInput
         style={{
-          backgroundColor: "#1E1E1E",
-          color: "#FFFFFF",
+          backgroundColor: colors.surface,
+          color: colors.textPrimary,
           paddingHorizontal: 16,
           paddingVertical: 12,
           borderRadius: 12,
           borderWidth: 1,
-          borderColor: "#2A2A2A",
+          borderColor: colors.surfaceAlt,
           marginBottom: 12,
         }}
         placeholder="Buscar por descrição ou categoria..."
-        placeholderTextColor="#666"
+        placeholderTextColor={colors.textPlaceholder}
         value={searchText}
         onChangeText={setSearchText}
       />
@@ -135,9 +127,9 @@ export function TransactionsHistoryList({
         <TouchableOpacity
           style={{
             flex: 1,
-            backgroundColor: "#2A2A2A",
+            backgroundColor: colors.surfaceAlt,
             borderWidth: 1,
-            borderColor: "#FFFFFF",
+            borderColor: colors.textPrimary,
             paddingVertical: 8,
             borderRadius: 8,
             alignItems: "center",
@@ -145,7 +137,7 @@ export function TransactionsHistoryList({
           }}
           onPress={() => setFilter("all")}
         >
-          <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "bold" }}>
+          <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "bold" }}>
             Todas
           </Text>
         </TouchableOpacity>
@@ -153,9 +145,9 @@ export function TransactionsHistoryList({
         <TouchableOpacity
           style={{
             flex: 1,
-            backgroundColor: "#2A2A2A",
+            backgroundColor: colors.surfaceAlt,
             borderWidth: 1,
-            borderColor: "#FFFFFF",
+            borderColor: colors.textPrimary,
             paddingVertical: 8,
             borderRadius: 8,
             alignItems: "center",
@@ -163,7 +155,7 @@ export function TransactionsHistoryList({
           }}
           onPress={() => setFilter("income")}
         >
-          <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "bold" }}>
+          <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "bold" }}>
             Receitas
           </Text>
         </TouchableOpacity>
@@ -171,9 +163,9 @@ export function TransactionsHistoryList({
         <TouchableOpacity
           style={{
             flex: 1,
-            backgroundColor: "#2A2A2A",
+            backgroundColor: colors.surfaceAlt,
             borderWidth: 1,
-            borderColor: "#FFFFFF",
+            borderColor: colors.textPrimary,
             paddingVertical: 8,
             borderRadius: 8,
             alignItems: "center",
@@ -181,7 +173,7 @@ export function TransactionsHistoryList({
           }}
           onPress={() => setFilter("expense")}
         >
-          <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "bold" }}>
+          <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "bold" }}>
             Despesas
           </Text>
         </TouchableOpacity>
@@ -195,9 +187,9 @@ export function TransactionsHistoryList({
         <View style={{ flexDirection: "row", gap: 8 }}>
           <TouchableOpacity
             style={{
-              backgroundColor: "#2A2A2A",
+              backgroundColor: colors.surfaceAlt,
               borderWidth: 1,
-              borderColor: "#FFFFFF",
+              borderColor: colors.textPrimary,
               paddingHorizontal: 12,
               paddingVertical: 6,
               borderRadius: 8,
@@ -206,7 +198,7 @@ export function TransactionsHistoryList({
             onPress={() => setSortBy("recent")}
           >
             <Text
-              style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "bold" }}
+              style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "bold" }}
             >
               Mais recente
             </Text>
@@ -214,9 +206,9 @@ export function TransactionsHistoryList({
 
           <TouchableOpacity
             style={{
-              backgroundColor: "#2A2A2A",
+              backgroundColor: colors.surfaceAlt,
               borderWidth: 1,
-              borderColor: "#FFFFFF",
+              borderColor: colors.textPrimary,
               paddingHorizontal: 12,
               paddingVertical: 6,
               borderRadius: 8,
@@ -225,7 +217,7 @@ export function TransactionsHistoryList({
             onPress={() => setSortBy("oldest")}
           >
             <Text
-              style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "bold" }}
+              style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "bold" }}
             >
               Mais antigo
             </Text>
@@ -233,9 +225,9 @@ export function TransactionsHistoryList({
 
           <TouchableOpacity
             style={{
-              backgroundColor: "#2A2A2A",
+              backgroundColor: colors.surfaceAlt,
               borderWidth: 1,
-              borderColor: "#FFFFFF",
+              borderColor: colors.textPrimary,
               paddingHorizontal: 12,
               paddingVertical: 6,
               borderRadius: 8,
@@ -244,7 +236,7 @@ export function TransactionsHistoryList({
             onPress={() => setSortBy("highest")}
           >
             <Text
-              style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "bold" }}
+              style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "bold" }}
             >
               Maior valor
             </Text>
@@ -252,9 +244,9 @@ export function TransactionsHistoryList({
 
           <TouchableOpacity
             style={{
-              backgroundColor: "#2A2A2A",
+              backgroundColor: colors.surfaceAlt,
               borderWidth: 1,
-              borderColor: "#FFFFFF",
+              borderColor: colors.textPrimary,
               paddingHorizontal: 12,
               paddingVertical: 6,
               borderRadius: 8,
@@ -263,7 +255,7 @@ export function TransactionsHistoryList({
             onPress={() => setSortBy("lowest")}
           >
             <Text
-              style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "bold" }}
+              style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "bold" }}
             >
               Menor valor
             </Text>
@@ -276,8 +268,8 @@ export function TransactionsHistoryList({
           entering={FadeIn.duration(150)}
           style={{ paddingVertical: 40, alignItems: "center" }}
         >
-          <ActivityIndicator size="small" color="#10B981" />
-          <Text style={{ color: "#888", fontSize: 13, marginTop: 12 }}>
+          <ActivityIndicator size="small" color={colors.income} />
+          <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 12 }}>
             Carregando transações...
           </Text>
         </Animated.View>
@@ -295,9 +287,9 @@ export function TransactionsHistoryList({
               width: 72,
               height: 72,
               borderRadius: 36,
-              backgroundColor: "#1E1E1E",
+              backgroundColor: colors.surface,
               borderWidth: 1,
-              borderColor: "#2A2A2A",
+              borderColor: colors.surfaceAlt,
               alignItems: "center",
               justifyContent: "center",
               marginBottom: 16,
@@ -308,12 +300,12 @@ export function TransactionsHistoryList({
                 hasAnyTransactions ? "search-outline" : "receipt-outline"
               }
               size={32}
-              color="#555"
+              color={colors.textFaint}
             />
           </View>
           <Text
             style={{
-              color: "#FFFFFF",
+              color: colors.textPrimary,
               fontSize: 15,
               fontWeight: "bold",
               textAlign: "center",
@@ -326,7 +318,7 @@ export function TransactionsHistoryList({
           </Text>
           <Text
             style={{
-              color: "#888",
+              color: colors.textMuted,
               fontSize: 13,
               textAlign: "center",
               lineHeight: 18,
@@ -343,7 +335,7 @@ export function TransactionsHistoryList({
             key={item.id}
             entering={FadeIn.duration(250).delay(Math.min(index, 8) * 40)}
             style={{
-              backgroundColor: "#1E1E1E",
+              backgroundColor: colors.surface,
               padding: 14,
               borderRadius: 12,
               marginBottom: 10,
@@ -351,7 +343,7 @@ export function TransactionsHistoryList({
               alignItems: "center",
               justifyContent: "space-between",
               borderWidth: 1,
-              borderColor: "#2A2A2A",
+              borderColor: colors.surfaceAlt,
             }}
           >
             <View
@@ -382,17 +374,17 @@ export function TransactionsHistoryList({
                       : "arrow-up-outline"
                   }
                   size={20}
-                  color={item.type === "income" ? "#10B981" : "#EF4444"}
+                  color={item.type === "income" ? colors.income : colors.expense}
                 />
               </View>
               <View style={{ flex: 1 }}>
                 <Text
-                  style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "500" }}
+                  style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "500" }}
                   numberOfLines={1}
                 >
                   {item.description}
                 </Text>
-                <Text style={{ color: "#888", fontSize: 12, marginTop: 2 }}>
+                <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>
                   {item.date} {item.category ? `• ${item.category}` : ""}
                 </Text>
               </View>
@@ -403,7 +395,7 @@ export function TransactionsHistoryList({
             >
               <Text
                 style={{
-                  color: item.type === "income" ? "#10B981" : "#EF4444",
+                  color: item.type === "income" ? colors.income : colors.expense,
                   fontSize: 14,
                   fontWeight: "bold",
                   marginRight: 2,
@@ -417,9 +409,9 @@ export function TransactionsHistoryList({
               <TouchableOpacity
                 onPress={() => onEditTransaction(item)}
                 style={{
-                  backgroundColor: "#2A2A2A",
+                  backgroundColor: colors.surfaceAlt,
                   borderWidth: 1,
-                  borderColor: "#FFFFFF",
+                  borderColor: colors.textPrimary,
                   borderRadius: 8,
                   width: 34,
                   height: 34,
@@ -427,15 +419,15 @@ export function TransactionsHistoryList({
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="pencil-outline" size={16} color="#FFFFFF" />
+                <Ionicons name="pencil-outline" size={16} color={colors.textPrimary} />
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={() => onDeleteTransaction(item.id)}
                 style={{
-                  backgroundColor: "#2A2A2A",
+                  backgroundColor: colors.surfaceAlt,
                   borderWidth: 1,
-                  borderColor: "#FFFFFF",
+                  borderColor: colors.textPrimary,
                   borderRadius: 8,
                   width: 34,
                   height: 34,
@@ -443,7 +435,7 @@ export function TransactionsHistoryList({
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                <Ionicons name="trash-outline" size={16} color={colors.expense} />
               </TouchableOpacity>
             </View>
           </Animated.View>

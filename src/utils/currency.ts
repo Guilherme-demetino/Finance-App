@@ -27,3 +27,18 @@ export function formatCurrency(
 
   return `${signPrefix}R$ ${magnitude}`;
 }
+
+/**
+ * Máscara de moeda para campos de texto: recebe o que o usuário digitou
+ * (dígitos crus, ex: "150") e devolve formatado como "1,50" enquanto ele
+ * digita (interpreta os dígitos como centavos).
+ */
+export function formatCurrencyInput(value: string): string {
+  const numbers = value.replace(/\D/g, "");
+  if (!numbers) return "";
+
+  const amount = (Number(numbers) / 100).toFixed(2);
+  const parts = amount.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return parts.join(",");
+}

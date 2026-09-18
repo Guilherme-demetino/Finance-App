@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
 import { formatCurrency } from "../utils/currency";
+import { colors } from "../constants/colors";
 
 interface Transaction {
   id: string;
@@ -17,12 +18,12 @@ interface GeneralBalanceCardProps {
 }
 
 const categoryColors: Record<string, string> = {
-  "Saldo Livre": "#10B981",
-  Moradia: "#3B82F6",
-  Alimentação: "#F59E0B",
-  Transporte: "#8B5CF6",
-  Lazer: "#EC4899",
-  Outros: "#A1A1AA",
+  "Saldo Livre": colors.income,
+  Moradia: colors.accent,
+  Alimentação: colors.categoryAmber,
+  Transporte: colors.categoryPurple,
+  Lazer: colors.categoryPink,
+  Outros: colors.textSecondary,
 };
 
 export function GeneralBalanceCard({
@@ -43,7 +44,7 @@ export function GeneralBalanceCard({
         acc[cat] = {
           amount: 0,
           // Pega a cor do banco (t.color), ou do dicionário fixo, ou uma cor padrão
-          color: t.color || categoryColors[cat] || "#A1A1AA",
+          color: t.color || categoryColors[cat] || colors.textSecondary,
         };
       }
       acc[cat].amount += t.amount;
@@ -104,7 +105,7 @@ export function GeneralBalanceCard({
                 cx={center}
                 cy={center}
                 r={radius}
-                stroke="#2A2A2A"
+                stroke={colors.surfaceAlt}
                 strokeWidth={strokeWidth}
                 fill="none"
               />
@@ -282,9 +283,9 @@ export function GeneralBalanceCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#333333",
+    borderColor: colors.border,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
@@ -295,23 +296,23 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "bold",
     letterSpacing: 1,
   },
   subtitle: {
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     fontSize: 11,
     marginTop: 4,
   },
   comprometidoLabel: {
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     fontSize: 10,
     fontWeight: "bold",
   },
   comprometidoValue: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: "bold",
     marginTop: 2,
@@ -334,17 +335,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   donutLabel: {
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     fontSize: 9,
     fontWeight: "bold",
   },
   donutValue: {
-    color: "#10B981",
+    color: colors.income,
     fontSize: 14,
     fontWeight: "bold",
   },
   donutValueEmpty: {
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     fontSize: 11,
   },
   legendContainer: {
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   legendName: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 11,
     fontWeight: "bold",
     flex: 1,
@@ -372,12 +373,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   legendPercent: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 11,
     fontWeight: "bold",
   },
   legendDesc: {
-    color: "#666666",
+    color: colors.textPlaceholder,
     fontSize: 9,
   },
   barsContainer: {
@@ -396,23 +397,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   barTitle: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 11,
     fontWeight: "bold",
   },
   barAmount: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 11,
     fontWeight: "bold",
   },
   barPercent: {
-    color: "#666666",
+    color: colors.textPlaceholder,
     fontWeight: "normal",
   },
   barBackground: {
     width: "100%",
     height: 6,
-    backgroundColor: "#121212",
+    backgroundColor: colors.background,
     borderRadius: 3,
     overflow: "hidden",
   },

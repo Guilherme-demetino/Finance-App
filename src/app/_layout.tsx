@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, AppState, AppStateStatus, View } from "react-native";
 import { initDatabase } from "../database/sqlite";
 import { hasPinConfigured } from "../utils/security";
+import { colors } from "../constants/colors";
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
@@ -53,10 +54,10 @@ export default function RootLayout() {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: "#121212",
+          backgroundColor: colors.background,
         }}
       >
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }

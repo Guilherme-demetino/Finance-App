@@ -1,5 +1,6 @@
 import { Text, View } from "react-native";
 import { formatCurrency } from "../utils/currency";
+import { colors } from "../constants/colors";
 
 interface BalanceCardProps {
   totalBalance: number;
@@ -12,22 +13,22 @@ export function BalanceCard({
   selectedMonth,
   selectedYear,
 }: BalanceCardProps) {
-  const balanceColor = totalBalance >= 0 ? "#10B981" : "#EF4444";
+  const balanceColor = totalBalance >= 0 ? colors.income : colors.expense;
 
   return (
     <View
       style={{
-        backgroundColor: "#1E1E1E",
+        backgroundColor: colors.surface,
         borderRadius: 16, // Bordas arredondadas restauradas
         width: "100%", // Mantém o cartão esticado acompanhando os outros
         paddingVertical: 24,
         paddingHorizontal: 20,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: "#2A2A2A",
+        borderColor: colors.surfaceAlt,
       }}
     >
-      <Text style={{ color: "#888", fontSize: 13, marginBottom: 8 }}>
+      <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 8 }}>
         Saldo Atual ({selectedMonth} / {selectedYear})
       </Text>
 

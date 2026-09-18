@@ -10,19 +10,20 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { getDatabase } from "../database/sqlite";
+import { colors } from "../constants/colors";
+import { createCategory } from "../database/categories";
 
 // Cores disponíveis para as categorias
 const COLORS = [
-  "#EF4444",
-  "#F97316",
-  "#F59E0B",
-  "#10B981",
-  "#3B82F6",
-  "#6366F1",
-  "#8B5CF6",
-  "#EC4899",
-  "#A8A29E",
+  colors.expense,
+  colors.categoryOrange,
+  colors.categoryAmber,
+  colors.income,
+  colors.accent,
+  colors.categoryIndigo,
+  colors.categoryPurple,
+  colors.categoryPink,
+  colors.categoryNeutral,
 ];
 
 interface CategoryModalProps {
@@ -55,26 +56,12 @@ export function CategoryModal({
     const safeName = String(categoryName || "").trim();
     if (!safeName) return;
 
-    const safeColor = String(selectedColor || "#EF4444");
+    const safeColor = String(selectedColor || colors.expense);
     const safeType =
       String(selectedType || "expense") === "income" ? "income" : "expense";
 
     try {
-      const db = await getDatabase();
-
-      await db.runAsync(`
-        CREATE TABLE IF NOT EXISTS categories (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          color TEXT NOT NULL,
-          type TEXT NOT NULL DEFAULT 'expense'
-        )
-      `);
-
-      await db.runAsync(
-        "INSERT INTO categories (name, color, type) VALUES (?, ?, ?)",
-        [safeName, safeColor, safeType],
-      );
+      await createCategory(safeName, safeColor, safeType);
 
       // Repassa os dados corretos para o modal pai
       onSave(safeName, safeType);
@@ -97,7 +84,7 @@ export function CategoryModal({
         >
           <View
             style={{
-              backgroundColor: "#1E1E1E",
+              backgroundColor: colors.surface,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
               padding: 24,
@@ -112,12 +99,12 @@ export function CategoryModal({
               }}
             >
               <Text
-                style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "bold" }}
+                style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "bold" }}
               >
                 Nova Categoria
               </Text>
               <TouchableOpacity onPress={onClose}>
-                <Ionicons name="close" size={24} color="#888" />
+                <Ionicons name="close" size={24} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -131,16 +118,16 @@ export function CategoryModal({
                   backgroundColor:
                     selectedType === "income"
                       ? "rgba(16, 185, 129, 0.15)"
-                      : "#2A2A2A",
+                      : colors.surfaceAlt,
                   borderWidth: 1,
                   borderColor:
-                    selectedType === "income" ? "#10B981" : "#2A2A2A",
+                    selectedType === "income" ? colors.income : colors.surfaceAlt,
                 }}
                 onPress={() => setSelectedType("income")}
               >
                 <Text
                   style={{
-                    color: selectedType === "income" ? "#10B981" : "#888",
+                    color: selectedType === "income" ? colors.income : colors.textMuted,
                     fontWeight: "bold",
                   }}
                 >
@@ -157,16 +144,16 @@ export function CategoryModal({
                   backgroundColor:
                     selectedType === "expense"
                       ? "rgba(239, 68, 68, 0.15)"
-                      : "#2A2A2A",
+                      : colors.surfaceAlt,
                   borderWidth: 1,
                   borderColor:
-                    selectedType === "expense" ? "#EF4444" : "#2A2A2A",
+                    selectedType === "expense" ? colors.expense : colors.surfaceAlt,
                 }}
                 onPress={() => setSelectedType("expense")}
               >
                 <Text
                   style={{
-                    color: selectedType === "expense" ? "#EF4444" : "#888",
+                    color: selectedType === "expense" ? colors.expense : colors.textMuted,
                     fontWeight: "bold",
                   }}
                 >
@@ -176,25 +163,25 @@ export function CategoryModal({
             </View>
 
             <View style={{ marginBottom: 24 }}>
-              <Text style={{ color: "#888", fontSize: 13, marginBottom: 8 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 8 }}>
                 Nome da Categoria
               </Text>
               <TextInput
                 style={{
-                  backgroundColor: "#2A2A2A",
-                  color: "#FFFFFF",
+                  backgroundColor: colors.surfaceAlt,
+                  color: colors.textPrimary,
                   padding: 16,
                   borderRadius: 12,
                 }}
                 value={categoryName}
                 onChangeText={setCategoryName}
                 placeholder="Ex: Assinaturas"
-                placeholderTextColor="#666"
+                placeholderTextColor={colors.textPlaceholder}
               />
             </View>
 
             <View style={{ marginBottom: 24 }}>
-              <Text style={{ color: "#888", fontSize: 13, marginBottom: 12 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 12 }}>
                 Cor
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -210,7 +197,7 @@ export function CategoryModal({
                         backgroundColor: color,
                         borderWidth: 3,
                         borderColor:
-                          selectedColor === color ? "#FFFFFF" : "transparent",
+                          selectedColor === color ? colors.textPrimary : "transparent",
                       }}
                     />
                   ))}
@@ -221,16 +208,16 @@ export function CategoryModal({
             <TouchableOpacity
               onPress={handleSave}
               style={{
-                backgroundColor: "#2A2A2A",
+                backgroundColor: colors.surfaceAlt,
                 borderWidth: 1,
-                borderColor: "#FFFFFF",
+                borderColor: colors.textPrimary,
                 padding: 16,
                 borderRadius: 12,
                 alignItems: "center",
               }}
             >
               <Text
-                style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 16 }}
+                style={{ color: colors.textPrimary, fontWeight: "bold", fontSize: 16 }}
               >
                 Salvar Categoria
               </Text>

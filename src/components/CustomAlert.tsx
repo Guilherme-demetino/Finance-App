@@ -1,4 +1,5 @@
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { colors } from "../constants/colors";
 
 interface CustomAlertProps {
   visible: boolean;
@@ -45,31 +46,31 @@ const styles = StyleSheet.create({
   alertContainer: {
     width: "100%",
     maxWidth: 320,
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 24,
     borderWidth: 1,
-    borderColor: "#333333",
+    borderColor: colors.border,
     alignItems: "center",
   },
   title: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     marginBottom: 12,
     textAlign: "center",
   },
   message: {
     fontSize: 14,
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     marginBottom: 24,
     textAlign: "center",
     lineHeight: 20,
   },
   button: {
-    backgroundColor: "#2A2A2A",
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: "#FFFFFF",
+    borderColor: colors.textPrimary,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -77,7 +78,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonText: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: "bold",
   },

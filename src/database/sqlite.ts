@@ -78,3 +78,14 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   }
   return dbInstance as SQLite.SQLiteDatabase;
 }
+
+/** Apaga todos os dados do app (transações, categorias, usuário e PIN legado). */
+export async function resetDatabase(): Promise<void> {
+  const db = await getDatabase();
+  db.withTransactionSync(() => {
+    db.runSync("DROP TABLE IF EXISTS transactions");
+    db.runSync("DROP TABLE IF EXISTS categories");
+    db.runSync("DROP TABLE IF EXISTS users");
+    db.runSync("DROP TABLE IF EXISTS security");
+  });
+}

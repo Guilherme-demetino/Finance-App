@@ -1,5 +1,85 @@
-import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { styles as menuStyles } from "../app/../styles/menuStyles";
+import {
+  DimensionValue,
+  Modal,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { styles as menuStyles } from "../styles/menuStyles";
+import { colors } from "../constants/colors";
+
+interface SelectionModalProps {
+  visible: boolean;
+  onClose: () => void;
+  title: string;
+  maxHeight: DimensionValue;
+  items: string[];
+  selectedItem: string;
+  onSelectItem: (item: string) => void;
+}
+
+function SelectionModal({
+  visible,
+  onClose,
+  title,
+  maxHeight,
+  items,
+  selectedItem,
+  onSelectItem,
+}: SelectionModalProps) {
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={menuStyles.overlay}>
+        <View
+          style={[menuStyles.menuContainer, { height: "auto", maxHeight }]}
+        >
+          <Text style={[menuStyles.menuTitle, { marginBottom: 16 }]}>
+            {title}
+          </Text>
+          <ScrollView>
+            {items.map((item, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={{
+                  paddingVertical: 12,
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.border,
+                  alignItems: "center",
+                }}
+                onPress={() => {
+                  onSelectItem(item);
+                  onClose();
+                }}
+              >
+                <Text
+                  style={{
+                    color: selectedItem === item ? colors.income : colors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: selectedItem === item ? "bold" : "normal",
+                  }}
+                >
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <TouchableOpacity
+            style={[menuStyles.closeButton, { marginTop: 16 }]}
+            onPress={onClose}
+          >
+            <Text style={menuStyles.closeButtonText}>Cancelar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 interface MonthModalProps {
   visible: boolean;
@@ -17,58 +97,15 @@ export function MonthModal({
   onSelectMonth,
 }: MonthModalProps) {
   return (
-    <Modal
+    <SelectionModal
       visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={menuStyles.overlay}>
-        <View
-          style={[
-            menuStyles.menuContainer,
-            { height: "auto", maxHeight: "70%" },
-          ]}
-        >
-          <Text style={[menuStyles.menuTitle, { marginBottom: 16 }]}>
-            Selecione o Mês
-          </Text>
-          <ScrollView>
-            {months.map((month, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={{
-                  paddingVertical: 12,
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#333333",
-                  alignItems: "center",
-                }}
-                onPress={() => {
-                  onSelectMonth(month);
-                  onClose();
-                }}
-              >
-                <Text
-                  style={{
-                    color: selectedMonth === month ? "#10B981" : "#FFFFFF",
-                    fontSize: 16,
-                    fontWeight: selectedMonth === month ? "bold" : "normal",
-                  }}
-                >
-                  {month}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <TouchableOpacity
-            style={[menuStyles.closeButton, { marginTop: 16 }]}
-            onPress={onClose}
-          >
-            <Text style={menuStyles.closeButtonText}>Cancelar</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
+      onClose={onClose}
+      title="Selecione o Mês"
+      maxHeight="70%"
+      items={months}
+      selectedItem={selectedMonth}
+      onSelectItem={onSelectMonth}
+    />
   );
 }
 
@@ -88,57 +125,14 @@ export function YearModal({
   onSelectYear,
 }: YearModalProps) {
   return (
-    <Modal
+    <SelectionModal
       visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={menuStyles.overlay}>
-        <View
-          style={[
-            menuStyles.menuContainer,
-            { height: "auto", maxHeight: "50%" },
-          ]}
-        >
-          <Text style={[menuStyles.menuTitle, { marginBottom: 16 }]}>
-            Selecione o Ano
-          </Text>
-          <ScrollView>
-            {years.map((year, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={{
-                  paddingVertical: 12,
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#333333",
-                  alignItems: "center",
-                }}
-                onPress={() => {
-                  onSelectYear(year);
-                  onClose();
-                }}
-              >
-                <Text
-                  style={{
-                    color: selectedYear === year ? "#10B981" : "#FFFFFF",
-                    fontSize: 16,
-                    fontWeight: selectedYear === year ? "bold" : "normal",
-                  }}
-                >
-                  {year}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <TouchableOpacity
-            style={[menuStyles.closeButton, { marginTop: 16 }]}
-            onPress={onClose}
-          >
-            <Text style={menuStyles.closeButtonText}>Cancelar</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
+      onClose={onClose}
+      title="Selecione o Ano"
+      maxHeight="50%"
+      items={years}
+      selectedItem={selectedYear}
+      onSelectItem={onSelectYear}
+    />
   );
 }

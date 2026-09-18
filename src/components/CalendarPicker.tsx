@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Modal, Text, TouchableOpacity, View } from "react-native";
+import { colors } from "../constants/colors";
 
 const WEEKDAYS = ["D", "S", "T", "Q", "Q", "S", "S"];
 const MONTHS = [
@@ -52,7 +53,7 @@ export function CalendarPicker({
   value,
   onClose,
   onSelect,
-  accentColor = "#10B981",
+  accentColor = colors.income,
 }: CalendarPickerProps) {
   const [viewDate, setViewDate] = useState(
     new Date(value.getFullYear(), value.getMonth(), 1),
@@ -86,7 +87,7 @@ export function CalendarPicker({
       >
         <View
           style={{
-            backgroundColor: "#1E1E1E",
+            backgroundColor: colors.surface,
             borderRadius: 24,
             padding: 20,
             width: "88%",
@@ -101,12 +102,12 @@ export function CalendarPicker({
             }}
           >
             <Text
-              style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "bold" }}
+              style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "bold" }}
             >
               {MONTHS[viewDate.getMonth()]} {viewDate.getFullYear()}
             </Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={22} color="#888" />
+              <Ionicons name="close" size={22} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -121,19 +122,19 @@ export function CalendarPicker({
             <TouchableOpacity
               onPress={goToPreviousMonth}
               style={{
-                backgroundColor: "#2A2A2A",
+                backgroundColor: colors.surfaceAlt,
                 borderRadius: 8,
                 padding: 8,
               }}
             >
-              <Ionicons name="chevron-back" size={18} color="#FFFFFF" />
+              <Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
             </TouchableOpacity>
 
             <View style={{ flexDirection: "row", flex: 1 }}>
               {WEEKDAYS.map((label, index) => (
                 <View key={index} style={{ flex: 1, alignItems: "center" }}>
                   <Text
-                    style={{ color: "#888", fontSize: 12, fontWeight: "bold" }}
+                    style={{ color: colors.textMuted, fontSize: 12, fontWeight: "bold" }}
                   >
                     {label}
                   </Text>
@@ -144,12 +145,12 @@ export function CalendarPicker({
             <TouchableOpacity
               onPress={goToNextMonth}
               style={{
-                backgroundColor: "#2A2A2A",
+                backgroundColor: colors.surfaceAlt,
                 borderRadius: 8,
                 padding: 8,
               }}
             >
-              <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+              <Ionicons name="chevron-forward" size={18} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
 
@@ -194,7 +195,7 @@ export function CalendarPicker({
                   >
                     <Text
                       style={{
-                        color: isSelected ? "#1E1E1E" : "#FFFFFF",
+                        color: isSelected ? colors.surface : colors.textPrimary,
                         fontWeight: isSelected || isToday ? "bold" : "normal",
                         fontSize: 13,
                       }}

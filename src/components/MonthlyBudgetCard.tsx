@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { styles } from "../app/../styles/dashboardStyles";
+import { styles } from "../styles/dashboardStyles";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
+import { colors } from "../constants/colors";
 
 interface MonthlyBudgetCardProps {
   monthlyBudget: string;
@@ -30,9 +31,9 @@ export function MonthlyBudgetCard({
 
         <TouchableOpacity
           style={{
-            backgroundColor: "#2A2A2A",
+            backgroundColor: colors.surfaceAlt,
             borderWidth: 1,
-            borderColor: "#FFFFFF",
+            borderColor: colors.textPrimary,
             borderRadius: 12,
             width: 40,
             height: 40,
@@ -44,7 +45,7 @@ export function MonthlyBudgetCard({
           <Ionicons
             name={isEditingBudget ? "checkmark-outline" : "create-outline"}
             size={20}
-            color="#FFFFFF"
+            color={colors.textPrimary}
           />
         </TouchableOpacity>
       </View>
@@ -55,32 +56,32 @@ export function MonthlyBudgetCard({
             <TextInput
               style={{
                 flex: 1,
-                backgroundColor: "#1E1E1E",
+                backgroundColor: colors.surface,
                 borderWidth: 1,
-                borderColor: "#FFFFFF",
+                borderColor: colors.textPrimary,
                 borderRadius: 12,
                 padding: 12,
-                color: "#FFFFFF",
+                color: colors.textPrimary,
                 fontSize: 16,
               }}
               keyboardType="numeric"
               value={monthlyBudget}
               onChangeText={(text) => setMonthlyBudget(formatCurrency(text))}
               placeholder="R$ 0,00"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.textPlaceholder}
             />
             <TouchableOpacity
               style={{
-                backgroundColor: "#2A2A2A",
+                backgroundColor: colors.surfaceAlt,
                 borderWidth: 1,
-                borderColor: "#FFFFFF",
+                borderColor: colors.textPrimary,
                 paddingVertical: 12,
                 paddingHorizontal: 16,
                 borderRadius: 12,
               }}
               onPress={() => setIsEditingBudget(false)}
             >
-              <Text style={{ color: "#FFFFFF", fontWeight: "bold" }}>
+              <Text style={{ color: colors.textPrimary, fontWeight: "bold" }}>
                 Salvar
               </Text>
             </TouchableOpacity>
@@ -94,7 +95,7 @@ export function MonthlyBudgetCard({
             }}
           >
             <Text
-              style={{ fontSize: 22, fontWeight: "bold", color: "#10B981" }}
+              style={{ fontSize: 22, fontWeight: "bold", color: colors.income }}
             >
               {(() => {
                 const parsed = Number(
@@ -105,7 +106,7 @@ export function MonthlyBudgetCard({
                   : formatCurrencyDisplay(parsed);
               })()}
             </Text>
-            <Text style={{ fontSize: 12, color: "#A1A1AA" }}>
+            <Text style={{ fontSize: 12, color: colors.textSecondary }}>
               Toque no ícone para editar
             </Text>
           </View>

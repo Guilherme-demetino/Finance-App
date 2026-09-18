@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Text, TouchableOpacity, View } from "react-native";
-import { styles } from "../app/../styles/dashboardStyles";
+import { styles } from "../styles/dashboardStyles";
+import { colors } from "../constants/colors";
 
 interface AnnualPanoramaCardProps {
   onPress: () => void;
@@ -11,7 +12,7 @@ export function AnnualPanoramaCard({ onPress }: AnnualPanoramaCardProps) {
     <TouchableOpacity
       style={[
         styles.chartCard,
-        { backgroundColor: "#1E1E1E", borderWidth: 1, borderColor: "#333333" },
+        { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
       ]}
       onPress={onPress}
       activeOpacity={0.8}
@@ -25,9 +26,9 @@ export function AnnualPanoramaCard({ onPress }: AnnualPanoramaCardProps) {
         </View>
         <View
           style={{
-            backgroundColor: "#2A2A2A",
+            backgroundColor: colors.surfaceAlt,
             borderWidth: 1,
-            borderColor: "#FFFFFF",
+            borderColor: colors.textPrimary,
             borderRadius: 12,
             width: 40,
             height: 40,
@@ -38,7 +39,7 @@ export function AnnualPanoramaCard({ onPress }: AnnualPanoramaCardProps) {
           <Ionicons
             name="phone-portrait-outline"
             size={20}
-            color="#FFFFFF"
+            color={colors.textPrimary}
             style={{ transform: [{ rotate: "90deg" }] }}
           />
         </View>

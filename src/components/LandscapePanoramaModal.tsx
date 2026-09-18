@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { formatCurrency } from "../utils/currency";
+import { colors } from "../constants/colors";
 
 interface MonthData {
   label: string;
@@ -58,7 +59,7 @@ export function LandscapePanoramaModal({
             </Text>
           </View>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color="#FFFFFF" />
+            <Ionicons name="close" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
@@ -75,8 +76,8 @@ export function LandscapePanoramaModal({
                   {
                     color:
                       selectedTooltip.type === "Receita"
-                        ? "#10B981"
-                        : "#EF4444",
+                        ? colors.income
+                        : colors.expense,
                   },
                 ]}
               >
@@ -113,7 +114,7 @@ export function LandscapePanoramaModal({
                         styles.bar,
                         {
                           height: Math.max(incomeHeight, 4), // Mínimo de 4px para aparecer mesmo se for 0
-                          backgroundColor: "#10B981",
+                          backgroundColor: colors.income,
                         },
                       ]}
                       onPress={() =>
@@ -132,7 +133,7 @@ export function LandscapePanoramaModal({
                         styles.bar,
                         {
                           height: Math.max(expenseHeight, 4),
-                          backgroundColor: "#EF4444",
+                          backgroundColor: colors.expense,
                         },
                       ]}
                       onPress={() =>
@@ -156,11 +157,11 @@ export function LandscapePanoramaModal({
         {/* Legenda Explicativa */}
         <View style={styles.legendContainer}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: "#10B981" }]} />
+            <View style={[styles.legendDot, { backgroundColor: colors.income }]} />
             <Text style={styles.legendText}>Receitas</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: "#EF4444" }]} />
+            <View style={[styles.legendDot, { backgroundColor: colors.expense }]} />
             <Text style={styles.legendText}>Despesas</Text>
           </View>
         </View>
@@ -172,7 +173,7 @@ export function LandscapePanoramaModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121212",
+    backgroundColor: colors.background,
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: 10,
@@ -184,20 +185,20 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: "bold",
     letterSpacing: 1,
   },
   subtitle: {
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     fontSize: 11,
     marginTop: 2,
   },
   closeButton: {
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#333333",
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 6,
   },
@@ -208,9 +209,9 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   tooltipBox: {
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#444444",
+    borderColor: colors.borderSubtle,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 6,
@@ -219,7 +220,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   tooltipTitle: {
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "bold",
   },
@@ -228,7 +229,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   tooltipPlaceholder: {
-    color: "#666666",
+    color: colors.textPlaceholder,
     fontSize: 11,
     fontStyle: "italic",
   },
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
     gap: 20,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#333333",
+    borderBottomColor: colors.border,
   },
   monthColumn: {
     alignItems: "center",
@@ -263,7 +264,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 4,
   },
   monthLabel: {
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     fontSize: 10,
     fontWeight: "bold",
     marginTop: 8,
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   legendText: {
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     fontSize: 12,
   },
 });

@@ -11,7 +11,9 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-import { getDatabase } from "../database/sqlite";
+import { colors } from "../constants/colors";
+import { getAllCategories } from "../database/categories";
+import type { CategoryRow } from "../types";
 import { CalendarPicker } from "./CalendarPicker";
 import { CategoryModal } from "./CategoryModal";
 
@@ -64,27 +66,14 @@ export function TransactionModal({
   onSave,
 }: TransactionModalProps) {
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
-  const [dbCategories, setDbCategories] = useState<any[]>([]);
+  const [dbCategories, setDbCategories] = useState<CategoryRow[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const fetchCategories = async () => {
     setIsLoadingCategories(true);
     try {
-      const db = await getDatabase();
-
-      await db.runAsync(`
-        CREATE TABLE IF NOT EXISTS categories (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          color TEXT NOT NULL,
-          type TEXT NOT NULL DEFAULT 'expense'
-        )
-      `);
-
-      const result = await db.getAllAsync(
-        "SELECT * FROM categories ORDER BY id DESC",
-      );
+      const result = await getAllCategories();
       setDbCategories(result);
     } catch (error) {
       console.log("Erro ao buscar categorias:", error);
@@ -151,7 +140,7 @@ export function TransactionModal({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
-              backgroundColor: "#1E1E1E",
+              backgroundColor: colors.surface,
               borderRadius: 24,
               marginHorizontal: 16,
               padding: 24,
@@ -166,12 +155,12 @@ export function TransactionModal({
               }}
             >
               <Text
-                style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "bold" }}
+                style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "bold" }}
               >
                 Nova Transação
               </Text>
               <TouchableOpacity onPress={onClose}>
-                <Ionicons name="close" size={24} color="#888" />
+                <Ionicons name="close" size={24} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -186,10 +175,10 @@ export function TransactionModal({
                   backgroundColor:
                     transactionType === "income"
                       ? "rgba(16, 185, 129, 0.15)"
-                      : "#2A2A2A",
+                      : colors.surfaceAlt,
                   borderWidth: 1,
                   borderColor:
-                    transactionType === "income" ? "#10B981" : "#2A2A2A",
+                    transactionType === "income" ? colors.income : colors.surfaceAlt,
                 }}
                 onPress={() => {
                   setTransactionType("income");
@@ -205,7 +194,7 @@ export function TransactionModal({
               >
                 <Text
                   style={{
-                    color: transactionType === "income" ? "#10B981" : "#888",
+                    color: transactionType === "income" ? colors.income : colors.textMuted,
                     fontWeight: "bold",
                   }}
                 >
@@ -222,10 +211,10 @@ export function TransactionModal({
                   backgroundColor:
                     transactionType === "expense"
                       ? "rgba(239, 68, 68, 0.15)"
-                      : "#2A2A2A",
+                      : colors.surfaceAlt,
                   borderWidth: 1,
                   borderColor:
-                    transactionType === "expense" ? "#EF4444" : "#2A2A2A",
+                    transactionType === "expense" ? colors.expense : colors.surfaceAlt,
                 }}
                 onPress={() => {
                   setTransactionType("expense");
@@ -239,7 +228,7 @@ export function TransactionModal({
               >
                 <Text
                   style={{
-                    color: transactionType === "expense" ? "#EF4444" : "#888",
+                    color: transactionType === "expense" ? colors.expense : colors.textMuted,
                     fontWeight: "bold",
                   }}
                 >
@@ -250,31 +239,31 @@ export function TransactionModal({
 
             {/* CAMPOS DE TEXTO */}
             <View style={{ marginBottom: 16 }}>
-              <Text style={{ color: "#888", fontSize: 13, marginBottom: 8 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 8 }}>
                 Descrição
               </Text>
               <TextInput
                 style={{
-                  backgroundColor: "#2A2A2A",
-                  color: "#FFFFFF",
+                  backgroundColor: colors.surfaceAlt,
+                  color: colors.textPrimary,
                   padding: 16,
                   borderRadius: 12,
                 }}
                 value={transactionTitle}
                 onChangeText={setTransactionTitle}
                 placeholder="Ex: Supermercado"
-                placeholderTextColor="#666"
+                placeholderTextColor={colors.textPlaceholder}
               />
             </View>
 
             <View style={{ marginBottom: 16 }}>
-              <Text style={{ color: "#888", fontSize: 13, marginBottom: 8 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 8 }}>
                 Valor (R$)
               </Text>
               <TextInput
                 style={{
-                  backgroundColor: "#2A2A2A",
-                  color: "#FFFFFF",
+                  backgroundColor: colors.surfaceAlt,
+                  color: colors.textPrimary,
                   padding: 16,
                   borderRadius: 12,
                   fontSize: 18,
@@ -285,18 +274,18 @@ export function TransactionModal({
                   setTransactionAmount(formatCurrency(text))
                 }
                 placeholder="0,00"
-                placeholderTextColor="#666"
+                placeholderTextColor={colors.textPlaceholder}
               />
             </View>
 
             <View style={{ marginBottom: 16 }}>
-              <Text style={{ color: "#888", fontSize: 13, marginBottom: 8 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 8 }}>
                 Data
               </Text>
               <TouchableOpacity
                 onPress={() => setShowDatePicker(true)}
                 style={{
-                  backgroundColor: "#2A2A2A",
+                  backgroundColor: colors.surfaceAlt,
                   padding: 16,
                   borderRadius: 12,
                   flexDirection: "row",
@@ -304,15 +293,15 @@ export function TransactionModal({
                   justifyContent: "space-between",
                 }}
               >
-                <Text style={{ color: "#FFFFFF" }}>
+                <Text style={{ color: colors.textPrimary }}>
                   {transactionDate || "DD/MM/AAAA"}
                 </Text>
-                <Ionicons name="calendar-outline" size={20} color="#888" />
+                <Ionicons name="calendar-outline" size={20} color={colors.textMuted} />
               </TouchableOpacity>
               <CalendarPicker
                 visible={showDatePicker}
                 value={parseDateString(transactionDate)}
-                accentColor={transactionType === "income" ? "#10B981" : "#EF4444"}
+                accentColor={transactionType === "income" ? colors.income : colors.expense}
                 onClose={() => setShowDatePicker(false)}
                 onSelect={(selectedDate) => {
                   setShowDatePicker(false);
@@ -323,7 +312,7 @@ export function TransactionModal({
 
             {/* LISTA DE CATEGORIAS */}
             <View style={{ marginBottom: 24 }}>
-              <Text style={{ color: "#888", fontSize: 13, marginBottom: 10 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 10 }}>
                 Categoria
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -333,9 +322,9 @@ export function TransactionModal({
                   <TouchableOpacity
                     onPress={() => setIsCategoryModalVisible(true)}
                     style={{
-                      backgroundColor: "#2A2A2A",
+                      backgroundColor: colors.surfaceAlt,
                       borderWidth: 1,
-                      borderColor: "#FFFFFF",
+                      borderColor: colors.textPrimary,
                       paddingHorizontal: 12,
                       paddingVertical: 8,
                       borderRadius: 8,
@@ -344,10 +333,10 @@ export function TransactionModal({
                       gap: 4,
                     }}
                   >
-                    <Ionicons name="add" size={14} color="#FFFFFF" />
+                    <Ionicons name="add" size={14} color={colors.textPrimary} />
                     <Text
                       style={{
-                        color: "#FFFFFF",
+                        color: colors.textPrimary,
                         fontWeight: "bold",
                         fontSize: 12,
                       }}
@@ -357,7 +346,7 @@ export function TransactionModal({
                   </TouchableOpacity>
 
                   {isLoadingCategories && (
-                    <ActivityIndicator size="small" color="#888" />
+                    <ActivityIndicator size="small" color={colors.textMuted} />
                   )}
 
                   {displayCategories.map((catName, index) => {
@@ -367,9 +356,9 @@ export function TransactionModal({
                         key={index}
                         onPress={() => setTransactionCategory(catName)}
                         style={{
-                          backgroundColor: "#2A2A2A",
+                          backgroundColor: colors.surfaceAlt,
                           borderWidth: 1,
-                          borderColor: "#FFFFFF",
+                          borderColor: colors.textPrimary,
                           paddingHorizontal: 12,
                           paddingVertical: 8,
                           borderRadius: 8,
@@ -378,7 +367,7 @@ export function TransactionModal({
                       >
                         <Text
                           style={{
-                            color: "#FFFFFF",
+                            color: colors.textPrimary,
                             fontSize: 12,
                             fontWeight: "bold",
                           }}
@@ -395,16 +384,16 @@ export function TransactionModal({
             <TouchableOpacity
               onPress={onSave}
               style={{
-                backgroundColor: "#2A2A2A",
+                backgroundColor: colors.surfaceAlt,
                 borderWidth: 1,
-                borderColor: "#FFFFFF",
+                borderColor: colors.textPrimary,
                 padding: 16,
                 borderRadius: 12,
                 alignItems: "center",
               }}
             >
               <Text
-                style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 16 }}
+                style={{ color: colors.textPrimary, fontWeight: "bold", fontSize: 16 }}
               >
                 Salvar Transação
               </Text>

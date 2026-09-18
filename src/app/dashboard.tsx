@@ -12,7 +12,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AnnualPanoramaCard } from "../components/AnnualPanoramaCard";
 import { BalanceCard } from "../components/BalanceCard";
 import { CustomAlert } from "../components/CustomAlert";
-import { DashboardStickyHeader } from "../components/DashboardStickyHeader";
 import { MonthModal, YearModal } from "../components/FilterModals";
 import { GeneralBalanceCard } from "../components/GeneralBalanceCard";
 import { LandscapePanoramaModal } from "../components/LandscapePanoramaModal";
@@ -24,48 +23,34 @@ import {
 import { SummaryCards } from "../components/SummaryCards";
 import { TransactionModal } from "../components/TransactionModal";
 import { TransactionsHistoryList } from "../components/TransactionsHistoryList";
+import { UserProfileHeader } from "../components/UserProfileHeader";
 
-import { getDatabase } from "../database/sqlite";
+import { colors } from "../constants/colors";
+import { resetDatabase } from "../database/sqlite";
+import { getAllTransactions } from "../database/transactions";
+import { useTransactions } from "../hooks/useTransactions";
+import { useUserProfile } from "../hooks/useUserProfile";
 import { styles } from "../styles/dashboardStyles";
-import { formatCurrency } from "../utils/currency";
+import type { DisplayTransaction, TransactionType } from "../types";
+import { formatCurrencyInput } from "../utils/currency";
+import { getMonthNumber, MONTH_NAMES } from "../utils/dates";
+import {
+  buildTransactionsCsv,
+  buildTransactionsHtmlReport,
+} from "../utils/export";
 import { clearPin } from "../utils/security";
 
-const monthMap: Record<string, string> = {
-  Janeiro: "01",
-  Fevereiro: "02",
-  Março: "03",
-  Abril: "04",
-  Maio: "05",
-  Junho: "06",
-  Julho: "07",
-  Agosto: "08",
-  Setembro: "09",
-  Outubro: "10",
-  Novembro: "11",
-  Dezembro: "12",
-};
-
-const formatCurrencyInput = (value: string) => {
-  const numbers = value.replace(/\D/g, "");
-  if (!numbers) return "";
-
-  const amount = (Number(numbers) / 100).toFixed(2);
-  const parts = amount.split(".");
-  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return parts.join(",");
-};
+const YEARS_LIST = ["2024", "2025", "2026", "2027", "2028"];
 
 export default function DashboardScreen() {
   const router = useRouter();
   const today = new Date();
-  const currentMonthNamesList = Object.keys(monthMap);
-  const currentMonthName = currentMonthNamesList[today.getMonth()];
+  const currentMonthName = MONTH_NAMES[today.getMonth()];
   const currentYearStr = String(today.getFullYear());
   const currentDay = String(today.getDate()).padStart(2, "0");
   const currentMonthNum = String(today.getMonth() + 1).padStart(2, "0");
 
-  const [userName, setUserName] = useState("Carregando...");
-  const [userImage, setUserImage] = useState<string | null>(null);
+  const { userName, userImage, updateName, updateAvatar } = useUserProfile();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState("");
@@ -82,9 +67,8 @@ export default function DashboardScreen() {
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | null
   >(null);
-  const [transactionType, setTransactionType] = useState<"income" | "expense">(
-    "income",
-  );
+  const [transactionType, setTransactionType] =
+    useState<TransactionType>("income");
   const [transactionTitle, setTransactionTitle] = useState("");
   const [transactionAmount, setTransactionAmount] = useState("");
   const [transactionDate, setTransactionDate] = useState(
@@ -92,45 +76,26 @@ export default function DashboardScreen() {
   );
   const [transactionCategory, setTransactionCategory] = useState("Salário");
 
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
-  const [totalIncome, setTotalIncome] = useState(0);
-  const [totalExpense, setTotalExpense] = useState(0);
+  const {
+    transactions,
+    isLoading: isLoadingTransactions,
+    totalIncome,
+    totalExpense,
+    monthsData,
+    saveTransaction,
+    removeTransaction,
+    removeAllForCurrentPeriod,
+  } = useTransactions(selectedMonth, selectedYear);
   const totalBalance = totalIncome - totalExpense;
-
-  const [monthsData, setMonthsData] = useState([
-    { label: "JAN", income: 0, expense: 0 },
-    { label: "FEV", income: 0, expense: 0 },
-    { label: "MAR", income: 0, expense: 0 },
-    { label: "ABR", income: 0, expense: 0 },
-    { label: "MAI", income: 0, expense: 0 },
-    { label: "JUN", income: 0, expense: 0 },
-    { label: "JUL", income: 0, expense: 0 },
-    { label: "AGO", income: 0, expense: 0 },
-    { label: "SET", income: 0, expense: 0 },
-    { label: "OUT", income: 0, expense: 0 },
-    { label: "NOV", income: 0, expense: 0 },
-    { label: "DEZ", income: 0, expense: 0 },
-  ]);
-
-  const monthsList = [
-    "Janeiro",
-    "Fevereiro",
-    "Março",
-    "Abril",
-    "Maio",
-    "Junho",
-    "Julho",
-    "Agosto",
-    "Setembro",
-    "Outubro",
-    "Novembro",
-    "Dezembro",
-  ];
-  const yearsList = ["2024", "2025", "2026", "2027", "2028"];
 
   const [monthlyBudget, setMonthlyBudget] = useState("0");
   const [isEditingBudget, setIsEditingBudget] = useState(false);
+
+  // O orçamento mensal acompanha a receita do período por padrão —
+  // sempre que as transações são recarregadas, ele é realinhado.
+  useEffect(() => {
+    setMonthlyBudget(totalIncome.toString());
+  }, [totalIncome]);
 
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
@@ -156,154 +121,6 @@ export default function DashboardScreen() {
     setIsLandscapePanoramaOpen(false);
   };
 
-  useEffect(() => {
-    async function setupDashboard() {
-      await fetchUserData();
-      await fetchTransactions();
-    }
-    setupDashboard();
-  }, [selectedMonth, selectedYear]);
-
-  const fetchUserData = async () => {
-    try {
-      const db = await getDatabase();
-      const result: any = db.getAllSync("SELECT * FROM users LIMIT 1");
-      if (result && result.length > 0) {
-        setUserName(result[0].name || "Meu Finanças");
-        if (result[0].avatar) setUserImage(result[0].avatar);
-      } else {
-        setUserName("Meu Finanças");
-      }
-    } catch (error) {
-      console.log("Erro ao buscar usuário:", error);
-      setUserName("Meu Finanças");
-    }
-  };
-
-  const fetchTransactions = async () => {
-    setIsLoadingTransactions(true);
-    try {
-      const db = await getDatabase();
-
-      const rawTransactions: any = await db.getAllAsync(
-        "SELECT * FROM transactions ORDER BY id DESC",
-      );
-
-      const rawCategories: any = await db.getAllAsync("SELECT * FROM categories");
-
-      const defaultSystemColors: Record<string, string> = {
-        salário: "#10B981",
-        investimentos: "#3B82F6",
-        alimentação: "#F97316",
-        transporte: "#8B5CF6",
-        lazer: "#EC4899",
-        moradia: "#F59E0B",
-        saúde: "#EF4444",
-        outros: "#A8A29E",
-      };
-
-      const categoryColorMap: Record<string, string> = {
-        ...defaultSystemColors,
-      };
-
-      rawCategories.forEach((cat: any) => {
-        if (cat.name) {
-          const cleanName = cat.name.trim().toLowerCase();
-          categoryColorMap[cleanName] = cat.color;
-        }
-      });
-
-      const allTransactions = rawTransactions.map((item: any) => {
-        const catKey = item.category_id
-          ? item.category_id.trim().toLowerCase()
-          : "";
-        const matchedColor = categoryColorMap[catKey] || "#A1A1AA";
-
-        return {
-          ...item,
-          category: item.category_id,
-          color: matchedColor,
-        };
-      });
-
-      const allYearTransactions = allTransactions.filter(
-        (item: any) => item.date && item.date.endsWith(`/${selectedYear}`),
-      );
-
-      const monthNumber = monthMap[selectedMonth] || currentMonthNum;
-      const currentMonthTransactions = allYearTransactions.filter((item: any) =>
-        item.date.includes(`/${monthNumber}/${selectedYear}`),
-      );
-      setTransactions(currentMonthTransactions);
-
-      let income = 0;
-      let expense = 0;
-
-      currentMonthTransactions.forEach((item: any) => {
-        if (item.type === "income") {
-          income += item.amount;
-        } else {
-          expense += item.amount;
-        }
-      });
-
-      setTotalIncome(income);
-      setTotalExpense(expense);
-      setMonthlyBudget(income.toString());
-
-      const calculatedMonthsData = [
-        { label: "JAN", income: 0, expense: 0 },
-        { label: "FEV", income: 0, expense: 0 },
-        { label: "MAR", income: 0, expense: 0 },
-        { label: "ABR", income: 0, expense: 0 },
-        { label: "MAI", income: 0, expense: 0 },
-        { label: "JUN", income: 0, expense: 0 },
-        { label: "JUL", income: 0, expense: 0 },
-        { label: "AGO", income: 0, expense: 0 },
-        { label: "SET", income: 0, expense: 0 },
-        { label: "OUT", income: 0, expense: 0 },
-        { label: "NOV", income: 0, expense: 0 },
-        { label: "DEZ", income: 0, expense: 0 },
-      ];
-
-      const monthIndexMap: Record<string, number> = {
-        "01": 0,
-        "02": 1,
-        "03": 2,
-        "04": 3,
-        "05": 4,
-        "06": 5,
-        "07": 6,
-        "08": 7,
-        "09": 8,
-        "10": 9,
-        "11": 10,
-        "12": 11,
-      };
-
-      allYearTransactions.forEach((item: any) => {
-        const parts = item.date.split("/");
-        if (parts.length === 3) {
-          const mNum = parts[1];
-          const idx = monthIndexMap[mNum];
-          if (idx !== undefined) {
-            if (item.type === "income") {
-              calculatedMonthsData[idx].income += item.amount;
-            } else {
-              calculatedMonthsData[idx].expense += item.amount;
-            }
-          }
-        }
-      });
-
-      setMonthsData(calculatedMonthsData);
-    } catch (error) {
-      console.log("Erro ao buscar transações anuais:", error);
-    } finally {
-      setIsLoadingTransactions(false);
-    }
-  };
-
   const pickImage = async () => {
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -323,21 +140,8 @@ export default function DashboardScreen() {
     });
 
     if (!result.canceled && result.assets[0].uri) {
-      const imageUri = result.assets[0].uri;
       try {
-        setUserImage(imageUri);
-        const db = await getDatabase();
-
-        try {
-          db.runSync(`ALTER TABLE users ADD COLUMN avatar TEXT;`);
-        } catch (e) {}
-
-        db.runSync(
-          "INSERT OR IGNORE INTO users (id, name) VALUES (1, ?)",
-          userName,
-        );
-        db.runSync("UPDATE users SET avatar = ? WHERE id = 1", imageUri);
-
+        await updateAvatar(result.assets[0].uri);
         showAlert("Sucesso", "Foto de perfil atualizada com sucesso!");
       } catch (error) {
         console.log("Erro ao salvar foto no banco:", error);
@@ -353,9 +157,7 @@ export default function DashboardScreen() {
     }
 
     try {
-      const db = await getDatabase();
-      db.runSync("UPDATE users SET name = ? WHERE id = 1", newName);
-      setUserName(newName);
+      await updateName(newName);
       setNewName("");
       setIsEditingName(false);
       setIsMenuOpen(false);
@@ -373,67 +175,15 @@ export default function DashboardScreen() {
         return;
       }
 
-      const htmlContent = `
-        <html>
-          <head>
-            <style>
-              body { font-family: 'Helvetica', Arial, sans-serif; padding: 20px; color: #333; }
-              h1 { color: #1E1E1E; font-size: 22px; border-bottom: 2px solid #333; padding-bottom: 5px; }
-              .info { margin-bottom: 20px; font-size: 14px; color: #555; }
-              .summary { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f4f4f4; padding: 15px; border-radius: 8px; }
-              .summary-item { font-size: 14px; font-weight: bold; }
-              .income { color: #10B981; }
-              .expense { color: #EF4444; }
-              table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-              th { background-color: #2A2A2A; color: #fff; }
-              tr:nth-child(even) { background-color: #f9f9f9; }
-            </style>
-          </head>
-          <body>
-            <h1>Relatório Financeiro — ${selectedMonth} de ${selectedYear}</h1>
-            <div class="info">
-              <p><strong>Usuário:</strong> ${userName}</p>
-              <p><strong>Data de geração:</strong> ${new Date().toLocaleDateString("pt-BR")}</p>
-            </div>
-            
-            <div class="summary">
-              <div class="summary-item">Receitas: <span class="income">${formatCurrency(totalIncome)}</span></div>
-              <div class="summary-item">Despesas: <span class="expense">${formatCurrency(totalExpense)}</span></div>
-              <div class="summary-item">Saldo: ${formatCurrency(totalBalance)}</div>
-            </div>
-
-            <table>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Descrição</th>
-                  <th>Categoria</th>
-                  <th>Tipo</th>
-                  <th>Valor (R$)</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${transactions
-                  .map(
-                    (t) => `
-                  <tr>
-                    <td>${t.date}</td>
-                    <td>${t.description}</td>
-                    <td>${t.category_id || "Geral"}</td>
-                    <td>${t.type === "income" ? "Receita" : "Despesa"}</td>
-                    <td class="${t.type === "income" ? "income" : "expense"}">
-                      ${formatCurrency(t.amount, { forceSign: t.type === "income" ? "+" : "-" })}
-                    </td>
-                  </tr>
-                `,
-                  )
-                  .join("")}
-              </tbody>
-            </table>
-          </body>
-        </html>
-      `;
+      const htmlContent = buildTransactionsHtmlReport({
+        userName,
+        selectedMonth,
+        selectedYear,
+        totalIncome,
+        totalExpense,
+        totalBalance,
+        transactions,
+      });
 
       await Print.printAsync({ html: htmlContent });
     } catch (error) {
@@ -442,40 +192,16 @@ export default function DashboardScreen() {
     }
   };
 
-  const csvEscape = (value: string): string => {
-    const safeValue = String(value ?? "");
-    if (/[;"\n]/.test(safeValue)) {
-      return `"${safeValue.replace(/"/g, '""')}"`;
-    }
-    return safeValue;
-  };
-
   const handleExportCSV = async () => {
     try {
-      const db = await getDatabase();
-      const allTransactions: any = await db.getAllAsync(
-        "SELECT * FROM transactions ORDER BY id DESC",
-      );
+      const allTransactions = await getAllTransactions();
 
       if (!allTransactions || allTransactions.length === 0) {
         showAlert("Atenção", "Não há transações para exportar.");
         return;
       }
 
-      const header = "Data;Descrição;Categoria;Tipo;Valor";
-      const rows = allTransactions.map((t: any) => {
-        const tipo = t.type === "income" ? "Receita" : "Despesa";
-        const valor = Number(t.amount).toFixed(2).replace(".", ",");
-        return [
-          csvEscape(t.date),
-          csvEscape(t.description || "Sem descrição"),
-          csvEscape(t.category_id || "Geral"),
-          csvEscape(tipo),
-          csvEscape(valor),
-        ].join(";");
-      });
-
-      const csvContent = "﻿" + [header, ...rows].join("\n");
+      const csvContent = buildTransactionsCsv(allTransactions);
 
       const fileName = `financas-backup-${Date.now()}.csv`;
       const file = new File(Paths.cache, fileName);
@@ -490,7 +216,10 @@ export default function DashboardScreen() {
           UTI: "public.comma-separated-values-text",
         });
       } else {
-        showAlert("Erro", "O compartilhamento não está disponível neste dispositivo.");
+        showAlert(
+          "Erro",
+          "O compartilhamento não está disponível neste dispositivo.",
+        );
       }
     } catch (error) {
       console.log("Erro ao gerar CSV:", error);
@@ -498,7 +227,7 @@ export default function DashboardScreen() {
     }
   };
 
-  const handleOpenEditTransaction = (item: any) => {
+  const handleOpenEditTransaction = (item: DisplayTransaction) => {
     setEditingTransactionId(item.id);
     setTransactionType(item.type);
     setTransactionTitle(item.description);
@@ -537,36 +266,24 @@ export default function DashboardScreen() {
     const safeDate =
       String(transactionDate).trim() ||
       `${currentDay}/${currentMonthNum}/${currentYearStr}`;
-    const safeType =
-      String(transactionType) === "income" ? "income" : "expense";
+    const safeType: TransactionType =
+      transactionType === "income" ? "income" : "expense";
 
     const rawCat = String(transactionCategory || "").trim();
     const safeCategory =
       rawCat !== "" ? rawCat : safeType === "income" ? "Salário" : "Outros";
 
     try {
-      const db = await getDatabase();
-
-      if (editingTransactionId) {
-        db.runSync(
-          "UPDATE transactions SET amount = ?, date = ?, description = ?, type = ?, category_id = ? WHERE id = ?",
-          cleanNumericValue,
-          safeDate,
-          safeTitle,
-          safeType,
-          safeCategory,
-          Number(editingTransactionId),
-        );
-      } else {
-        db.runSync(
-          "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, ?, ?)",
-          cleanNumericValue,
-          safeDate,
-          safeTitle,
-          safeType,
-          safeCategory,
-        );
-      }
+      await saveTransaction(
+        editingTransactionId ? Number(editingTransactionId) : null,
+        {
+          amount: cleanNumericValue,
+          date: safeDate,
+          description: safeTitle,
+          type: safeType,
+          category: safeCategory,
+        },
+      );
 
       showAlert(
         "Sucesso",
@@ -575,7 +292,6 @@ export default function DashboardScreen() {
           : "Transação salva com sucesso!",
       );
 
-      fetchTransactions();
       setTransactionTitle("");
       setTransactionAmount("");
       setEditingTransactionId(null);
@@ -588,9 +304,7 @@ export default function DashboardScreen() {
 
   const handleDeleteTransaction = async (id: string) => {
     try {
-      const db = await getDatabase();
-      db.runSync("DELETE FROM transactions WHERE id = ?", id);
-      fetchTransactions();
+      await removeTransaction(Number(id));
       showAlert("Sucesso", "Transação excluída com sucesso.");
     } catch (error) {
       console.log("Erro ao excluir transação:", error);
@@ -600,16 +314,7 @@ export default function DashboardScreen() {
 
   const handleDeleteAllTransactions = async () => {
     try {
-      const db = await getDatabase();
-      const monthNumber = monthMap[selectedMonth] || currentMonthNum;
-      const dateSearchPattern = `%/${monthNumber}/${selectedYear}`;
-
-      db.runSync(
-        "DELETE FROM transactions WHERE date LIKE ?",
-        dateSearchPattern,
-      );
-
-      fetchTransactions();
+      await removeAllForCurrentPeriod();
       showAlert(
         "Sucesso",
         "Todas as transações deste período foram excluídas.",
@@ -625,7 +330,7 @@ export default function DashboardScreen() {
     setIsMenuOpen(false);
     // O PIN atual só é sobrescrito quando o novo for confirmado na tela
     // de segurança — se o usuário voltar sem concluir, nada muda.
-    router.replace("/security?mode=change" as any);
+    router.replace({ pathname: "/security", params: { mode: "change" } } as any);
   };
 
   const handleWipeData = () => {
@@ -640,13 +345,7 @@ export default function DashboardScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              const db = await getDatabase();
-              db.withTransactionSync(() => {
-                db.runSync("DROP TABLE IF EXISTS transactions");
-                db.runSync("DROP TABLE IF EXISTS categories");
-                db.runSync("DROP TABLE IF EXISTS users");
-                db.runSync("DROP TABLE IF EXISTS security");
-              });
+              await resetDatabase();
               await clearPin();
               router.replace("/" as any); // Volta para a tela de boas-vindas
             } catch (error) {
@@ -669,20 +368,22 @@ export default function DashboardScreen() {
     );
   });
 
-  const formattedTransactions = filteredTransactions.map((item) => ({
-    id: String(item.id),
-    description: item.description || "Sem descrição",
-    amount: item.amount,
-    type: item.type,
-    date: item.date,
-    category: item.category_id,
-    color: item.color || "#A1A1AA",
-    icon: item.type === "income" ? "cash-outline" : "cart-outline",
-  }));
+  const formattedTransactions: DisplayTransaction[] = filteredTransactions.map(
+    (item) => ({
+      id: String(item.id),
+      description: item.description || "Sem descrição",
+      amount: item.amount,
+      type: item.type,
+      date: item.date,
+      category: item.category_id,
+      color: item.color || colors.textSecondary,
+      icon: item.type === "income" ? "cash-outline" : "cart-outline",
+    }),
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <DashboardStickyHeader
+      <UserProfileHeader
         userName={userName}
         userImage={userImage}
         selectedMonth={selectedMonth}
@@ -738,7 +439,7 @@ export default function DashboardScreen() {
           setTransactionType("income");
           setTransactionCategory("Salário");
 
-          const targetMonth = monthMap[selectedMonth] || currentMonthNum;
+          const targetMonth = getMonthNumber(selectedMonth);
           let dayToUse = "01";
           if (
             targetMonth === currentMonthNum &&
@@ -751,7 +452,7 @@ export default function DashboardScreen() {
           setIsTransactionModalOpen(true);
         }}
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
+        <Ionicons name="add" size={28} color={colors.textPrimary} />
       </TouchableOpacity>
 
       <TransactionModal
@@ -777,7 +478,7 @@ export default function DashboardScreen() {
       <MonthModal
         visible={isMonthModalOpen}
         onClose={() => setIsMonthModalOpen(false)}
-        months={monthsList}
+        months={MONTH_NAMES}
         selectedMonth={selectedMonth}
         onSelectMonth={setSelectedMonth}
       />
@@ -785,7 +486,7 @@ export default function DashboardScreen() {
       <YearModal
         visible={isYearModalOpen}
         onClose={() => setIsYearModalOpen(false)}
-        years={yearsList}
+        years={YEARS_LIST}
         selectedYear={selectedYear}
         onSelectYear={setSelectedYear}
       />

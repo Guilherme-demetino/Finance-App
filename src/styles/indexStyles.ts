@@ -1,45 +1,46 @@
 import { StyleSheet } from "react-native";
+import { colors } from "../constants/colors";
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121212",
+    backgroundColor: colors.background,
     justifyContent: "center",
     padding: 24,
   },
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     marginBottom: 8,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     marginBottom: 32,
     textAlign: "center",
   },
   input: {
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#333333",
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     marginBottom: 24,
   },
   button: {
-    backgroundColor: "#2A2A2A", // Fundo escuro igual ao botão do menu e login
+    backgroundColor: colors.surfaceAlt, // Fundo escuro igual ao botão do menu e login
     borderWidth: 1,
-    borderColor: "#FFFFFF", // Borda branca
+    borderColor: colors.textPrimary, // Borda branca
     padding: 16,
     borderRadius: 12,
     alignItems: "center",
   },
   buttonText: {
-    color: "#FFFFFF", // Texto branco
+    color: colors.textPrimary, // Texto branco
     fontSize: 16,
     fontWeight: "bold",
   },

@@ -2,7 +2,9 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { CustomAlert } from "../components/CustomAlert";
-import { getDatabase } from "../database/sqlite";
+import { colors } from "../constants/colors";
+import { getLegacyPin } from "../database/security";
+import { getUser, upsertUserName } from "../database/users";
 import { styles } from "../styles/indexStyles";
 import { hasPinConfigured } from "../utils/security";
 
@@ -26,21 +28,17 @@ export default function WelcomeScreen() {
 
   const checkIfUserExists = async () => {
     try {
-      const db = await getDatabase();
-
       // Verifica se já existe um PIN salvo (SecureStore, ou um PIN
       // legado ainda não migrado no SQLite). Se sim, vai direto pedir a senha!
       const hasPin = await hasPinConfigured();
-      const legacySecurity: any = await db.getFirstAsync(
-        "SELECT pin FROM security LIMIT 1",
-      );
-      if (hasPin || (legacySecurity && legacySecurity.pin)) {
+      const legacyPin = await getLegacyPin();
+      if (hasPin || legacyPin) {
         router.replace("/security");
         return;
       }
 
-      // 3. Se não tem PIN, verifica se já tem nome salvo (liberamos o nome Guilherme agora!)
-      const user: any = db.getFirstSync("SELECT * FROM users LIMIT 1");
+      // Se não tem PIN, verifica se já tem nome salvo (liberamos o nome Guilherme agora!)
+      const user = await getUser();
       if (
         user &&
         user.name &&
@@ -61,21 +59,7 @@ export default function WelcomeScreen() {
     }
 
     try {
-      const db = await getDatabase();
-
-      db.withTransactionSync(() => {
-        const existing: any = db.getFirstSync("SELECT id FROM users LIMIT 1");
-        if (existing) {
-          db.runSync(
-            "UPDATE users SET name = ? WHERE id = ?",
-            name.trim(),
-            existing.id,
-          );
-        } else {
-          db.runSync("INSERT INTO users (name) VALUES (?)", name.trim());
-        }
-      });
-
+      await upsertUserName(name.trim());
       showAlert("Sucesso!", `Bem-vindo(a), ${name}!`);
       router.replace("/security");
     } catch (error) {
@@ -92,7 +76,7 @@ export default function WelcomeScreen() {
       <TextInput
         style={styles.input}
         placeholder="Digite seu nome"
-        placeholderTextColor="#888888"
+        placeholderTextColor={colors.textMuted}
         value={name}
         onChangeText={setName}
         autoCorrect={false}

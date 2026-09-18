@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { colors } from "../constants/colors";
 
 export const styles = StyleSheet.create({
   overlay: {
@@ -9,13 +10,13 @@ export const styles = StyleSheet.create({
   },
   menuContainer: {
     width: "75%",
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     height: "100%",
     padding: 24,
     paddingTop: 60,
     justifyContent: "space-between",
     borderLeftWidth: 1,
-    borderLeftColor: "#333333",
+    borderLeftColor: colors.border,
   },
   menuHeader: {
     alignItems: "center",
@@ -25,12 +26,12 @@ export const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: colors.surfaceAlt,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: "#3B82F6",
+    borderColor: colors.accent,
     overflow: "hidden",
   },
   avatarImage: {
@@ -40,12 +41,12 @@ export const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     textAlign: "center",
   },
   menuSubtitle: {
     fontSize: 12,
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     textAlign: "center",
     marginTop: 4,
   },
@@ -53,9 +54,9 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   actionButton: {
-    backgroundColor: "#2A2A2A", // Corrigido o valor de fundo
+    backgroundColor: colors.surfaceAlt, // Corrigido o valor de fundo
     borderWidth: 1,
-    borderColor: "#3B82F6",
+    borderColor: colors.accent,
     padding: 16,
     borderRadius: 12,
     alignItems: "center",
@@ -64,18 +65,18 @@ export const styles = StyleSheet.create({
     gap: 8,
   },
   actionButtonText: {
-    color: "#3B82F6",
+    color: colors.accent,
     fontSize: 16,
     fontWeight: "bold",
   },
   closeButton: {
-    backgroundColor: "#333333",
+    backgroundColor: colors.border,
     padding: 16,
     borderRadius: 12,
     alignItems: "center",
   },
   closeButtonText: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -87,26 +88,26 @@ export const styles = StyleSheet.create({
     padding: 24,
   },
   modalContent: {
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 24,
     borderWidth: 1,
-    borderColor: "#333333",
+    borderColor: colors.border,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     marginBottom: 16,
     textAlign: "center",
   },
   modalInput: {
-    backgroundColor: "#121212",
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: "#333333",
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 16,
     marginBottom: 24,
   },
@@ -117,20 +118,20 @@ export const styles = StyleSheet.create({
   },
   modalButtonCancel: {
     flex: 1,
-    backgroundColor: "#333333",
+    backgroundColor: colors.border,
     padding: 14,
     borderRadius: 12,
     alignItems: "center",
   },
   modalButtonSave: {
     flex: 1,
-    backgroundColor: "#3B82F6",
+    backgroundColor: colors.accent,
     padding: 14,
     borderRadius: 12,
     alignItems: "center",
   },
   modalButtonText: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: "bold",
   },

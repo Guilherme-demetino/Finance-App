@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { colors } from "../constants/colors";
 
 interface ProfileMenuModalProps {
   visible: boolean;
@@ -50,7 +51,7 @@ export function ProfileMenuModal({
                 <Image source={{ uri: userImage }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person" size={24} color="#FFFFFF" />
+                  <Ionicons name="person" size={24} color={colors.textPrimary} />
                 </View>
               )}
             </TouchableOpacity>
@@ -65,25 +66,25 @@ export function ProfileMenuModal({
           <View style={styles.divider} />
 
           <TouchableOpacity style={styles.menuItem} onPress={onExportPDF}>
-            <Ionicons name="document-text-outline" size={24} color="#FFFFFF" />
+            <Ionicons name="document-text-outline" size={24} color={colors.textPrimary} />
             <Text style={styles.menuItemText}>Exportar Relatório PDF</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={onExportCSV}>
-            <Ionicons name="download-outline" size={24} color="#FFFFFF" />
+            <Ionicons name="download-outline" size={24} color={colors.textPrimary} />
             <Text style={styles.menuItemText}>Exportar Backup (CSV)</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={onChangePIN}>
-            <Ionicons name="lock-closed-outline" size={24} color="#10B981" />
+            <Ionicons name="lock-closed-outline" size={24} color={colors.income} />
             <Text style={styles.menuItemText}>Alterar PIN de Segurança</Text>
           </TouchableOpacity>
 
           <View style={styles.divider} />
 
           <TouchableOpacity style={styles.menuItem} onPress={onWipeData}>
-            <Ionicons name="trash-outline" size={24} color="#EF4444" />
-            <Text style={[styles.menuItemText, { color: "#EF4444" }]}>
+            <Ionicons name="trash-outline" size={24} color={colors.expense} />
+            <Text style={[styles.menuItemText, { color: colors.expense }]}>
               Zerar Dados do App
             </Text>
           </TouchableOpacity>
@@ -118,7 +119,7 @@ export function EditNameModal({
           <TextInput
             style={styles.input}
             placeholder="Digite seu nome"
-            placeholderTextColor="#888888"
+            placeholderTextColor={colors.textMuted}
             value={newName}
             onChangeText={setNewName}
             autoCorrect={false}
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     width: "85%",
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
   },
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#333333",
+    backgroundColor: colors.border,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
@@ -175,18 +176,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 18,
     fontWeight: "bold",
   },
   editNameText: {
-    color: "#10B981",
+    color: colors.income,
     fontSize: 14,
     marginTop: 4,
   },
   divider: {
     height: 1,
-    backgroundColor: "#333333",
+    backgroundColor: colors.border,
     marginVertical: 16,
   },
   menuItem: {
@@ -195,25 +196,25 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   menuItemText: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 16,
     marginLeft: 16,
   },
   modalContainer: {
     width: "85%",
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 24,
   },
   modalTitle: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 16,
   },
   input: {
-    backgroundColor: "#2A2A2A",
-    color: "#FFFFFF",
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textPrimary,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -229,17 +230,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   cancelButtonText: {
-    color: "#A1A1AA",
+    color: colors.textSecondary,
     fontSize: 16,
   },
   saveButton: {
-    backgroundColor: "#10B981",
+    backgroundColor: colors.income,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
   },
   saveButtonText: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: "bold",
   },
