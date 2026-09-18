@@ -31,7 +31,7 @@ import {
   buildTransactionsCsv,
   buildTransactionsHtmlReport,
 } from "../utils/export";
-import { clearPin } from "../utils/security";
+import { clearPin, suppressAppLockOnce } from "../utils/security";
 
 export const YEARS_LIST = ["2024", "2025", "2026", "2027", "2028"];
 
@@ -102,6 +102,7 @@ interface DashboardContextValue {
   categoryBudgets: ReturnType<typeof useCategoryBudgets>["categoryBudgets"];
   isLoadingCategoryBudgets: boolean;
   saveCategoryGoal: ReturnType<typeof useCategoryBudgets>["saveCategoryGoal"];
+  handleDeleteCategory: (id: number) => Promise<void>;
   refreshCategoryBudgets: ReturnType<
     typeof useCategoryBudgets
   >["refreshCategoryBudgets"];
@@ -118,6 +119,8 @@ interface DashboardContextValue {
   handleSaveTransaction: () => Promise<void>;
   handleDeleteTransaction: (id: string) => Promise<void>;
   handleDeleteAllTransactions: () => Promise<void>;
+  handleDeleteSeriesFromId: (groupId: string, fromId: number) => Promise<void>;
+  handleDeleteSeries: (groupId: string) => Promise<void>;
   handleChangePIN: () => void;
   handleWipeData: () => void;
   openNewTransactionModal: () => void;
@@ -180,6 +183,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     saveTransaction,
     removeTransaction,
     removeAllForCurrentPeriod,
+    removeSeries,
+    removeSeriesFromId,
   } = useTransactions(selectedMonth, selectedYear);
   const totalBalance = totalIncome - totalExpense;
 
@@ -190,6 +195,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     categoryBudgets,
     isLoadingCategoryBudgets,
     saveCategoryGoal,
+    removeCategory,
     refreshCategoryBudgets,
   } = useCategoryBudgets(selectedMonth, selectedYear, transactions);
 
@@ -228,6 +234,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Abrir a galeria manda o app pro background e ele volta em seguida —
+    // sem isso, o listener de AppState acharia que é uma troca de app de
+    // verdade e pediria PIN/biometria de novo.
+    suppressAppLockOnce();
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
@@ -281,6 +291,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         transactions,
       });
 
+      suppressAppLockOnce();
       await Print.printAsync({ html: htmlContent });
     } catch (error) {
       console.log("Erro ao gerar PDF:", error);
@@ -306,6 +317,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       file.write(csvContent);
 
       if (await Sharing.isAvailableAsync()) {
+        suppressAppLockOnce();
         await Sharing.shareAsync(file.uri, {
           mimeType: "text/csv",
           dialogTitle: "Exportar backup em CSV",
@@ -438,6 +450,39 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const handleDeleteSeriesFromId = async (groupId: string, fromId: number) => {
+    try {
+      await removeSeriesFromId(groupId, fromId);
+      showAlert(
+        "Sucesso",
+        "Esta e as próximas ocorrências da série foram excluídas.",
+      );
+    } catch (error) {
+      console.log("Erro ao excluir ocorrências futuras da série:", error);
+      showAlert("Erro", "Não foi possível excluir as ocorrências futuras.");
+    }
+  };
+
+  const handleDeleteSeries = async (groupId: string) => {
+    try {
+      await removeSeries(groupId);
+      showAlert("Sucesso", "Série excluída com sucesso.");
+    } catch (error) {
+      console.log("Erro ao excluir série:", error);
+      showAlert("Erro", "Não foi possível excluir a série.");
+    }
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    try {
+      await removeCategory(id);
+      showAlert("Sucesso", "Categoria excluída com sucesso.");
+    } catch (error) {
+      console.log("Erro ao excluir categoria:", error);
+      showAlert("Erro", "Não foi possível excluir a categoria.");
+    }
+  };
+
   const handleChangePIN = () => {
     setIsMenuOpen(false);
     // O PIN atual só é sobrescrito quando o novo for confirmado na tela
@@ -500,7 +545,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const formattedTransactions: DisplayTransaction[] = filteredTransactions.map(
     (item) => ({
       id: String(item.id),
-      description: item.description || "Sem descrição",
+      description: item.description || "Sem título",
       amount: item.amount,
       type: item.type,
       date: item.date,
@@ -508,6 +553,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       color: item.color || colors.textSecondary,
       icon: item.type === "income" ? "cash-outline" : "cart-outline",
       recurrenceType: item.recurrence_type,
+      recurrenceGroupId: item.recurrence_group_id,
+      installmentNumber: item.installment_number,
+      installmentTotal: item.installment_total,
     }),
   );
 
@@ -578,6 +626,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     categoryBudgets,
     isLoadingCategoryBudgets,
     saveCategoryGoal,
+    handleDeleteCategory,
     refreshCategoryBudgets,
 
     alertVisible,
@@ -592,6 +641,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     handleSaveTransaction,
     handleDeleteTransaction,
     handleDeleteAllTransactions,
+    handleDeleteSeriesFromId,
+    handleDeleteSeries,
     handleChangePIN,
     handleWipeData,
     openNewTransactionModal,

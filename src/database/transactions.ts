@@ -73,6 +73,45 @@ export async function deleteTransactionsByMonth(
   );
 }
 
+/** Busca todas as ocorrências de uma série recorrente/parcelada, em ordem cronológica. */
+export async function getTransactionsByGroupId(
+  groupId: string,
+): Promise<TransactionRow[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<TransactionRow>(
+    "SELECT * FROM transactions WHERE recurrence_group_id = ? ORDER BY id ASC",
+    groupId,
+  );
+}
+
+/** Apaga todas as ocorrências de uma série recorrente/parcelada. */
+export async function deleteTransactionsByGroupId(
+  groupId: string,
+): Promise<void> {
+  const db = await getDatabase();
+  db.runSync(
+    "DELETE FROM transactions WHERE recurrence_group_id = ?",
+    groupId,
+  );
+}
+
+/**
+ * Apaga uma ocorrência e todas as seguintes da mesma série ("esta e as
+ * futuras"). Como as ocorrências são inseridas em ordem cronológica dentro
+ * da mesma transação, o id crescente já reflete a ordem da série.
+ */
+export async function deleteTransactionsFromIdInGroup(
+  groupId: string,
+  fromId: number,
+): Promise<void> {
+  const db = await getDatabase();
+  db.runSync(
+    "DELETE FROM transactions WHERE recurrence_group_id = ? AND id >= ?",
+    groupId,
+    fromId,
+  );
+}
+
 /**
  * Cria uma transação recorrente: gera a ocorrência atual + as próximas
  * `monthsAhead - 1`, mesmo dia todo mês (ajustado quando o mês de destino

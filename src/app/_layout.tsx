@@ -2,7 +2,7 @@ import { Stack, usePathname, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, AppState, AppStateStatus, View } from "react-native";
 import { initDatabase } from "../database/sqlite";
-import { hasPinConfigured } from "../utils/security";
+import { consumeAppLockSuppression, hasPinConfigured } from "../utils/security";
 import { colors } from "../constants/colors";
 
 export default function RootLayout() {
@@ -35,6 +35,9 @@ export default function RootLayout() {
 
         if (!cameFromBackground) return;
         if (pathname === "/security" || pathname === "/") return;
+        // Voltou do background porque o próprio app abriu a galeria (ou
+        // outra tela do sistema) — não é uma troca de app de verdade.
+        if (consumeAppLockSuppression()) return;
 
         const pinConfigured = await hasPinConfigured();
         if (pinConfigured) {

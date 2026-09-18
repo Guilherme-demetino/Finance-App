@@ -263,7 +263,7 @@ export function TransactionModal({
             {/* CAMPOS DE TEXTO */}
             <View style={{ marginBottom: 16 }}>
               <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 8 }}>
-                Descrição
+                Título
               </Text>
               <TextInput
                 style={{

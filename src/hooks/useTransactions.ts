@@ -6,7 +6,9 @@ import {
   createRecurringTransactions,
   createTransaction,
   deleteTransaction,
+  deleteTransactionsByGroupId,
   deleteTransactionsByMonth,
+  deleteTransactionsFromIdInGroup,
   getAllTransactions,
   TransactionInput,
   updateTransaction,
@@ -181,6 +183,16 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
     await refresh();
   };
 
+  const removeSeries = async (groupId: string) => {
+    await deleteTransactionsByGroupId(groupId);
+    await refresh();
+  };
+
+  const removeSeriesFromId = async (groupId: string, fromId: number) => {
+    await deleteTransactionsFromIdInGroup(groupId, fromId);
+    await refresh();
+  };
+
   return {
     transactions,
     isLoading,
@@ -191,5 +203,7 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
     saveTransaction,
     removeTransaction,
     removeAllForCurrentPeriod,
+    removeSeries,
+    removeSeriesFromId,
   };
 }

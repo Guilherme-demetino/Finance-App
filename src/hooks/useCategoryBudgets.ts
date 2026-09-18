@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { colors } from "../constants/colors";
-import { getAllCategories } from "../database/categories";
+import { deleteCategory, getAllCategories } from "../database/categories";
 import { getCategoryBudgets, setCategoryBudget } from "../database/categoryBudgets";
 import type { EnrichedTransaction } from "../types";
 import { getMonthNumber } from "../utils/dates";
 import { DEFAULT_CATEGORY_COLORS } from "./useTransactions";
 
 export interface CategoryBudgetItem {
+  /** null quando a categoria não existe (mais) na tabela categories — só apareceu por causa de transações/meta antigas. */
+  id: number | null;
   category: string;
   color: string;
   spent: number;
@@ -60,6 +62,7 @@ export function useCategoryBudgets(
       const merged: CategoryBudgetItem[] = expenseCategories.map((cat) => {
         const key = cat.name.trim().toLowerCase();
         return {
+          id: cat.id,
           category: cat.name,
           color: cat.color || DEFAULT_CATEGORY_COLORS[key] || colors.categoryNeutral,
           spent: spentByCategory[key] || 0,
@@ -75,6 +78,7 @@ export function useCategoryBudgets(
         );
         if (!alreadyListed) {
           merged.push({
+            id: null,
             category: displayNameByKey[key],
             color: DEFAULT_CATEGORY_COLORS[key] || colors.categoryNeutral,
             spent: spentByCategory[key],
@@ -112,10 +116,16 @@ export function useCategoryBudgets(
     await refresh();
   };
 
+  const removeCategory = async (id: number) => {
+    await deleteCategory(id);
+    await refresh();
+  };
+
   return {
     categoryBudgets,
     isLoadingCategoryBudgets,
     saveCategoryGoal,
+    removeCategory,
     refreshCategoryBudgets: refresh,
   };
 }

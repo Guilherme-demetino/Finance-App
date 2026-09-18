@@ -17,3 +17,13 @@ export async function createCategory(
     [name, color, type],
   );
 }
+
+/**
+ * Apaga uma categoria. Transações e metas já registradas com esse nome
+ * continuam existindo (guardam a categoria como texto), só deixam de
+ * aparecer atreladas a essa categoria formal.
+ */
+export async function deleteCategory(id: number): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("DELETE FROM categories WHERE id = ?", [id]);
+}

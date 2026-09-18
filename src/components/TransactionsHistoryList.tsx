@@ -10,6 +10,7 @@ import {
 import Animated, { FadeIn } from "react-native-reanimated";
 import { colors } from "../constants/colors";
 import { SortModal, type SortOption } from "./FilterModals";
+import { SeriesManagerModal } from "./SeriesManagerModal";
 import type { DisplayTransaction } from "../types";
 import { formatCurrency } from "../utils/currency";
 
@@ -53,6 +54,8 @@ interface TransactionsHistoryListProps {
   onEditTransaction: (item: DisplayTransaction) => void;
   onDeleteTransaction: (id: string) => void;
   onDeleteAll: () => void;
+  onDeleteSeriesFromHere: (groupId: string, fromId: number) => void;
+  onDeleteSeries: (groupId: string) => void;
 }
 
 export function TransactionsHistoryList({
@@ -64,10 +67,14 @@ export function TransactionsHistoryList({
   onEditTransaction,
   onDeleteTransaction,
   onDeleteAll,
+  onDeleteSeriesFromHere,
+  onDeleteSeries,
 }: TransactionsHistoryListProps) {
   const [filter, setFilter] = useState<TypeFilter>("all");
   const [sortBy, setSortBy] = useState<SortKey>("recent");
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
+  const [seriesTransaction, setSeriesTransaction] =
+    useState<DisplayTransaction | null>(null);
   const currentSortOption =
     SORT_OPTIONS.find((option) => option.key === sortBy) ?? SORT_OPTIONS[0];
 
@@ -320,21 +327,12 @@ export function TransactionsHistoryList({
               padding: 14,
               borderRadius: 12,
               marginBottom: 10,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
               borderWidth: 1,
               borderColor: colors.surfaceAlt,
             }}
           >
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                flex: 1,
-                gap: 12,
-              }}
-            >
+            {/* Linha 1: ícone, título e valor — título tem toda a largura livre. */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
               <View
                 style={{
                   width: 40,
@@ -357,70 +355,117 @@ export function TransactionsHistoryList({
                   color={item.color}
                 />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "500" }}
-                  numberOfLines={1}
-                >
-                  {item.description}
-                </Text>
-                <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>
-                  {item.date} {item.category ? `• ${item.category}` : ""}
-                </Text>
-              </View>
-            </View>
 
-            <View
-              style={{ alignItems: "flex-end", flexDirection: "row", gap: 8 }}
-            >
+              <Text
+                style={{
+                  flex: 1,
+                  color: colors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: "500",
+                }}
+                numberOfLines={1}
+              >
+                {item.description}
+              </Text>
+
               <Text
                 style={{
                   color: item.type === "income" ? colors.income : colors.expense,
                   fontSize: 14,
                   fontWeight: "bold",
-                  marginRight: 2,
                 }}
               >
                 {formatCurrency(item.amount, {
                   forceSign: item.type === "income" ? "+" : "-",
                 })}
               </Text>
+            </View>
 
-              <TouchableOpacity
-                onPress={() => onEditTransaction(item)}
-                style={{
-                  backgroundColor: colors.surfaceAlt,
-                  borderWidth: 1,
-                  borderColor: colors.textPrimary,
-                  borderRadius: 8,
-                  width: 34,
-                  height: 34,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+            {/* Linha 2: data e ações — fora da disputa de espaço com o título. */}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginTop: 10,
+                paddingLeft: 52,
+              }}
+            >
+              <Text
+                style={{ color: colors.textMuted, fontSize: 12 }}
+                numberOfLines={1}
               >
-                <Ionicons name="pencil-outline" size={16} color={colors.textPrimary} />
-              </TouchableOpacity>
+                {item.date}
+              </Text>
 
-              <TouchableOpacity
-                onPress={() => onDeleteTransaction(item.id)}
-                style={{
-                  backgroundColor: colors.surfaceAlt,
-                  borderWidth: 1,
-                  borderColor: colors.textPrimary,
-                  borderRadius: 8,
-                  width: 34,
-                  height: 34,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Ionicons name="trash-outline" size={16} color={colors.expense} />
-              </TouchableOpacity>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => onEditTransaction(item)}
+                  style={{
+                    backgroundColor: colors.surfaceAlt,
+                    borderWidth: 1,
+                    borderColor: colors.textPrimary,
+                    borderRadius: 8,
+                    width: 34,
+                    height: 34,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="pencil-outline" size={16} color={colors.textPrimary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => onDeleteTransaction(item.id)}
+                  style={{
+                    backgroundColor: colors.surfaceAlt,
+                    borderWidth: 1,
+                    borderColor: colors.textPrimary,
+                    borderRadius: 8,
+                    width: 34,
+                    height: 34,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={16} color={colors.expense} />
+                </TouchableOpacity>
+
+                {item.recurrenceType && (
+                  <TouchableOpacity
+                    onPress={() => setSeriesTransaction(item)}
+                    style={{
+                      backgroundColor: colors.surfaceAlt,
+                      borderWidth: 1,
+                      borderColor: colors.textPrimary,
+                      borderRadius: 8,
+                      width: 34,
+                      height: 34,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons
+                      name="repeat-outline"
+                      size={16}
+                      color={colors.accent}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           </Animated.View>
         ))
       )}
+
+      <SeriesManagerModal
+        visible={!!seriesTransaction}
+        transaction={seriesTransaction}
+        onClose={() => setSeriesTransaction(null)}
+        onDeleteOccurrence={onDeleteTransaction}
+        onDeleteFromHere={onDeleteSeriesFromHere}
+        onDeleteSeries={onDeleteSeries}
+      />
     </View>
   );
 }

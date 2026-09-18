@@ -17,6 +17,8 @@ export default function DashboardHistoryScreen() {
     handleOpenEditTransaction,
     handleDeleteTransaction,
     handleDeleteAllTransactions,
+    handleDeleteSeriesFromId,
+    handleDeleteSeries,
     scrollY,
   } = useDashboardContext();
 
@@ -39,6 +41,8 @@ export default function DashboardHistoryScreen() {
         onEditTransaction={handleOpenEditTransaction}
         onDeleteTransaction={handleDeleteTransaction}
         onDeleteAll={handleDeleteAllTransactions}
+        onDeleteSeriesFromHere={handleDeleteSeriesFromId}
+        onDeleteSeries={handleDeleteSeries}
       />
     </Animated.ScrollView>
   );

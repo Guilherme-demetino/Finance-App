@@ -72,4 +72,7 @@ export interface DisplayTransaction {
   color: string;
   icon: string;
   recurrenceType?: RecurrenceType | null;
+  recurrenceGroupId?: string | null;
+  installmentNumber?: number | null;
+  installmentTotal?: number | null;
 }

@@ -6,12 +6,14 @@ import type { CategoryBudgetItem } from "../hooks/useCategoryBudgets";
 import { styles } from "../styles/dashboardStyles";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
 import { CategoryModal } from "./CategoryModal";
+import { ConfirmModal } from "./ConfirmModal";
 
 interface CategoryBudgetsCardProps {
   items: CategoryBudgetItem[];
   isLoading: boolean;
   onSaveGoal: (category: string, amount: number) => void;
   onCategoryCreated: () => Promise<void> | void;
+  onDeleteCategory: (id: number) => void;
   formatCurrency: (val: string) => string;
 }
 
@@ -20,11 +22,14 @@ export function CategoryBudgetsCard({
   isLoading,
   onSaveGoal,
   onCategoryCreated,
+  onDeleteCategory,
   formatCurrency,
 }: CategoryBudgetsCardProps) {
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [draftAmount, setDraftAmount] = useState("");
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] =
+    useState<CategoryBudgetItem | null>(null);
 
   const startEditing = (item: CategoryBudgetItem) => {
     setEditingCategory(item.category);
@@ -143,27 +148,51 @@ export function CategoryBudgetsCard({
                     </Text>
                   </View>
 
-                  <TouchableOpacity
-                    onPress={() =>
-                      isEditing ? setEditingCategory(null) : startEditing(item)
-                    }
-                    style={{
-                      backgroundColor: colors.surfaceAlt,
-                      borderWidth: 1,
-                      borderColor: colors.textPrimary,
-                      borderRadius: 8,
-                      width: 30,
-                      height: 30,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Ionicons
-                      name={isEditing ? "close-outline" : "create-outline"}
-                      size={15}
-                      color={colors.textPrimary}
-                    />
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    {item.id !== null && (
+                      <TouchableOpacity
+                        onPress={() => setCategoryToDelete(item)}
+                        style={{
+                          backgroundColor: colors.surfaceAlt,
+                          borderWidth: 1,
+                          borderColor: colors.textPrimary,
+                          borderRadius: 8,
+                          width: 30,
+                          height: 30,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={15}
+                          color={colors.expense}
+                        />
+                      </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                      onPress={() =>
+                        isEditing ? setEditingCategory(null) : startEditing(item)
+                      }
+                      style={{
+                        backgroundColor: colors.surfaceAlt,
+                        borderWidth: 1,
+                        borderColor: colors.textPrimary,
+                        borderRadius: 8,
+                        width: 30,
+                        height: 30,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Ionicons
+                        name={isEditing ? "close-outline" : "create-outline"}
+                        size={15}
+                        color={colors.textPrimary}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {isEditing ? (
@@ -285,6 +314,25 @@ export function CategoryBudgetsCard({
         lockType
         onSave={(categoryName) => {
           handleCategoryCreated(categoryName);
+        }}
+      />
+
+      <ConfirmModal
+        visible={!!categoryToDelete}
+        title="Excluir categoria"
+        message={
+          categoryToDelete
+            ? `Excluir a categoria "${categoryToDelete.category}"? As transações e metas já registradas com ela continuam existindo, só deixam de aparecer atreladas a essa categoria.`
+            : ""
+        }
+        confirmLabel="Excluir"
+        destructive
+        onCancel={() => setCategoryToDelete(null)}
+        onConfirm={() => {
+          if (categoryToDelete?.id !== null && categoryToDelete?.id !== undefined) {
+            onDeleteCategory(categoryToDelete.id);
+          }
+          setCategoryToDelete(null);
         }}
       />
     </View>

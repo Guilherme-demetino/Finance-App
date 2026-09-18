@@ -19,6 +19,7 @@ export default function DashboardBudgetScreen() {
     categoryBudgets,
     isLoadingCategoryBudgets,
     saveCategoryGoal,
+    handleDeleteCategory,
     refreshCategoryBudgets,
     scrollY,
   } = useDashboardContext();
@@ -47,6 +48,7 @@ export default function DashboardBudgetScreen() {
         isLoading={isLoadingCategoryBudgets}
         onSaveGoal={saveCategoryGoal}
         onCategoryCreated={refreshCategoryBudgets}
+        onDeleteCategory={handleDeleteCategory}
         formatCurrency={formatCurrencyInput}
       />
     </Animated.ScrollView>
