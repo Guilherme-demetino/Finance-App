@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -11,6 +12,21 @@ import {
 } from "react-native";
 import { getDatabase } from "../database/sqlite";
 import { CategoryModal } from "./CategoryModal";
+
+const parseDateString = (value: string): Date => {
+  const [day, month, year] = String(value).split("/").map(Number);
+  if (day && month && year) {
+    return new Date(year, month - 1, day);
+  }
+  return new Date();
+};
+
+const formatDateToString = (date: Date): string => {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 
 interface TransactionModalProps {
   visible: boolean;
@@ -47,6 +63,7 @@ export function TransactionModal({
 }: TransactionModalProps) {
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
   const [dbCategories, setDbCategories] = useState<any[]>([]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const fetchCategories = async () => {
     try {
@@ -268,18 +285,35 @@ export function TransactionModal({
               <Text style={{ color: "#888", fontSize: 13, marginBottom: 8 }}>
                 Data
               </Text>
-              <TextInput
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(true)}
                 style={{
                   backgroundColor: "#2A2A2A",
-                  color: "#FFFFFF",
                   padding: 16,
                   borderRadius: 12,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                 }}
-                value={transactionDate}
-                onChangeText={setTransactionDate}
-                placeholder="DD/MM/AAAA"
-                placeholderTextColor="#666"
-              />
+              >
+                <Text style={{ color: "#FFFFFF" }}>
+                  {transactionDate || "DD/MM/AAAA"}
+                </Text>
+                <Ionicons name="calendar-outline" size={20} color="#888" />
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={parseDateString(transactionDate)}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "inline" : "calendar"}
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (event.type === "set" && selectedDate) {
+                      setTransactionDate(formatDateToString(selectedDate));
+                    }
+                  }}
+                />
+              )}
             </View>
 
             {/* LISTA DE CATEGORIAS */}
