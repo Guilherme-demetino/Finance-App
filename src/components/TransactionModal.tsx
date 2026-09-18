@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -10,7 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { getDatabase } from "../database/sqlite";
+import { CalendarPicker } from "./CalendarPicker";
 import { CategoryModal } from "./CategoryModal";
 
 const parseDateString = (value: string): Date => {
@@ -63,17 +65,19 @@ export function TransactionModal({
 }: TransactionModalProps) {
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
   const [dbCategories, setDbCategories] = useState<any[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const fetchCategories = async () => {
+    setIsLoadingCategories(true);
     try {
       const db = await getDatabase();
 
       await db.runAsync(`
         CREATE TABLE IF NOT EXISTS categories (
-          id INTEGER PRIMARY KEY AUTOINCREMENT, 
-          name TEXT NOT NULL, 
-          color TEXT NOT NULL, 
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          color TEXT NOT NULL,
           type TEXT NOT NULL DEFAULT 'expense'
         )
       `);
@@ -84,6 +88,8 @@ export function TransactionModal({
       setDbCategories(result);
     } catch (error) {
       console.log("Erro ao buscar categorias:", error);
+    } finally {
+      setIsLoadingCategories(false);
     }
   };
 
@@ -121,7 +127,8 @@ export function TransactionModal({
 
   return (
     <>
-      <View
+      <Animated.View
+        entering={FadeIn.duration(200)}
         style={{
           position: "absolute",
           top: 0,
@@ -139,7 +146,8 @@ export function TransactionModal({
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ maxHeight: "85%" }}
         >
-          <ScrollView
+          <Animated.ScrollView
+            entering={FadeInDown.duration(250).springify().damping(18)}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
@@ -301,19 +309,16 @@ export function TransactionModal({
                 </Text>
                 <Ionicons name="calendar-outline" size={20} color="#888" />
               </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={parseDateString(transactionDate)}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "inline" : "calendar"}
-                  onChange={(event, selectedDate) => {
-                    setShowDatePicker(false);
-                    if (event.type === "set" && selectedDate) {
-                      setTransactionDate(formatDateToString(selectedDate));
-                    }
-                  }}
-                />
-              )}
+              <CalendarPicker
+                visible={showDatePicker}
+                value={parseDateString(transactionDate)}
+                accentColor={transactionType === "income" ? "#10B981" : "#EF4444"}
+                onClose={() => setShowDatePicker(false)}
+                onSelect={(selectedDate) => {
+                  setShowDatePicker(false);
+                  setTransactionDate(formatDateToString(selectedDate));
+                }}
+              />
             </View>
 
             {/* LISTA DE CATEGORIAS */}
@@ -350,6 +355,10 @@ export function TransactionModal({
                       Nova
                     </Text>
                   </TouchableOpacity>
+
+                  {isLoadingCategories && (
+                    <ActivityIndicator size="small" color="#888" />
+                  )}
 
                   {displayCategories.map((catName, index) => {
                     const isSelected = transactionCategory === catName;
@@ -400,9 +409,9 @@ export function TransactionModal({
                 Salvar Transação
               </Text>
             </TouchableOpacity>
-          </ScrollView>
+          </Animated.ScrollView>
         </KeyboardAvoidingView>
-      </View>
+      </Animated.View>
 
       {/* MODAL DE CRIAR CATEGORIA */}
       <CategoryModal

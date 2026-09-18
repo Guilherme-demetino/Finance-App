@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Text, View } from "react-native";
 import { styles } from "../app/../styles/dashboardStyles";
+import { formatCurrency } from "../utils/currency";
 
 interface SummaryCardsProps {
   totalIncome: number;
@@ -16,7 +17,7 @@ export function SummaryCards({ totalIncome, totalExpense }: SummaryCardsProps) {
           <Text style={styles.summaryLabel}>Receitas</Text>
         </View>
         <Text style={styles.summaryValueIncome}>
-          + R$ {totalIncome.toFixed(2).replace(".", ",")}
+          {formatCurrency(totalIncome, { forceSign: "+" })}
         </Text>
       </View>
 
@@ -26,7 +27,7 @@ export function SummaryCards({ totalIncome, totalExpense }: SummaryCardsProps) {
           <Text style={styles.summaryLabel}>Despesas</Text>
         </View>
         <Text style={styles.summaryValueExpense}>
-          - R$ {totalExpense.toFixed(2).replace(".", ",")}
+          {formatCurrency(totalExpense, { forceSign: "-" })}
         </Text>
       </View>
     </View>

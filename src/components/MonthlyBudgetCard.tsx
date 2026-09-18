@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { styles } from "../app/../styles/dashboardStyles";
+import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
 
 interface MonthlyBudgetCardProps {
   monthlyBudget: string;
@@ -95,17 +96,14 @@ export function MonthlyBudgetCard({
             <Text
               style={{ fontSize: 22, fontWeight: "bold", color: "#10B981" }}
             >
-              R${" "}
-              {isNaN(Number(monthlyBudget))
-                ? monthlyBudget
-                : Number(
-                    monthlyBudget
-                      .toString()
-                      .replace(/\./g, "")
-                      .replace(",", "."),
-                  )
-                    .toFixed(2)
-                    .replace(".", ",")}
+              {(() => {
+                const parsed = Number(
+                  monthlyBudget.toString().replace(/\./g, "").replace(",", "."),
+                );
+                return isNaN(parsed)
+                  ? `R$ ${monthlyBudget}`
+                  : formatCurrencyDisplay(parsed);
+              })()}
             </Text>
             <Text style={{ fontSize: 12, color: "#A1A1AA" }}>
               Toque no ícone para editar

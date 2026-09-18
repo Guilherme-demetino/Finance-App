@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
+import { formatCurrency } from "../utils/currency";
 
 interface Transaction {
   id: string;
@@ -76,9 +77,6 @@ export function GeneralBalanceCard({
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   let currentOffset = 0;
-
-  const formatCurrency = (val: number) =>
-    `R$ ${val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <View style={styles.card}>

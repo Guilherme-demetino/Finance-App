@@ -4,6 +4,7 @@ import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { CustomAlert } from "../components/CustomAlert";
 import { getDatabase } from "../database/sqlite";
 import { styles } from "../styles/indexStyles";
+import { hasPinConfigured } from "../utils/security";
 
 export default function WelcomeScreen() {
   const [name, setName] = useState("");
@@ -27,9 +28,13 @@ export default function WelcomeScreen() {
     try {
       const db = await getDatabase();
 
-      // Verifica se já existe um PIN salvo. Se sim, vai direto pedir a senha!
-      const security: any = db.getFirstSync("SELECT pin FROM security LIMIT 1");
-      if (security && security.pin) {
+      // Verifica se já existe um PIN salvo (SecureStore, ou um PIN
+      // legado ainda não migrado no SQLite). Se sim, vai direto pedir a senha!
+      const hasPin = await hasPinConfigured();
+      const legacySecurity: any = await db.getFirstAsync(
+        "SELECT pin FROM security LIMIT 1",
+      );
+      if (hasPin || (legacySecurity && legacySecurity.pin)) {
         router.replace("/security");
         return;
       }

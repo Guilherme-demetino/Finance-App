@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { formatCurrency } from "../utils/currency";
 
 interface MonthData {
   label: string;
@@ -36,9 +37,6 @@ export function LandscapePanoramaModal({
     type: "Receita" | "Despesa";
     amount: number;
   } | null>(null);
-
-  const formatCurrency = (val: number) =>
-    `R$ ${val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   // Encontra o maior valor entre todas as receitas e despesas do ano para dimensionar proporcionalmente as barras
   const maxAmount = Math.max(

@@ -1,4 +1,5 @@
 import { Text, View } from "react-native";
+import { formatCurrency } from "../utils/currency";
 
 interface BalanceCardProps {
   totalBalance: number;
@@ -11,8 +12,7 @@ export function BalanceCard({
   selectedMonth,
   selectedYear,
 }: BalanceCardProps) {
-  const isPositive = totalBalance >= 0;
-  const balanceColor = isPositive ? "#10B981" : "#EF4444";
+  const balanceColor = totalBalance >= 0 ? "#10B981" : "#EF4444";
 
   return (
     <View
@@ -38,11 +38,7 @@ export function BalanceCard({
           fontWeight: "bold",
         }}
       >
-        {isPositive ? "" : "- "}R${" "}
-        {Math.abs(totalBalance).toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}
+        {formatCurrency(totalBalance)}
       </Text>
     </View>
   );

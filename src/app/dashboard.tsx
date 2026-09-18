@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
+import { File, Paths } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import * as Print from "expo-print";
 import { useRouter } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
+import * as Sharing from "expo-sharing";
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,6 +27,8 @@ import { TransactionsHistoryList } from "../components/TransactionsHistoryList";
 
 import { getDatabase } from "../database/sqlite";
 import { styles } from "../styles/dashboardStyles";
+import { formatCurrency } from "../utils/currency";
+import { clearPin } from "../utils/security";
 
 const monthMap: Record<string, string> = {
   Janeiro: "01",
@@ -41,7 +45,7 @@ const monthMap: Record<string, string> = {
   Dezembro: "12",
 };
 
-const formatCurrency = (value: string) => {
+const formatCurrencyInput = (value: string) => {
   const numbers = value.replace(/\D/g, "");
   if (!numbers) return "";
 
@@ -89,6 +93,7 @@ export default function DashboardScreen() {
   const [transactionCategory, setTransactionCategory] = useState("Salário");
 
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
   const totalBalance = totalIncome - totalExpense;
@@ -176,14 +181,15 @@ export default function DashboardScreen() {
   };
 
   const fetchTransactions = async () => {
+    setIsLoadingTransactions(true);
     try {
       const db = await getDatabase();
 
-      const rawTransactions: any = db.getAllSync(
+      const rawTransactions: any = await db.getAllAsync(
         "SELECT * FROM transactions ORDER BY id DESC",
       );
 
-      const rawCategories: any = db.getAllSync("SELECT * FROM categories");
+      const rawCategories: any = await db.getAllAsync("SELECT * FROM categories");
 
       const defaultSystemColors: Record<string, string> = {
         salário: "#10B981",
@@ -293,6 +299,8 @@ export default function DashboardScreen() {
       setMonthsData(calculatedMonthsData);
     } catch (error) {
       console.log("Erro ao buscar transações anuais:", error);
+    } finally {
+      setIsLoadingTransactions(false);
     }
   };
 
@@ -390,9 +398,9 @@ export default function DashboardScreen() {
             </div>
             
             <div class="summary">
-              <div class="summary-item">Receitas: <span class="income">R$ ${totalIncome.toFixed(2)}</span></div>
-              <div class="summary-item">Despesas: <span class="expense">R$ ${totalExpense.toFixed(2)}</span></div>
-              <div class="summary-item">Saldo: R$ ${totalBalance.toFixed(2)}</div>
+              <div class="summary-item">Receitas: <span class="income">${formatCurrency(totalIncome)}</span></div>
+              <div class="summary-item">Despesas: <span class="expense">${formatCurrency(totalExpense)}</span></div>
+              <div class="summary-item">Saldo: ${formatCurrency(totalBalance)}</div>
             </div>
 
             <table>
@@ -415,7 +423,7 @@ export default function DashboardScreen() {
                     <td>${t.category_id || "Geral"}</td>
                     <td>${t.type === "income" ? "Receita" : "Despesa"}</td>
                     <td class="${t.type === "income" ? "income" : "expense"}">
-                      ${t.type === "income" ? "+ " : "- "} ${t.amount.toFixed(2)}
+                      ${formatCurrency(t.amount, { forceSign: t.type === "income" ? "+" : "-" })}
                     </td>
                   </tr>
                 `,
@@ -434,13 +442,69 @@ export default function DashboardScreen() {
     }
   };
 
+  const csvEscape = (value: string): string => {
+    const safeValue = String(value ?? "");
+    if (/[;"\n]/.test(safeValue)) {
+      return `"${safeValue.replace(/"/g, '""')}"`;
+    }
+    return safeValue;
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const db = await getDatabase();
+      const allTransactions: any = await db.getAllAsync(
+        "SELECT * FROM transactions ORDER BY id DESC",
+      );
+
+      if (!allTransactions || allTransactions.length === 0) {
+        showAlert("Atenção", "Não há transações para exportar.");
+        return;
+      }
+
+      const header = "Data;Descrição;Categoria;Tipo;Valor";
+      const rows = allTransactions.map((t: any) => {
+        const tipo = t.type === "income" ? "Receita" : "Despesa";
+        const valor = Number(t.amount).toFixed(2).replace(".", ",");
+        return [
+          csvEscape(t.date),
+          csvEscape(t.description || "Sem descrição"),
+          csvEscape(t.category_id || "Geral"),
+          csvEscape(tipo),
+          csvEscape(valor),
+        ].join(";");
+      });
+
+      const csvContent = "﻿" + [header, ...rows].join("\n");
+
+      const fileName = `financas-backup-${Date.now()}.csv`;
+      const file = new File(Paths.cache, fileName);
+      if (file.exists) file.delete();
+      file.create();
+      file.write(csvContent);
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri, {
+          mimeType: "text/csv",
+          dialogTitle: "Exportar backup em CSV",
+          UTI: "public.comma-separated-values-text",
+        });
+      } else {
+        showAlert("Erro", "O compartilhamento não está disponível neste dispositivo.");
+      }
+    } catch (error) {
+      console.log("Erro ao gerar CSV:", error);
+      showAlert("Erro", "Não foi possível gerar o arquivo CSV.");
+    }
+  };
+
   const handleOpenEditTransaction = (item: any) => {
     setEditingTransactionId(item.id);
     setTransactionType(item.type);
     setTransactionTitle(item.description);
 
     const rawCents = Math.round(item.amount * 100).toString();
-    setTransactionAmount(formatCurrency(rawCents));
+    setTransactionAmount(formatCurrencyInput(rawCents));
 
     setTransactionDate(item.date);
     setTransactionCategory(
@@ -557,16 +621,11 @@ export default function DashboardScreen() {
   };
 
   // ------------------ NOVAS FUNÇÕES DE SEGURANÇA ------------------
-  const handleChangePIN = async () => {
+  const handleChangePIN = () => {
     setIsMenuOpen(false);
-    try {
-      const db = await getDatabase();
-      db.runSync("DELETE FROM security"); // Apaga o PIN atual
-      router.replace("/security" as any); // Manda criar um novo
-    } catch (error) {
-      console.log("Erro ao alterar PIN:", error);
-      showAlert("Erro", "Não foi possível iniciar a troca de PIN.");
-    }
+    // O PIN atual só é sobrescrito quando o novo for confirmado na tela
+    // de segurança — se o usuário voltar sem concluir, nada muda.
+    router.replace("/security?mode=change" as any);
   };
 
   const handleWipeData = () => {
@@ -588,6 +647,7 @@ export default function DashboardScreen() {
                 db.runSync("DROP TABLE IF EXISTS users");
                 db.runSync("DROP TABLE IF EXISTS security");
               });
+              await clearPin();
               router.replace("/" as any); // Volta para a tela de boas-vindas
             } catch (error) {
               console.log("Erro ao zerar dados:", error);
@@ -648,7 +708,7 @@ export default function DashboardScreen() {
           setMonthlyBudget={setMonthlyBudget}
           isEditingBudget={isEditingBudget}
           setIsEditingBudget={setIsEditingBudget}
-          formatCurrency={formatCurrency}
+          formatCurrency={formatCurrencyInput}
         />
 
         <GeneralBalanceCard
@@ -661,6 +721,8 @@ export default function DashboardScreen() {
 
         <TransactionsHistoryList
           transactions={formattedTransactions}
+          hasAnyTransactions={transactions.length > 0}
+          isLoading={isLoadingTransactions}
           searchText={searchText}
           setSearchText={setSearchText}
           onEditTransaction={handleOpenEditTransaction}
@@ -708,7 +770,7 @@ export default function DashboardScreen() {
         setTransactionDate={setTransactionDate}
         transactionCategory={transactionCategory}
         setTransactionCategory={setTransactionCategory}
-        formatCurrency={formatCurrency}
+        formatCurrency={formatCurrencyInput}
         onSave={handleSaveTransaction}
       />
 
@@ -745,6 +807,7 @@ export default function DashboardScreen() {
         onPickImage={pickImage}
         onOpenEditName={() => setIsEditingName(true)}
         onExportPDF={handleExportPDF}
+        onExportCSV={handleExportCSV}
         onChangePIN={handleChangePIN}
         onWipeData={handleWipeData}
       />

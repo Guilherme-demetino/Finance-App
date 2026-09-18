@@ -1,12 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
+import { formatCurrency } from "../utils/currency";
 
 interface TransactionItem {
   id: string;
@@ -20,6 +23,8 @@ interface TransactionItem {
 
 interface TransactionsHistoryListProps {
   transactions: TransactionItem[];
+  hasAnyTransactions?: boolean;
+  isLoading?: boolean;
   searchText: string;
   setSearchText: (text: string) => void;
   onEditTransaction: (item: any) => void;
@@ -29,6 +34,8 @@ interface TransactionsHistoryListProps {
 
 export function TransactionsHistoryList({
   transactions,
+  hasAnyTransactions = transactions.length > 0,
+  isLoading = false,
   searchText,
   setSearchText,
   onEditTransaction,
@@ -264,16 +271,77 @@ export function TransactionsHistoryList({
         </View>
       </ScrollView>
 
-      {sortedTransactions.length === 0 ? (
-        <View style={{ padding: 20, alignItems: "center" }}>
-          <Text style={{ color: "#888", fontSize: 14 }}>
-            Nenhuma transação encontrada.
+      {isLoading ? (
+        <Animated.View
+          entering={FadeIn.duration(150)}
+          style={{ paddingVertical: 40, alignItems: "center" }}
+        >
+          <ActivityIndicator size="small" color="#10B981" />
+          <Text style={{ color: "#888", fontSize: 13, marginTop: 12 }}>
+            Carregando transações...
           </Text>
-        </View>
-      ) : (
-        sortedTransactions.map((item) => (
+        </Animated.View>
+      ) : sortedTransactions.length === 0 ? (
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          style={{
+            paddingVertical: 40,
+            paddingHorizontal: 24,
+            alignItems: "center",
+          }}
+        >
           <View
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 36,
+              backgroundColor: "#1E1E1E",
+              borderWidth: 1,
+              borderColor: "#2A2A2A",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 16,
+            }}
+          >
+            <Ionicons
+              name={
+                hasAnyTransactions ? "search-outline" : "receipt-outline"
+              }
+              size={32}
+              color="#555"
+            />
+          </View>
+          <Text
+            style={{
+              color: "#FFFFFF",
+              fontSize: 15,
+              fontWeight: "bold",
+              textAlign: "center",
+              marginBottom: 4,
+            }}
+          >
+            {hasAnyTransactions
+              ? "Nenhuma transação encontrada"
+              : "Nenhuma transação ainda"}
+          </Text>
+          <Text
+            style={{
+              color: "#888",
+              fontSize: 13,
+              textAlign: "center",
+              lineHeight: 18,
+            }}
+          >
+            {hasAnyTransactions
+              ? "Tente ajustar a busca ou os filtros selecionados."
+              : "Toque no botão + para registrar sua primeira receita ou despesa."}
+          </Text>
+        </Animated.View>
+      ) : (
+        sortedTransactions.map((item, index) => (
+          <Animated.View
             key={item.id}
+            entering={FadeIn.duration(250).delay(Math.min(index, 8) * 40)}
             style={{
               backgroundColor: "#1E1E1E",
               padding: 14,
@@ -341,10 +409,8 @@ export function TransactionsHistoryList({
                   marginRight: 2,
                 }}
               >
-                {item.type === "income" ? "+ " : "- "}
-                R${" "}
-                {item.amount.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
+                {formatCurrency(item.amount, {
+                  forceSign: item.type === "income" ? "+" : "-",
                 })}
               </Text>
 
@@ -380,7 +446,7 @@ export function TransactionsHistoryList({
                 <Ionicons name="trash-outline" size={16} color="#EF4444" />
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         ))
       )}
     </View>

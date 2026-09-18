@@ -1,13 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as LocalAuthentication from "expo-local-authentication";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CustomAlert } from "../components/CustomAlert";
 import { getDatabase } from "../database/sqlite";
+import { getStoredPin, savePin } from "../utils/security";
 
 export default function SecurityScreen() {
   const router = useRouter();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isChangeFlow = mode === "change";
   const [pin, setPin] = useState("");
   const [storedPin, setStoredPin] = useState<string | null>(null);
   const [isSettingUp, setIsSettingUp] = useState(false);
@@ -24,7 +27,7 @@ export default function SecurityScreen() {
   };
 
   useEffect(() => {
-    checkPinTable();
+    checkPin();
     checkBiometrics();
   }, []);
 
@@ -49,21 +52,39 @@ export default function SecurityScreen() {
     }
   };
 
-  const checkPinTable = async () => {
-    try {
-      const db = await getDatabase();
+  const checkPin = async () => {
+    if (isChangeFlow) {
+      // Troca de PIN: o usuário já está autenticado, sempre pede um novo.
+      setIsSettingUp(true);
+      return;
+    }
 
-      const result: any = db.getFirstSync("SELECT pin FROM security LIMIT 1");
-      if (result && result.pin) {
-        setStoredPin(result.pin);
+    try {
+      const existingPin = await getStoredPin();
+      if (existingPin) {
+        setStoredPin(existingPin);
         setIsSettingUp(false);
-        // Opcional: Chama a biometria automaticamente ao abrir a tela
-        // handleBiometricAuth();
+        return;
+      }
+
+      // Migração: PIN antigo pode existir em texto puro no SQLite
+      // (versão anterior, antes do expo-secure-store). Move para o
+      // SecureStore e limpa o registro legado.
+      const db = await getDatabase();
+      const legacy: any = await db.getFirstAsync(
+        "SELECT pin FROM security LIMIT 1",
+      );
+      if (legacy && legacy.pin) {
+        await savePin(String(legacy.pin));
+        db.runSync("DELETE FROM security");
+        setStoredPin(String(legacy.pin));
+        setIsSettingUp(false);
       } else {
         setIsSettingUp(true);
       }
     } catch (error) {
       console.log("Erro ao verificar PIN:", error);
+      setIsSettingUp(true);
     }
   };
 
@@ -84,13 +105,8 @@ export default function SecurityScreen() {
 
   const processPin = async (enteredPin: string) => {
     try {
-      const db = await getDatabase();
-
       if (isSettingUp) {
-        db.runSync("DELETE FROM security");
-
-        // Interpolação direta do valor para driblar o bug do prepareSync no Android
-        db.runSync(`INSERT INTO security (pin) VALUES ('${enteredPin}')`);
+        await savePin(enteredPin);
 
         showAlert("Sucesso", "PIN de segurança cadastrado com sucesso!");
         setTimeout(() => {
@@ -112,6 +128,14 @@ export default function SecurityScreen() {
   };
   return (
     <View style={styles.container}>
+      {isChangeFlow && (
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.replace("/dashboard" as any)}
+        >
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
       <Ionicons
         name="lock-closed-outline"
         size={48}
@@ -206,6 +230,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
+  },
+  backButton: {
+    position: "absolute",
+    top: 60,
+    left: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#1E1E1E",
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: {
     color: "#FFFFFF",
