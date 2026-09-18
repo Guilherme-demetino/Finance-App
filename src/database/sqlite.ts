@@ -80,6 +80,17 @@ function createTables(db: SQLite.SQLiteDatabase) {
         due_date TEXT
       );
     `);
+
+    db.runSync(`
+      CREATE TABLE IF NOT EXISTS savings_goals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        target_amount REAL NOT NULL,
+        saved_amount REAL NOT NULL DEFAULT 0,
+        deadline TEXT,
+        created_date TEXT NOT NULL
+      );
+    `);
   });
 
   // Migração: instalações existentes já têm essas tabelas sem as colunas
@@ -145,6 +156,7 @@ export async function resetDatabase(): Promise<void> {
     db.runSync("DROP TABLE IF EXISTS budgets");
     db.runSync("DROP TABLE IF EXISTS category_budgets");
     db.runSync("DROP TABLE IF EXISTS debts");
+    db.runSync("DROP TABLE IF EXISTS savings_goals");
     db.runSync("DROP TABLE IF EXISTS users");
     db.runSync("DROP TABLE IF EXISTS security");
   });

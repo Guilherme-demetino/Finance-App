@@ -13,6 +13,7 @@ import { SortModal, type SortOption } from "./FilterModals";
 import { SeriesManagerModal } from "./SeriesManagerModal";
 import type { DisplayTransaction } from "../types";
 import { formatCurrency } from "../utils/currency";
+import { parseDateString } from "../utils/dates";
 
 type TypeFilter = "all" | "income" | "expense";
 type SortKey = "recent" | "oldest" | "highest" | "lowest";
@@ -88,20 +89,8 @@ export function TransactionsHistoryList({
     if (sortBy === "highest") return b.amount - a.amount;
     if (sortBy === "lowest") return a.amount - b.amount;
 
-    const parseDate = (dateStr: string) => {
-      if (!dateStr) return 0;
-      const parts = dateStr.split("/");
-      if (parts.length === 3) {
-        const day = Number(parts[0]);
-        const month = Number(parts[1]);
-        const year = Number(parts[2]);
-        return new Date(year, month - 1, day).getTime();
-      }
-      return 0;
-    };
-
-    const timeA = parseDate(a.date);
-    const timeB = parseDate(b.date);
+    const timeA = parseDateString(a.date).getTime();
+    const timeB = parseDateString(b.date).getTime();
 
     if (timeA === timeB) {
       const idA = Number(a.id) || 0;

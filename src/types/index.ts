@@ -1,7 +1,7 @@
 export type TransactionType = "income" | "expense";
 
 /** Como uma transação se repete: recorrente (todo mês) ou parcelada (N vezes). */
-export type RecurrenceType = "recurring" | "installment";
+type RecurrenceType = "recurring" | "installment";
 
 /** Linha crua da tabela `transactions` no SQLite. */
 export interface TransactionRow {
@@ -51,7 +51,7 @@ export interface CategoryBudgetRow {
 
 /** "lent" = você emprestou (a receber). "borrowed" = você pegou emprestado (a pagar). */
 export type DebtType = "lent" | "borrowed";
-export type DebtStatus = "pending" | "settled";
+type DebtStatus = "pending" | "settled";
 
 /** Linha crua da tabela `debts` — fica fora do fluxo normal de receita/despesa até ser quitada. */
 export interface DebtRow {
@@ -64,6 +64,16 @@ export interface DebtRow {
   status: DebtStatus;
   settled_date: string | null; // DD/MM/AAAA — data em que foi quitada
   due_date: string | null; // DD/MM/AAAA — dia combinado pra receber/pagar
+}
+
+/** Linha crua da tabela `savings_goals` — meta de economia, separada do saldo. */
+export interface SavingsGoalRow {
+  id: number;
+  name: string;
+  target_amount: number;
+  saved_amount: number;
+  deadline: string | null; // DD/MM/AAAA
+  created_date: string; // DD/MM/AAAA
 }
 
 /** Rascunhos do onboarding — ficam só em memória até o usuário concluir. */

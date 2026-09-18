@@ -1,6 +1,6 @@
 import { addMonthsToDateString } from "./dates";
 
-export interface PlannedInstallment {
+interface PlannedInstallment {
   number: number;
   date: string;
   description: string;

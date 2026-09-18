@@ -6,7 +6,7 @@ import type { EnrichedTransaction, TransactionRow } from "../types";
 import { getMonthNumber, getPreviousMonth } from "../utils/dates";
 import { DEFAULT_CATEGORY_COLORS } from "./useTransactions";
 
-export interface CategoryComparisonItem {
+interface CategoryComparisonItem {
   category: string;
   color: string;
   current: number;

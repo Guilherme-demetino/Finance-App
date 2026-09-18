@@ -8,6 +8,8 @@ import { CustomAlert } from "../../components/CustomAlert";
 import { DebtModal } from "../../components/DebtModal";
 import { MonthModal, YearModal } from "../../components/FilterModals";
 import { LandscapePanoramaModal } from "../../components/LandscapePanoramaModal";
+import { SavingsDepositModal } from "../../components/SavingsDepositModal";
+import { SavingsGoalModal } from "../../components/SavingsGoalModal";
 import {
   EditNameModal,
   ProfileMenuModal,
@@ -62,6 +64,16 @@ function DashboardChrome() {
     currentDay,
     currentMonthNum,
     currentYearStr,
+    isSavingsModalOpen,
+    setIsSavingsModalOpen,
+    depositGoal,
+    setDepositGoal,
+    handleAddSavingsGoal,
+    handleChangeSavings,
+    handleImportCSV,
+    pendingImport,
+    setPendingImport,
+    confirmImport,
     isTransactionModalOpen,
     setIsTransactionModalOpen,
     setEditingTransactionId,
@@ -235,6 +247,26 @@ function DashboardChrome() {
         }}
       />
 
+      <SavingsGoalModal
+        visible={isSavingsModalOpen}
+        onClose={() => setIsSavingsModalOpen(false)}
+        formatCurrency={formatCurrencyInput}
+        onSave={(data) => {
+          setIsSavingsModalOpen(false);
+          handleAddSavingsGoal(data);
+        }}
+      />
+
+      <SavingsDepositModal
+        goal={depositGoal}
+        onClose={() => setDepositGoal(null)}
+        formatCurrency={formatCurrencyInput}
+        onConfirm={(goal, delta) => {
+          setDepositGoal(null);
+          handleChangeSavings(goal, delta);
+        }}
+      />
+
       <MonthModal
         visible={isMonthModalOpen}
         onClose={() => setIsMonthModalOpen(false)}
@@ -267,6 +299,7 @@ function DashboardChrome() {
         onOpenEditName={() => setIsEditingName(true)}
         onExportPDF={handleExportPDF}
         onExportCSV={handleExportCSV}
+        onImportCSV={handleImportCSV}
         onChangePIN={handleChangePIN}
         onWipeData={handleWipeData}
       />
@@ -284,6 +317,19 @@ function DashboardChrome() {
         title={alertTitle}
         message={alertMessage}
         onClose={() => setAlertVisible(false)}
+      />
+
+      <ConfirmModal
+        visible={pendingImport !== null}
+        title="Importar backup"
+        message={
+          pendingImport
+            ? `Vamos importar ${pendingImport.toImport.length} ${pendingImport.toImport.length === 1 ? "transação nova" : "transações novas"}${pendingImport.duplicates > 0 ? `, ignorando ${pendingImport.duplicates} que já existem` : ""}${pendingImport.invalid > 0 ? ` e ${pendingImport.invalid} linhas inválidas` : ""}. Deseja continuar?`
+            : ""
+        }
+        confirmLabel="Importar"
+        onCancel={() => setPendingImport(null)}
+        onConfirm={confirmImport}
       />
 
       <ConfirmModal

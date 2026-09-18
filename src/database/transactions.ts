@@ -6,7 +6,7 @@ import { planRemainingInstallments } from "../utils/installments";
 
 // Menor número de meses aceito para uma recorrência — abaixo disso não
 // faz sentido chamar de "recorrente".
-export const MIN_RECURRING_MONTHS = 2;
+const MIN_RECURRING_MONTHS = 2;
 
 function generateRecurrenceGroupId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -138,6 +138,25 @@ export async function createRecurringTransactions(
         data.category,
         groupId,
         "recurring",
+      );
+    }
+  });
+}
+
+/** Grava várias transações de uma vez (importação de backup), numa única transação do banco. */
+export async function importTransactions(
+  rows: TransactionInput[],
+): Promise<void> {
+  const db = await getDatabase();
+  db.withTransactionSync(() => {
+    for (const row of rows) {
+      db.runSync(
+        "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, ?, ?)",
+        row.amount,
+        row.date,
+        row.description,
+        row.type,
+        row.category,
       );
     }
   });

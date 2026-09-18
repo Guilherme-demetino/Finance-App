@@ -18,56 +18,11 @@ export const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderLeftColor: colors.border,
   },
-  menuHeader: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  avatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.surfaceAlt,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: colors.accent,
-    overflow: "hidden",
-  },
-  avatarImage: {
-    width: "100%",
-    height: "100%",
-  },
   menuTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: colors.textPrimary,
     textAlign: "center",
-  },
-  menuSubtitle: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    textAlign: "center",
-    marginTop: 4,
-  },
-  menuBody: {
-    flex: 1,
-  },
-  actionButton: {
-    backgroundColor: colors.surfaceAlt, // Corrigido o valor de fundo
-    borderWidth: 1,
-    borderColor: colors.accent,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-  },
-  actionButtonText: {
-    color: colors.accent,
-    fontSize: 16,
-    fontWeight: "bold",
   },
   closeButton: {
     backgroundColor: colors.border,
@@ -100,16 +55,6 @@ export const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 16,
     textAlign: "center",
-  },
-  modalInput: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    padding: 16,
-    color: colors.textPrimary,
-    fontSize: 16,
-    marginBottom: 24,
   },
   modalButtons: {
     flexDirection: "row",

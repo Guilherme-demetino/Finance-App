@@ -4,6 +4,7 @@ import Animated, {
 
 import { CategoryBudgetsCard } from "../../components/CategoryBudgetsCard";
 import { MonthlyBudgetCard } from "../../components/MonthlyBudgetCard";
+import { SavingsGoalsCard } from "../../components/SavingsGoalsCard";
 
 import { useDashboardContext } from "../../context/DashboardContext";
 import { styles } from "../../styles/dashboardStyles";
@@ -21,6 +22,11 @@ export default function DashboardBudgetScreen() {
     saveCategoryGoal,
     handleDeleteCategory,
     refreshCategoryBudgets,
+    savingsGoals,
+    isLoadingSavings,
+    setIsSavingsModalOpen,
+    setDepositGoal,
+    handleDeleteSavingsGoal,
     scrollY,
   } = useDashboardContext();
 
@@ -50,6 +56,14 @@ export default function DashboardBudgetScreen() {
         onCategoryCreated={refreshCategoryBudgets}
         onDeleteCategory={handleDeleteCategory}
         formatCurrency={formatCurrencyInput}
+      />
+
+      <SavingsGoalsCard
+        goals={savingsGoals}
+        isLoading={isLoadingSavings}
+        onOpenCreate={() => setIsSavingsModalOpen(true)}
+        onOpenDeposit={setDepositGoal}
+        onDelete={handleDeleteSavingsGoal}
       />
     </Animated.ScrollView>
   );

@@ -1,0 +1,58 @@
+import { useEffect, useState } from "react";
+import {
+  createSavingsGoal,
+  deleteSavingsGoal,
+  getAllSavingsGoals,
+  updateSavedAmount,
+  type SavingsGoalInput,
+} from "../database/savingsGoals";
+import type { SavingsGoalRow } from "../types";
+
+/**
+ * Metas de economia ("juntar R$ 5.000 até dezembro"). Ficam separadas do
+ * saldo: guardar dinheiro numa meta não é receita nem despesa.
+ */
+export function useSavingsGoals() {
+  const [savingsGoals, setSavingsGoals] = useState<SavingsGoalRow[]>([]);
+  const [isLoadingSavings, setIsLoadingSavings] = useState(true);
+
+  const refreshSavings = async () => {
+    setIsLoadingSavings(true);
+    try {
+      setSavingsGoals(await getAllSavingsGoals());
+    } catch (error) {
+      console.log("Erro ao buscar metas de economia:", error);
+    } finally {
+      setIsLoadingSavings(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshSavings();
+  }, []);
+
+  const addSavingsGoal = async (data: SavingsGoalInput) => {
+    await createSavingsGoal(data);
+    await refreshSavings();
+  };
+
+  /** Soma (ou subtrai, com delta negativo) um valor ao já guardado, sem ficar abaixo de zero. */
+  const changeSavedAmount = async (goal: SavingsGoalRow, delta: number) => {
+    const next = Math.max(0, Math.round((goal.saved_amount + delta) * 100) / 100);
+    await updateSavedAmount(goal.id, next);
+    await refreshSavings();
+  };
+
+  const removeSavingsGoal = async (id: number) => {
+    await deleteSavingsGoal(id);
+    await refreshSavings();
+  };
+
+  return {
+    savingsGoals,
+    isLoadingSavings,
+    addSavingsGoal,
+    changeSavedAmount,
+    removeSavingsGoal,
+  };
+}

@@ -16,7 +16,7 @@ import {
 import type { EnrichedTransaction, TransactionRepeatMode } from "../types";
 import { getMonthNumber } from "../utils/dates";
 
-export interface MonthDatum {
+interface MonthDatum {
   label: string;
   income: number;
   expense: number;

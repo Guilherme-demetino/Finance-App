@@ -19,6 +19,7 @@ interface ProfileMenuModalProps {
   onOpenEditName: () => void;
   onExportPDF: () => void;
   onExportCSV: () => void;
+  onImportCSV: () => void;
   onChangePIN: () => void;
   onWipeData: () => void;
 }
@@ -32,6 +33,7 @@ export function ProfileMenuModal({
   onOpenEditName,
   onExportPDF,
   onExportCSV,
+  onImportCSV,
   onChangePIN,
   onWipeData,
 }: ProfileMenuModalProps) {
@@ -73,6 +75,11 @@ export function ProfileMenuModal({
           <TouchableOpacity style={styles.menuItem} onPress={onExportCSV}>
             <Ionicons name="download-outline" size={24} color={colors.textPrimary} />
             <Text style={styles.menuItemText}>Exportar Backup (CSV)</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={onImportCSV}>
+            <Ionicons name="cloud-upload-outline" size={24} color={colors.textPrimary} />
+            <Text style={styles.menuItemText}>Importar Backup (CSV)</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={onChangePIN}>

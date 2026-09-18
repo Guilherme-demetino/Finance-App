@@ -15,16 +15,21 @@ import { useSharedValue, type SharedValue } from "react-native-reanimated";
 import { colors } from "../constants/colors";
 import type { DebtInput } from "../database/debts";
 import { resetDatabase } from "../database/sqlite";
-import { getAllTransactions } from "../database/transactions";
+import {
+  getAllTransactions,
+  importTransactions,
+} from "../database/transactions";
 import { useBudget } from "../hooks/useBudget";
 import { useCategoryBudgets } from "../hooks/useCategoryBudgets";
 import { useDebts } from "../hooks/useDebts";
 import { useMonthComparison } from "../hooks/useMonthComparison";
+import { useSavingsGoals } from "../hooks/useSavingsGoals";
 import { useTransactions } from "../hooks/useTransactions";
 import { useUserProfile } from "../hooks/useUserProfile";
 import type {
   DebtRow,
   DisplayTransaction,
+  SavingsGoalRow,
   TransactionRepeatMode,
   TransactionType,
 } from "../types";
@@ -34,6 +39,7 @@ import {
   buildTransactionsCsv,
   buildTransactionsHtmlReport,
 } from "../utils/export";
+import { planCsvImport, type CsvImportPlan } from "../utils/importCsv";
 import { clearPin } from "../utils/security";
 
 export const YEARS_LIST = ["2024", "2025", "2026", "2027", "2028"];
@@ -124,6 +130,26 @@ interface DashboardContextValue {
   handleSettleDebt: (debt: DebtRow) => Promise<void>;
   handleDeleteDebt: (id: number) => Promise<void>;
 
+  savingsGoals: SavingsGoalRow[];
+  isLoadingSavings: boolean;
+  isSavingsModalOpen: boolean;
+  setIsSavingsModalOpen: (value: boolean) => void;
+  depositGoal: SavingsGoalRow | null;
+  setDepositGoal: (goal: SavingsGoalRow | null) => void;
+  handleAddSavingsGoal: (data: {
+    name: string;
+    targetAmount: number;
+    savedAmount: number;
+    deadline: string | null;
+  }) => Promise<void>;
+  handleChangeSavings: (goal: SavingsGoalRow, delta: number) => Promise<void>;
+  handleDeleteSavingsGoal: (id: number) => Promise<void>;
+
+  pendingImport: CsvImportPlan | null;
+  setPendingImport: (plan: CsvImportPlan | null) => void;
+  handleImportCSV: () => Promise<void>;
+  confirmImport: () => Promise<void>;
+
   alertVisible: boolean;
   alertTitle: string;
   alertMessage: string;
@@ -166,6 +192,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [newName, setNewName] = useState("");
   const [isWipeConfirmOpen, setIsWipeConfirmOpen] = useState(false);
   const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
+  const [isSavingsModalOpen, setIsSavingsModalOpen] = useState(false);
+  const [depositGoal, setDepositGoal] = useState<SavingsGoalRow | null>(null);
+  const [pendingImport, setPendingImport] = useState<CsvImportPlan | null>(
+    null,
+  );
 
   const [isLandscapePanoramaOpen, setIsLandscapePanoramaOpen] = useState(false);
 
@@ -207,6 +238,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     removeAllForCurrentPeriod,
     removeSeries,
     removeSeriesFromId,
+    refresh: refreshTransactions,
   } = useTransactions(selectedMonth, selectedYear);
   const totalBalance = totalIncome - totalExpense;
 
@@ -237,6 +269,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     settleDebt,
     removeDebt,
   } = useDebts();
+
+  const {
+    savingsGoals,
+    isLoadingSavings,
+    addSavingsGoal,
+    changeSavedAmount,
+    removeSavingsGoal,
+  } = useSavingsGoals();
 
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
@@ -563,6 +603,94 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const handleAddSavingsGoal = async (data: {
+    name: string;
+    targetAmount: number;
+    savedAmount: number;
+    deadline: string | null;
+  }) => {
+    try {
+      await addSavingsGoal({
+        ...data,
+        createdDate: `${currentDay}/${currentMonthNum}/${currentYearStr}`,
+      });
+      showAlert("Sucesso", "Meta de economia criada.");
+    } catch (error) {
+      console.log("Erro ao criar meta de economia:", error);
+      showAlert("Erro", "Não foi possível criar a meta.");
+    }
+  };
+
+  const handleChangeSavings = async (goal: SavingsGoalRow, delta: number) => {
+    try {
+      await changeSavedAmount(goal, delta);
+    } catch (error) {
+      console.log("Erro ao atualizar valor guardado:", error);
+      showAlert("Erro", "Não foi possível atualizar a meta.");
+    }
+  };
+
+  const handleDeleteSavingsGoal = async (id: number) => {
+    try {
+      await removeSavingsGoal(id);
+      showAlert("Sucesso", "Meta excluída com sucesso.");
+    } catch (error) {
+      console.log("Erro ao excluir meta de economia:", error);
+      showAlert("Erro", "Não foi possível excluir a meta.");
+    }
+  };
+
+  const handleImportCSV = async () => {
+    setIsMenuOpen(false);
+    try {
+      const picked = await File.pickFileAsync({ mimeTypes: "*/*" });
+      if (picked.canceled) return;
+
+      const csvText = await picked.result.text();
+      const existing = await getAllTransactions();
+      const result = planCsvImport(csvText, existing);
+
+      if (!result.ok) {
+        showAlert("Arquivo inválido", result.error);
+        return;
+      }
+
+      const { plan } = result;
+      if (plan.toImport.length === 0) {
+        showAlert(
+          "Nada para importar",
+          plan.totalRows === 0
+            ? "O arquivo não tem nenhuma transação."
+            : `Todas as transações válidas do arquivo já estão no app${plan.invalid > 0 ? ` (${plan.invalid} linhas inválidas foram ignoradas)` : ""}.`,
+        );
+        return;
+      }
+
+      setPendingImport(plan);
+    } catch (error) {
+      console.log("Erro ao ler o backup:", error);
+      showAlert("Erro", "Não foi possível ler o arquivo selecionado.");
+    }
+  };
+
+  const confirmImport = async () => {
+    const plan = pendingImport;
+    setPendingImport(null);
+    if (!plan) return;
+
+    try {
+      await importTransactions(plan.toImport);
+      await refreshTransactions();
+      showAlert(
+        "Sucesso",
+        `${plan.toImport.length} ${plan.toImport.length === 1 ? "transação importada" : "transações importadas"} com sucesso.`,
+      );
+    } catch (error) {
+      console.log("Erro ao importar backup:", error);
+      showAlert("Erro", "Não foi possível importar as transações.");
+    }
+  };
+
   const handleChangePIN = () => {
     setIsMenuOpen(false);
     // O PIN atual só é sobrescrito quando o novo for confirmado na tela
@@ -714,6 +842,21 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     handleAddDebt,
     handleSettleDebt,
     handleDeleteDebt,
+
+    savingsGoals,
+    isLoadingSavings,
+    isSavingsModalOpen,
+    setIsSavingsModalOpen,
+    depositGoal,
+    setDepositGoal,
+    handleAddSavingsGoal,
+    handleChangeSavings,
+    handleDeleteSavingsGoal,
+
+    pendingImport,
+    setPendingImport,
+    handleImportCSV,
+    confirmImport,
 
     alertVisible,
     alertTitle,
