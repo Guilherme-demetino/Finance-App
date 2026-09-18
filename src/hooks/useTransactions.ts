@@ -148,6 +148,7 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
 
   useEffect(() => {
     refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh não é memoizada, roda só quando o período muda
   }, [selectedMonth, selectedYear]);
 
   const saveTransaction = async (

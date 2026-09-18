@@ -22,10 +22,6 @@ export default function WelcomeScreen() {
     setAlertVisible(true);
   };
 
-  useEffect(() => {
-    checkIfUserExists();
-  }, []);
-
   const checkIfUserExists = async () => {
     try {
       // Verifica se já existe um PIN salvo (SecureStore, ou um PIN
@@ -51,6 +47,11 @@ export default function WelcomeScreen() {
       console.log("Erro ao verificar usuário/PIN:", error);
     }
   };
+
+  useEffect(() => {
+    checkIfUserExists();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- roda só na montagem
+  }, []);
 
   const handleSaveName = async () => {
     if (name.trim() === "") {

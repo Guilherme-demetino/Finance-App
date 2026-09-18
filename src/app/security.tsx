@@ -32,11 +32,6 @@ export default function SecurityScreen() {
     setAlertVisible(true);
   };
 
-  useEffect(() => {
-    checkPin();
-    checkBiometrics();
-  }, []);
-
   const checkBiometrics = async () => {
     const compatible = await LocalAuthentication.hasHardwareAsync();
     const enrolled = await LocalAuthentication.isEnrolledAsync();
@@ -92,6 +87,12 @@ export default function SecurityScreen() {
       setIsSettingUp(true);
     }
   };
+
+  useEffect(() => {
+    checkPin();
+    checkBiometrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- roda só na montagem
+  }, []);
 
   const handlePressNumber = (num: string) => {
     if (pin.length < 4) {
