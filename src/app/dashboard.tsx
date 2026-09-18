@@ -5,7 +5,7 @@ import * as Print from "expo-print";
 import { useRouter } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as Sharing from "expo-sharing";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Alert, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -28,6 +28,7 @@ import { UserProfileHeader } from "../components/UserProfileHeader";
 import { colors } from "../constants/colors";
 import { resetDatabase } from "../database/sqlite";
 import { getAllTransactions } from "../database/transactions";
+import { useBudget } from "../hooks/useBudget";
 import { useTransactions } from "../hooks/useTransactions";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { styles } from "../styles/dashboardStyles";
@@ -95,14 +96,8 @@ export default function DashboardScreen() {
   } = useTransactions(selectedMonth, selectedYear);
   const totalBalance = totalIncome - totalExpense;
 
-  const [monthlyBudget, setMonthlyBudget] = useState("0");
+  const { budget, updateBudget } = useBudget(selectedMonth, selectedYear);
   const [isEditingBudget, setIsEditingBudget] = useState(false);
-
-  // O orçamento mensal acompanha a receita do período por padrão —
-  // sempre que as transações são recarregadas, ele é realinhado.
-  useEffect(() => {
-    setMonthlyBudget(totalIncome.toString());
-  }, [totalIncome]);
 
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
@@ -430,10 +425,11 @@ export default function DashboardScreen() {
         <SummaryCards totalIncome={totalIncome} totalExpense={totalExpense} />
 
         <MonthlyBudgetCard
-          monthlyBudget={monthlyBudget}
-          setMonthlyBudget={setMonthlyBudget}
+          budget={budget}
+          totalExpense={totalExpense}
           isEditingBudget={isEditingBudget}
           setIsEditingBudget={setIsEditingBudget}
+          onSaveBudget={updateBudget}
           formatCurrency={formatCurrencyInput}
         />
 

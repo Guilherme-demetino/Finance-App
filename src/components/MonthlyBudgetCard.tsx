@@ -1,31 +1,67 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { colors } from "../constants/colors";
 import { styles } from "../styles/dashboardStyles";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
-import { colors } from "../constants/colors";
 
 interface MonthlyBudgetCardProps {
-  monthlyBudget: string;
-  setMonthlyBudget: (val: string) => void;
+  budget: number | null;
+  totalExpense: number;
   isEditingBudget: boolean;
   setIsEditingBudget: (val: boolean) => void;
+  onSaveBudget: (amount: number) => void;
   formatCurrency: (val: string) => string;
 }
 
 export function MonthlyBudgetCard({
-  monthlyBudget,
-  setMonthlyBudget,
+  budget,
+  totalExpense,
   isEditingBudget,
   setIsEditingBudget,
+  onSaveBudget,
   formatCurrency,
 }: MonthlyBudgetCardProps) {
+  const [draftAmount, setDraftAmount] = useState("");
+
+  useEffect(() => {
+    if (isEditingBudget) {
+      const cents = budget ? Math.round(budget * 100).toString() : "";
+      setDraftAmount(cents ? formatCurrency(cents) : "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só precisa rodar quando entra/sai do modo de edição
+  }, [isEditingBudget]);
+
+  const handleSave = () => {
+    const numericValue = Number(
+      draftAmount.replace(/\./g, "").replace(",", "."),
+    );
+    if (!isNaN(numericValue) && numericValue > 0) {
+      onSaveBudget(numericValue);
+    }
+    setIsEditingBudget(false);
+  };
+
+  const hasBudget = budget !== null && budget > 0;
+  const percent = hasBudget ? totalExpense / budget : 0;
+  const remaining = hasBudget ? budget - totalExpense : 0;
+  const isOverBudget = remaining < 0;
+  const barColor =
+    percent < 0.8
+      ? colors.income
+      : percent < 1
+        ? colors.categoryAmber
+        : colors.expense;
+
   return (
     <View style={styles.chartCard}>
       <View style={styles.chartHeader}>
         <View>
           <Text style={styles.chartTitle}>Orçamento Mensal</Text>
           <Text style={styles.chartSubtitle}>
-            Definido automaticamente pelas receitas
+            {hasBudget
+              ? "Quanto você já gastou neste mês"
+              : "Defina uma meta de gastos para este mês"}
           </Text>
         </View>
 
@@ -43,7 +79,7 @@ export function MonthlyBudgetCard({
           onPress={() => setIsEditingBudget(!isEditingBudget)}
         >
           <Ionicons
-            name={isEditingBudget ? "checkmark-outline" : "create-outline"}
+            name={isEditingBudget ? "close-outline" : "create-outline"}
             size={20}
             color={colors.textPrimary}
           />
@@ -65,10 +101,11 @@ export function MonthlyBudgetCard({
                 fontSize: 16,
               }}
               keyboardType="numeric"
-              value={monthlyBudget}
-              onChangeText={(text) => setMonthlyBudget(formatCurrency(text))}
+              value={draftAmount}
+              onChangeText={(text) => setDraftAmount(formatCurrency(text))}
               placeholder="R$ 0,00"
               placeholderTextColor={colors.textPlaceholder}
+              autoFocus
             />
             <TouchableOpacity
               style={{
@@ -79,37 +116,105 @@ export function MonthlyBudgetCard({
                 paddingHorizontal: 16,
                 borderRadius: 12,
               }}
-              onPress={() => setIsEditingBudget(false)}
+              onPress={handleSave}
             >
               <Text style={{ color: colors.textPrimary, fontWeight: "bold" }}>
                 Salvar
               </Text>
             </TouchableOpacity>
           </View>
+        ) : hasBudget ? (
+          <View>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "flex-end",
+                marginBottom: 10,
+              }}
+            >
+              <Text style={{ fontSize: 22, fontWeight: "bold", color: barColor }}>
+                {formatCurrencyDisplay(totalExpense)}
+              </Text>
+              <Text style={{ fontSize: 13, color: colors.textSecondary }}>
+                de {formatCurrencyDisplay(budget)}
+              </Text>
+            </View>
+
+            <View
+              style={{
+                height: 10,
+                borderRadius: 5,
+                backgroundColor: colors.surfaceAlt,
+                overflow: "hidden",
+              }}
+            >
+              <View
+                style={{
+                  height: "100%",
+                  width: `${Math.min(percent * 100, 100)}%`,
+                  backgroundColor: barColor,
+                  borderRadius: 5,
+                }}
+              />
+            </View>
+
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginTop: 8,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: colors.textMuted }}>
+                {Math.round(percent * 100)}% usado
+              </Text>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "bold",
+                  color: isOverBudget ? colors.expense : colors.income,
+                }}
+              >
+                {isOverBudget
+                  ? `${formatCurrencyDisplay(Math.abs(remaining))} acima do orçamento`
+                  : `${formatCurrencyDisplay(remaining)} restantes`}
+              </Text>
+            </View>
+          </View>
         ) : (
-          <View
+          <TouchableOpacity
+            onPress={() => setIsEditingBudget(true)}
             style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
               alignItems: "center",
+              paddingVertical: 16,
+              borderWidth: 1,
+              borderColor: colors.surfaceAlt,
+              borderStyle: "dashed",
+              borderRadius: 12,
             }}
           >
+            <Ionicons name="wallet-outline" size={24} color={colors.textMuted} />
             <Text
-              style={{ fontSize: 22, fontWeight: "bold", color: colors.income }}
+              style={{
+                color: colors.textPrimary,
+                fontWeight: "bold",
+                fontSize: 14,
+                marginTop: 8,
+              }}
             >
-              {(() => {
-                const parsed = Number(
-                  monthlyBudget.toString().replace(/\./g, "").replace(",", "."),
-                );
-                return isNaN(parsed)
-                  ? `R$ ${monthlyBudget}`
-                  : formatCurrencyDisplay(parsed);
-              })()}
+              Nenhum orçamento definido
             </Text>
-            <Text style={{ fontSize: 12, color: colors.textSecondary }}>
-              Toque no ícone para editar
+            <Text
+              style={{
+                color: colors.textMuted,
+                fontSize: 12,
+                marginTop: 2,
+              }}
+            >
+              Toque para definir quanto pretende gastar
             </Text>
-          </View>
+          </TouchableOpacity>
         )}
       </View>
     </View>

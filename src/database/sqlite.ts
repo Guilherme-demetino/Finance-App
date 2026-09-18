@@ -45,6 +45,16 @@ function createTables(db: SQLite.SQLiteDatabase) {
         pin TEXT NOT NULL
       );
     `);
+
+    db.runSync(`
+      CREATE TABLE IF NOT EXISTS budgets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        month TEXT NOT NULL,
+        year TEXT NOT NULL,
+        amount REAL NOT NULL,
+        UNIQUE(month, year)
+      );
+    `);
   });
 
   // Migração: instalações existentes já têm a tabela `transactions` sem
@@ -100,12 +110,13 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   return dbInstance as SQLite.SQLiteDatabase;
 }
 
-/** Apaga todos os dados do app (transações, categorias, usuário e PIN legado). */
+/** Apaga todos os dados do app (transações, categorias, orçamentos, usuário e PIN legado). */
 export async function resetDatabase(): Promise<void> {
   const db = await getDatabase();
   db.withTransactionSync(() => {
     db.runSync("DROP TABLE IF EXISTS transactions");
     db.runSync("DROP TABLE IF EXISTS categories");
+    db.runSync("DROP TABLE IF EXISTS budgets");
     db.runSync("DROP TABLE IF EXISTS users");
     db.runSync("DROP TABLE IF EXISTS security");
   });

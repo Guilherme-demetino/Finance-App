@@ -32,6 +32,14 @@ export interface UserRow {
   avatar: string | null;
 }
 
+/** Linha crua da tabela `budgets` no SQLite — um valor por mês/ano. */
+export interface BudgetRow {
+  id: number;
+  month: string; // "01".."12"
+  year: string;
+  amount: number;
+}
+
 /** Transação já enriquecida com a cor da categoria, usada na tela do dashboard. */
 export interface EnrichedTransaction extends TransactionRow {
   category: string;
