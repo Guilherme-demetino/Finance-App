@@ -1,7 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image, Text, TouchableOpacity, View } from "react-native";
-import { styles } from "../styles/dashboardStyles";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  type SharedValue,
+} from "react-native-reanimated";
 import { colors } from "../constants/colors";
+import { styles } from "../styles/dashboardStyles";
 
 interface UserProfileHeaderProps {
   userName: string;
@@ -11,7 +17,12 @@ interface UserProfileHeaderProps {
   onOpenMonthModal: () => void;
   onOpenYearModal: () => void;
   onOpenMenu: () => void;
+  /** Posição vertical do scroll da tela — usada pra suavizar a borda ao rolar. */
+  scrollY?: SharedValue<number>;
 }
+
+// Distância de rolagem (em px) até a borda ficar totalmente visível.
+const BORDER_FADE_DISTANCE = 24;
 
 export function UserProfileHeader({
   userName,
@@ -21,7 +32,20 @@ export function UserProfileHeader({
   onOpenMonthModal,
   onOpenYearModal,
   onOpenMenu,
+  scrollY,
 }: UserProfileHeaderProps) {
+  const animatedBorderStyle = useAnimatedStyle(() => {
+    const opacity = scrollY
+      ? interpolate(
+          scrollY.value,
+          [0, BORDER_FADE_DISTANCE],
+          [0, 1],
+          Extrapolation.CLAMP,
+        )
+      : 0;
+    return { opacity };
+  });
+
   return (
     <View
       style={{
@@ -92,6 +116,16 @@ export function UserProfileHeader({
           )}
         </TouchableOpacity>
       </View>
+
+      <Animated.View
+        style={[
+          {
+            height: 1,
+            backgroundColor: colors.border,
+          },
+          animatedBorderStyle,
+        ]}
+      />
     </View>
   );
 }

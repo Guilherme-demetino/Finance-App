@@ -76,7 +76,7 @@ export function ProfileMenuModal({
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={onChangePIN}>
-            <Ionicons name="lock-closed-outline" size={24} color={colors.income} />
+            <Ionicons name="lock-closed-outline" size={24} color={colors.textPrimary} />
             <Text style={styles.menuItemText}>Alterar PIN de Segurança</Text>
           </TouchableOpacity>
 
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   editNameText: {
-    color: colors.income,
+    color: colors.textPrimary,
     fontSize: 14,
     marginTop: 4,
   },

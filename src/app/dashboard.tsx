@@ -6,8 +6,12 @@ import { useRouter } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as Sharing from "expo-sharing";
 import { useState } from "react";
-import { Alert, ScrollView, TouchableOpacity } from "react-native";
+import { Alert, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from "react-native-reanimated";
 
 import { AnnualPanoramaCard } from "../components/AnnualPanoramaCard";
 import { BalanceCard } from "../components/BalanceCard";
@@ -61,6 +65,12 @@ export default function DashboardScreen() {
   const [newName, setNewName] = useState("");
 
   const [isLandscapePanoramaOpen, setIsLandscapePanoramaOpen] = useState(false);
+
+  // Acompanha o quanto a tela rolou pra animar a borda do cabeçalho fixo.
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
 
   const [selectedMonth, setSelectedMonth] = useState(currentMonthName);
   const [selectedYear, setSelectedYear] = useState(currentYearStr);
@@ -411,9 +421,12 @@ export default function DashboardScreen() {
         onOpenMonthModal={() => setIsMonthModalOpen(true)}
         onOpenYearModal={() => setIsYearModalOpen(true)}
         onOpenMenu={() => setIsMenuOpen(true)}
+        scrollY={scrollY}
       />
 
-      <ScrollView
+      <Animated.ScrollView
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         contentContainerStyle={[styles.scrollContent, { paddingTop: 10 }]}
       >
         <BalanceCard
@@ -451,7 +464,7 @@ export default function DashboardScreen() {
           onDeleteTransaction={handleDeleteTransaction}
           onDeleteAll={handleDeleteAllTransactions}
         />
-      </ScrollView>
+      </Animated.ScrollView>
 
       <TouchableOpacity
         style={styles.fab}
