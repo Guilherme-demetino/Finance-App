@@ -20,8 +20,6 @@ interface MonthData {
 interface LandscapePanoramaModalProps {
   visible: boolean;
   selectedYear: string;
-  totalIncome: number;
-  totalExpense: number;
   monthsData: MonthData[];
   onClose: () => void;
 }

@@ -1,7 +1,8 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
-import { formatCurrency } from "../utils/currency";
 import { colors } from "../constants/colors";
+import { formatCurrency } from "../utils/currency";
 
 interface Transaction {
   id: string;
@@ -17,59 +18,72 @@ interface GeneralBalanceCardProps {
   transactions: Transaction[];
 }
 
-const categoryColors: Record<string, string> = {
-  "Saldo Livre": colors.income,
-  Moradia: colors.accent,
-  Alimentação: colors.categoryAmber,
-  Transporte: colors.categoryPurple,
-  Lazer: colors.categoryPink,
-  Outros: colors.textSecondary,
-};
+// "Saldo Livre" não é uma categoria de transação — é o saldo restante
+// depois das despesas, sempre na cor de receita.
+const SALDO_LIVRE_COLOR = colors.income;
+
+type ViewMode = "expense" | "income";
+
+function groupByCategory(transactions: Transaction[], totalIncome: number) {
+  const grouped = transactions.reduce(
+    (acc: Record<string, { amount: number; color: string }>, t) => {
+      const cat = t.category || "Outros";
+      if (!acc[cat]) {
+        acc[cat] = {
+          amount: 0,
+          color: t.color || colors.textSecondary,
+        };
+      }
+      acc[cat].amount += t.amount;
+      return acc;
+    },
+    {},
+  );
+
+  return Object.keys(grouped)
+    .map((key) => ({
+      name: key.toUpperCase(),
+      originalName: key,
+      amount: grouped[key].amount,
+      color: grouped[key].color,
+      percent: totalIncome > 0 ? (grouped[key].amount / totalIncome) * 100 : 0,
+    }))
+    .sort((a, b) => b.amount - a.amount);
+}
 
 export function GeneralBalanceCard({
   totalIncome,
   totalExpense,
   transactions,
 }: GeneralBalanceCardProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>("expense");
+
   const saldoLivre = Math.max(0, totalIncome - totalExpense);
   const comprometidoPercent =
     totalIncome > 0 ? (totalExpense / totalIncome) * 100 : 0;
 
-  // Agrupar despesas por categoria somando valores e guardando a cor
-  const expensesByCategory = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((acc: Record<string, { amount: number; color: string }>, t) => {
-      const cat = t.category || "Outros";
-      if (!acc[cat]) {
-        acc[cat] = {
-          amount: 0,
-          // Pega a cor do banco (t.color), ou do dicionário fixo, ou uma cor padrão
-          color: t.color || categoryColors[cat] || colors.textSecondary,
-        };
-      }
-      acc[cat].amount += t.amount;
-      return acc;
-    }, {});
+  const expenseData = groupByCategory(
+    transactions.filter((t) => t.type === "expense"),
+    totalIncome,
+  );
+  const incomeData = groupByCategory(
+    transactions.filter((t) => t.type === "income"),
+    totalIncome,
+  );
 
-  // Criar array ordenado para legendas e barras
-  const expenseData = Object.keys(expensesByCategory)
-    .map((key) => ({
-      name: key.toUpperCase(),
-      originalName: key,
-      amount: expensesByCategory[key].amount,
-      color: expensesByCategory[key].color,
-      percent:
-        totalIncome > 0
-          ? (expensesByCategory[key].amount / totalIncome) * 100
-          : 0,
-    }))
-    .sort((a, b) => b.amount - a.amount);
+  const isExpenseView = viewMode === "expense";
+  const categoryData = isExpenseView ? expenseData : incomeData;
 
-  // Dados para o Gráfico de Rosca (Donut Chart)
-  const pieData = [
-    { value: saldoLivre, color: categoryColors["Saldo Livre"] },
-    ...expenseData.map((item) => ({ value: item.amount, color: item.color })),
-  ].filter((item) => item.value > 0);
+  // Na visão de despesas, a rosca também tem a fatia de "Saldo Livre".
+  // Na visão de receitas, as categorias já somam 100% da receita.
+  const pieData = isExpenseView
+    ? [
+        { value: saldoLivre, color: SALDO_LIVRE_COLOR },
+        ...expenseData.map((item) => ({ value: item.amount, color: item.color })),
+      ].filter((item) => item.value > 0)
+    : incomeData
+        .map((item) => ({ value: item.amount, color: item.color }))
+        .filter((item) => item.value > 0);
 
   // Configurações do SVG
   const size = 120;
@@ -83,9 +97,13 @@ export function GeneralBalanceCard({
     <View style={styles.card}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>ANÁLISE DE GASTOS</Text>
+          <Text style={styles.title}>
+            {isExpenseView ? "ANÁLISE DE GASTOS" : "ANÁLISE DE RECEITAS"}
+          </Text>
           <Text style={styles.subtitle}>
-            Distribuição de despesas e saldo livre
+            {isExpenseView
+              ? "Distribuição de despesas e saldo livre"
+              : "Distribuição das receitas por categoria"}
           </Text>
         </View>
         <View style={{ alignItems: "flex-end" }}>
@@ -94,6 +112,35 @@ export function GeneralBalanceCard({
             {comprometidoPercent.toFixed(1)}%
           </Text>
         </View>
+      </View>
+
+      <View style={styles.toggleRow}>
+        <TouchableOpacity
+          style={[styles.toggleButton, isExpenseView && styles.toggleButtonActive]}
+          onPress={() => setViewMode("expense")}
+        >
+          <Text
+            style={[
+              styles.toggleButtonText,
+              isExpenseView && styles.toggleButtonTextActive,
+            ]}
+          >
+            Despesas
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.toggleButton, !isExpenseView && styles.toggleButtonActive]}
+          onPress={() => setViewMode("income")}
+        >
+          <Text
+            style={[
+              styles.toggleButtonText,
+              !isExpenseView && styles.toggleButtonTextActive,
+            ]}
+          >
+            Receitas
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.chartContainer}>
@@ -135,7 +182,9 @@ export function GeneralBalanceCard({
           </Svg>
 
           <View style={styles.donutCenterText}>
-            <Text style={styles.donutLabel}>SALDO LIVRE</Text>
+            <Text style={styles.donutLabel}>
+              {isExpenseView ? "SALDO LIVRE" : "TOTAL RECEITAS"}
+            </Text>
             <Text
               style={[
                 styles.donutValue,
@@ -143,7 +192,7 @@ export function GeneralBalanceCard({
               ]}
             >
               {totalIncome > 0
-                ? `R$ ${(saldoLivre / 1000).toFixed(1)}k`
+                ? `R$ ${((isExpenseView ? saldoLivre : totalIncome) / 1000).toFixed(1)}k`
                 : "Sem dados"}
             </Text>
           </View>
@@ -151,103 +200,97 @@ export function GeneralBalanceCard({
 
         {/* Legendas (Direita) */}
         <View style={styles.legendContainer}>
-          <View style={styles.legendItem}>
-            <View
-              style={[
-                styles.legendDot,
-                { backgroundColor: categoryColors["Saldo Livre"] },
-              ]}
-            />
-            <View>
-              <Text
-                style={[
-                  styles.legendName,
-                  { color: categoryColors["Saldo Livre"] },
-                ]}
-              >
-                SALDO LIVRE
-              </Text>
-            </View>
-            <View style={styles.legendPercentContainer}>
-              <Text style={styles.legendPercent}>
-                {(totalIncome > 0
-                  ? (saldoLivre / totalIncome) * 100
-                  : 0
-                ).toFixed(1)}
-                %
-              </Text>
-              <Text style={styles.legendDesc}>da receita</Text>
-            </View>
-          </View>
-
-          {expenseData.slice(0, 3).map((item, index) => (
-            <View key={index} style={styles.legendItem}>
+          {isExpenseView && (
+            <View style={styles.legendItem}>
               <View
-                style={[styles.legendDot, { backgroundColor: item.color }]}
+                style={[styles.legendDot, { backgroundColor: SALDO_LIVRE_COLOR }]}
               />
-              <Text style={styles.legendName}>{item.originalName}</Text>
+              <View>
+                <Text style={[styles.legendName, { color: SALDO_LIVRE_COLOR }]}>
+                  SALDO LIVRE
+                </Text>
+              </View>
               <View style={styles.legendPercentContainer}>
                 <Text style={styles.legendPercent}>
-                  {item.percent.toFixed(1)}%
+                  {(totalIncome > 0
+                    ? (saldoLivre / totalIncome) * 100
+                    : 0
+                  ).toFixed(1)}
+                  %
                 </Text>
                 <Text style={styles.legendDesc}>da receita</Text>
               </View>
             </View>
-          ))}
+          )}
+
+          {categoryData.length === 0 ? (
+            <Text style={styles.emptyText}>
+              {isExpenseView
+                ? "Nenhuma despesa neste período"
+                : "Nenhuma receita neste período"}
+            </Text>
+          ) : (
+            categoryData.slice(0, 3).map((item, index) => (
+              <View key={index} style={styles.legendItem}>
+                <View
+                  style={[styles.legendDot, { backgroundColor: item.color }]}
+                />
+                <Text style={styles.legendName}>{item.originalName}</Text>
+                <View style={styles.legendPercentContainer}>
+                  <Text style={styles.legendPercent}>
+                    {item.percent.toFixed(1)}%
+                  </Text>
+                  <Text style={styles.legendDesc}>da receita</Text>
+                </View>
+              </View>
+            ))
+          )}
         </View>
       </View>
 
       {/* Barras de Progresso */}
       <View style={styles.barsContainer}>
-        <View style={styles.barBlock}>
-          <View style={styles.barHeader}>
-            <View style={styles.barTitleGroup}>
-              <View
-                style={[
-                  styles.legendDot,
-                  { backgroundColor: categoryColors["Saldo Livre"] },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.barTitle,
-                  { color: categoryColors["Saldo Livre"] },
-                ]}
-              >
-                SALDO LIVRE RESTANTE
+        {isExpenseView && (
+          <View style={styles.barBlock}>
+            <View style={styles.barHeader}>
+              <View style={styles.barTitleGroup}>
+                <View
+                  style={[
+                    styles.legendDot,
+                    { backgroundColor: SALDO_LIVRE_COLOR },
+                  ]}
+                />
+                <Text style={[styles.barTitle, { color: SALDO_LIVRE_COLOR }]}>
+                  SALDO LIVRE RESTANTE
+                </Text>
+              </View>
+              <Text style={[styles.barAmount, { color: SALDO_LIVRE_COLOR }]}>
+                {formatCurrency(saldoLivre)}{" "}
+                <Text style={styles.barPercent}>
+                  (
+                  {(totalIncome > 0
+                    ? (saldoLivre / totalIncome) * 100
+                    : 0
+                  ).toFixed(1)}
+                  % DA RECEITA)
+                </Text>
               </Text>
             </View>
-            <Text
-              style={[
-                styles.barAmount,
-                { color: categoryColors["Saldo Livre"] },
-              ]}
-            >
-              {formatCurrency(saldoLivre)}{" "}
-              <Text style={styles.barPercent}>
-                (
-                {(totalIncome > 0
-                  ? (saldoLivre / totalIncome) * 100
-                  : 0
-                ).toFixed(1)}
-                % DA RECEITA)
-              </Text>
-            </Text>
+            <View style={styles.barBackground}>
+              <View
+                style={[
+                  styles.barFill,
+                  {
+                    backgroundColor: SALDO_LIVRE_COLOR,
+                    width: `${totalIncome > 0 ? (saldoLivre / totalIncome) * 100 : 0}%`,
+                  },
+                ]}
+              />
+            </View>
           </View>
-          <View style={styles.barBackground}>
-            <View
-              style={[
-                styles.barFill,
-                {
-                  backgroundColor: categoryColors["Saldo Livre"],
-                  width: `${totalIncome > 0 ? (saldoLivre / totalIncome) * 100 : 0}%`,
-                },
-              ]}
-            />
-          </View>
-        </View>
+        )}
 
-        {expenseData.map((item, index) => (
+        {categoryData.map((item, index) => (
           <View key={index} style={styles.barBlock}>
             <View style={styles.barHeader}>
               <View style={styles.barTitleGroup}>
@@ -293,7 +336,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   title: {
     color: colors.textPrimary,
@@ -316,6 +359,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginTop: 2,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 20,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.surfaceAlt,
+  },
+  toggleButtonActive: {
+    borderColor: colors.textPrimary,
+  },
+  toggleButtonText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  toggleButtonTextActive: {
+    color: colors.textPrimary,
   },
   chartContainer: {
     flexDirection: "row",
@@ -380,6 +448,11 @@ const styles = StyleSheet.create({
   legendDesc: {
     color: colors.textPlaceholder,
     fontSize: 9,
+  },
+  emptyText: {
+    color: colors.textPlaceholder,
+    fontSize: 11,
+    fontStyle: "italic",
   },
   barsContainer: {
     gap: 20,

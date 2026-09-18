@@ -538,8 +538,6 @@ export default function DashboardScreen() {
       <LandscapePanoramaModal
         visible={isLandscapePanoramaOpen}
         selectedYear={selectedYear}
-        totalIncome={totalIncome}
-        totalExpense={totalExpense}
         monthsData={monthsData}
         onClose={closeLandscapePanorama}
       />

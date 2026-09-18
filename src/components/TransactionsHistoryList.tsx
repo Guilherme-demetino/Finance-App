@@ -359,10 +359,9 @@ export function TransactionsHistoryList({
                   width: 40,
                   height: 40,
                   borderRadius: 20,
-                  backgroundColor:
-                    item.type === "income"
-                      ? "rgba(16, 185, 129, 0.15)"
-                      : "rgba(239, 68, 68, 0.15)",
+                  // Fundo translúcido na cor da categoria (não só receita/despesa),
+                  // pra transações de categorias diferentes serem visualmente distintas.
+                  backgroundColor: `${item.color}26`,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
@@ -374,7 +373,7 @@ export function TransactionsHistoryList({
                       : "arrow-up-outline"
                   }
                   size={20}
-                  color={item.type === "income" ? colors.income : colors.expense}
+                  color={item.color}
                 />
               </View>
               <View style={{ flex: 1 }}>
