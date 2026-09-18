@@ -40,6 +40,15 @@ export interface BudgetRow {
   amount: number;
 }
 
+/** Linha crua da tabela `category_budgets` — uma meta por categoria/mês/ano. */
+export interface CategoryBudgetRow {
+  id: number;
+  category: string;
+  month: string; // "01".."12"
+  year: string;
+  amount: number;
+}
+
 /** Transação já enriquecida com a cor da categoria, usada na tela do dashboard. */
 export interface EnrichedTransaction extends TransactionRow {
   category: string;

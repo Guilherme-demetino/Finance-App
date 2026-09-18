@@ -137,6 +137,19 @@ function DashboardChrome() {
           }}
         />
         <Tabs.Screen
+          name="budget"
+          options={{
+            title: "Orçamento",
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name={focused ? "wallet" : "wallet-outline"}
+                size={22}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="history"
           options={{
             title: "Histórico",

@@ -14,6 +14,11 @@ module.exports = defineConfig([
       // A regra do compiler experimental do React marca isso como erro;
       // mantemos como aviso em vez de travar o CI por um padrão válido.
       "react-hooks/set-state-in-effect": "warn",
+      // `sharedValue.value = x` é a forma oficial do Reanimated de
+      // atualizar um SharedValue (ex: nos onScroll dos ScrollViews
+      // animados). A regra do compiler não reconhece esse padrão e
+      // marca como erro; mantemos como aviso pelo mesmo motivo acima.
+      "react-hooks/immutability": "warn",
     },
   },
 ]);

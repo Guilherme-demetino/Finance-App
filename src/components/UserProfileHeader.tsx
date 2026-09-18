@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 import Animated, {
-  Extrapolation,
-  interpolate,
+  interpolateColor,
   useAnimatedStyle,
   type SharedValue,
 } from "react-native-reanimated";
@@ -23,6 +22,8 @@ interface UserProfileHeaderProps {
 
 // Distância de rolagem (em px) até a borda ficar totalmente visível.
 const BORDER_FADE_DISTANCE = 24;
+// Raio das bordas inferiores do cabeçalho — soft card em vez de corte reto.
+const HEADER_RADIUS = 20;
 
 export function UserProfileHeader({
   userName,
@@ -34,26 +35,31 @@ export function UserProfileHeader({
   onOpenMenu,
   scrollY,
 }: UserProfileHeaderProps) {
-  const animatedBorderStyle = useAnimatedStyle(() => {
-    const opacity = scrollY
-      ? interpolate(
+  const animatedHeaderStyle = useAnimatedStyle(() => {
+    const borderBottomColor = scrollY
+      ? interpolateColor(
           scrollY.value,
           [0, BORDER_FADE_DISTANCE],
-          [0, 1],
-          Extrapolation.CLAMP,
+          ["transparent", colors.border],
         )
-      : 0;
-    return { opacity };
+      : "transparent";
+    return { borderBottomColor };
   });
 
   return (
-    <View
-      style={{
-        backgroundColor: colors.background,
-        width: "100%",
-        zIndex: 999, // Garante que o cabeçalho fique acima de tudo e receba o toque
-        elevation: 5, // Necessário para o Android priorizar a camada de toque
-      }}
+    <Animated.View
+      style={[
+        {
+          backgroundColor: colors.surface,
+          width: "100%",
+          zIndex: 999, // Garante que o cabeçalho fique acima de tudo e receba o toque
+          elevation: 5, // Necessário para o Android priorizar a camada de toque
+          borderBottomLeftRadius: HEADER_RADIUS,
+          borderBottomRightRadius: HEADER_RADIUS,
+          borderBottomWidth: 1,
+        },
+        animatedHeaderStyle,
+      ]}
     >
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
@@ -116,16 +122,6 @@ export function UserProfileHeader({
           )}
         </TouchableOpacity>
       </View>
-
-      <Animated.View
-        style={[
-          {
-            height: 1,
-            backgroundColor: colors.border,
-          },
-          animatedBorderStyle,
-        ]}
-      />
-    </View>
+    </Animated.View>
   );
 }

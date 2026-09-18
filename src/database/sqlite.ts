@@ -55,6 +55,17 @@ function createTables(db: SQLite.SQLiteDatabase) {
         UNIQUE(month, year)
       );
     `);
+
+    db.runSync(`
+      CREATE TABLE IF NOT EXISTS category_budgets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category TEXT NOT NULL,
+        month TEXT NOT NULL,
+        year TEXT NOT NULL,
+        amount REAL NOT NULL,
+        UNIQUE(category, month, year)
+      );
+    `);
   });
 
   // Migração: instalações existentes já têm a tabela `transactions` sem
@@ -117,6 +128,7 @@ export async function resetDatabase(): Promise<void> {
     db.runSync("DROP TABLE IF EXISTS transactions");
     db.runSync("DROP TABLE IF EXISTS categories");
     db.runSync("DROP TABLE IF EXISTS budgets");
+    db.runSync("DROP TABLE IF EXISTS category_budgets");
     db.runSync("DROP TABLE IF EXISTS users");
     db.runSync("DROP TABLE IF EXISTS security");
   });

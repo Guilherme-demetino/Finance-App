@@ -5,12 +5,10 @@ import Animated, {
 import { AnnualPanoramaCard } from "../../components/AnnualPanoramaCard";
 import { BalanceCard } from "../../components/BalanceCard";
 import { GeneralBalanceCard } from "../../components/GeneralBalanceCard";
-import { MonthlyBudgetCard } from "../../components/MonthlyBudgetCard";
 import { SummaryCards } from "../../components/SummaryCards";
 
 import { useDashboardContext } from "../../context/DashboardContext";
 import { styles } from "../../styles/dashboardStyles";
-import { formatCurrencyInput } from "../../utils/currency";
 
 export default function DashboardHomeScreen() {
   const {
@@ -19,10 +17,6 @@ export default function DashboardHomeScreen() {
     selectedYear,
     totalIncome,
     totalExpense,
-    budget,
-    isEditingBudget,
-    setIsEditingBudget,
-    updateBudget,
     formattedTransactions,
     openLandscapePanorama,
     scrollY,
@@ -45,15 +39,6 @@ export default function DashboardHomeScreen() {
       />
 
       <SummaryCards totalIncome={totalIncome} totalExpense={totalExpense} />
-
-      <MonthlyBudgetCard
-        budget={budget}
-        totalExpense={totalExpense}
-        isEditingBudget={isEditingBudget}
-        setIsEditingBudget={setIsEditingBudget}
-        onSaveBudget={updateBudget}
-        formatCurrency={formatCurrencyInput}
-      />
 
       <GeneralBalanceCard
         totalIncome={totalIncome}

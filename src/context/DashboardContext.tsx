@@ -17,6 +17,7 @@ import { colors } from "../constants/colors";
 import { resetDatabase } from "../database/sqlite";
 import { getAllTransactions } from "../database/transactions";
 import { useBudget } from "../hooks/useBudget";
+import { useCategoryBudgets } from "../hooks/useCategoryBudgets";
 import { useTransactions } from "../hooks/useTransactions";
 import { useUserProfile } from "../hooks/useUserProfile";
 import type {
@@ -98,6 +99,13 @@ interface DashboardContextValue {
   isEditingBudget: boolean;
   setIsEditingBudget: (value: boolean) => void;
 
+  categoryBudgets: ReturnType<typeof useCategoryBudgets>["categoryBudgets"];
+  isLoadingCategoryBudgets: boolean;
+  saveCategoryGoal: ReturnType<typeof useCategoryBudgets>["saveCategoryGoal"];
+  refreshCategoryBudgets: ReturnType<
+    typeof useCategoryBudgets
+  >["refreshCategoryBudgets"];
+
   alertVisible: boolean;
   alertTitle: string;
   alertMessage: string;
@@ -177,6 +185,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const { budget, updateBudget } = useBudget(selectedMonth, selectedYear);
   const [isEditingBudget, setIsEditingBudget] = useState(false);
+
+  const {
+    categoryBudgets,
+    isLoadingCategoryBudgets,
+    saveCategoryGoal,
+    refreshCategoryBudgets,
+  } = useCategoryBudgets(selectedMonth, selectedYear, transactions);
 
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
@@ -559,6 +574,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     updateBudget,
     isEditingBudget,
     setIsEditingBudget,
+
+    categoryBudgets,
+    isLoadingCategoryBudgets,
+    saveCategoryGoal,
+    refreshCategoryBudgets,
 
     alertVisible,
     alertTitle,

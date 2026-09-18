@@ -52,7 +52,7 @@ const MONTH_INDEX_BY_NUMBER: Record<string, number> = {
 
 // Cores padrão para as categorias do sistema (usadas até o usuário criar
 // uma categoria customizada com cor própria, que sobrescreve estas).
-const DEFAULT_CATEGORY_COLORS: Record<string, string> = {
+export const DEFAULT_CATEGORY_COLORS: Record<string, string> = {
   salário: colors.income,
   investimentos: colors.accent,
   alimentação: colors.categoryOrange,
