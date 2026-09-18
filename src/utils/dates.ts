@@ -65,3 +65,20 @@ export function addMonthsToDateString(
 
   return `${String(targetDay).padStart(2, "0")}/${String(targetMonth + 1).padStart(2, "0")}/${targetYear}`;
 }
+
+/** Converte uma data DD/MM/AAAA em Date, com fallback pra hoje quando o texto é inválido/vazio. */
+export function parseDateString(value: string): Date {
+  const [day, month, year] = String(value).split("/").map(Number);
+  if (day && month && year) {
+    return new Date(year, month - 1, day);
+  }
+  return new Date();
+}
+
+/** Converte um Date em string DD/MM/AAAA. */
+export function formatDateToString(date: Date): string {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}

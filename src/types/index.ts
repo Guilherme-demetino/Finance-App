@@ -49,6 +49,23 @@ export interface CategoryBudgetRow {
   amount: number;
 }
 
+/** "lent" = você emprestou (a receber). "borrowed" = você pegou emprestado (a pagar). */
+export type DebtType = "lent" | "borrowed";
+export type DebtStatus = "pending" | "settled";
+
+/** Linha crua da tabela `debts` — fica fora do fluxo normal de receita/despesa até ser quitada. */
+export interface DebtRow {
+  id: number;
+  person: string;
+  amount: number;
+  type: DebtType;
+  description: string | null;
+  date: string; // DD/MM/AAAA — data do empréstimo
+  status: DebtStatus;
+  settled_date: string | null; // DD/MM/AAAA — data em que foi quitada
+  due_date: string | null; // DD/MM/AAAA — dia combinado pra receber/pagar
+}
+
 /** Transação já enriquecida com a cor da categoria, usada na tela do dashboard. */
 export interface EnrichedTransaction extends TransactionRow {
   category: string;

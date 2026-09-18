@@ -66,20 +66,35 @@ function createTables(db: SQLite.SQLiteDatabase) {
         UNIQUE(category, month, year)
       );
     `);
+
+    db.runSync(`
+      CREATE TABLE IF NOT EXISTS debts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        person TEXT NOT NULL,
+        amount REAL NOT NULL,
+        type TEXT NOT NULL,
+        description TEXT,
+        date TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        settled_date TEXT,
+        due_date TEXT
+      );
+    `);
   });
 
-  // Migração: instalações existentes já têm a tabela `transactions` sem
-  // essas colunas (CREATE TABLE IF NOT EXISTS não altera tabelas já
-  // criadas). ALTER TABLE falha se a coluna já existir — ignoramos o erro.
-  const recurrenceColumns = [
-    "recurrence_group_id TEXT",
-    "recurrence_type TEXT",
-    "installment_number INTEGER",
-    "installment_total INTEGER",
+  // Migração: instalações existentes já têm essas tabelas sem as colunas
+  // abaixo (CREATE TABLE IF NOT EXISTS não altera tabelas já criadas).
+  // ALTER TABLE falha se a coluna já existir — ignoramos o erro.
+  const columnsToMigrate: { table: string; column: string }[] = [
+    { table: "transactions", column: "recurrence_group_id TEXT" },
+    { table: "transactions", column: "recurrence_type TEXT" },
+    { table: "transactions", column: "installment_number INTEGER" },
+    { table: "transactions", column: "installment_total INTEGER" },
+    { table: "debts", column: "due_date TEXT" },
   ];
-  for (const column of recurrenceColumns) {
+  for (const { table, column } of columnsToMigrate) {
     try {
-      db.runSync(`ALTER TABLE transactions ADD COLUMN ${column};`);
+      db.runSync(`ALTER TABLE ${table} ADD COLUMN ${column};`);
     } catch {
       // coluna já existe — instalação recente, nada a fazer
     }
@@ -129,6 +144,7 @@ export async function resetDatabase(): Promise<void> {
     db.runSync("DROP TABLE IF EXISTS categories");
     db.runSync("DROP TABLE IF EXISTS budgets");
     db.runSync("DROP TABLE IF EXISTS category_budgets");
+    db.runSync("DROP TABLE IF EXISTS debts");
     db.runSync("DROP TABLE IF EXISTS users");
     db.runSync("DROP TABLE IF EXISTS security");
   });

@@ -3,6 +3,7 @@ import { Tabs } from "expo-router";
 import { TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { ConfirmModal } from "../../components/ConfirmModal";
 import { CustomAlert } from "../../components/CustomAlert";
 import { MonthModal, YearModal } from "../../components/FilterModals";
 import { LandscapePanoramaModal } from "../../components/LandscapePanoramaModal";
@@ -51,6 +52,9 @@ function DashboardChrome() {
     handleExportCSV,
     handleChangePIN,
     handleWipeData,
+    isWipeConfirmOpen,
+    setIsWipeConfirmOpen,
+    confirmWipeData,
     isTransactionModalOpen,
     setIsTransactionModalOpen,
     setEditingTransactionId,
@@ -143,6 +147,19 @@ function DashboardChrome() {
             tabBarIcon: ({ color, focused }) => (
               <Ionicons
                 name={focused ? "wallet" : "wallet-outline"}
+                size={22}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="debts"
+          options={{
+            title: "Dívidas",
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name={focused ? "people" : "people-outline"}
                 size={22}
                 color={color}
               />
@@ -247,6 +264,16 @@ function DashboardChrome() {
         title={alertTitle}
         message={alertMessage}
         onClose={() => setAlertVisible(false)}
+      />
+
+      <ConfirmModal
+        visible={isWipeConfirmOpen}
+        title="Zerar Aplicativo"
+        message="ATENÇÃO: Isso apagará todas as suas transações, categorias, nome, foto e PIN. Essa ação NÃO pode ser desfeita. Tem certeza?"
+        confirmLabel="Sim, apagar tudo"
+        destructive
+        onCancel={() => setIsWipeConfirmOpen(false)}
+        onConfirm={confirmWipeData}
       />
     </SafeAreaView>
   );

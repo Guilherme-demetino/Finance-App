@@ -10,18 +10,20 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Alert } from "react-native";
 import { useSharedValue, type SharedValue } from "react-native-reanimated";
 
 import { colors } from "../constants/colors";
+import type { DebtInput } from "../database/debts";
 import { resetDatabase } from "../database/sqlite";
 import { getAllTransactions } from "../database/transactions";
 import { useBudget } from "../hooks/useBudget";
 import { useCategoryBudgets } from "../hooks/useCategoryBudgets";
+import { useDebts } from "../hooks/useDebts";
 import { useMonthComparison } from "../hooks/useMonthComparison";
 import { useTransactions } from "../hooks/useTransactions";
 import { useUserProfile } from "../hooks/useUserProfile";
 import type {
+  DebtRow,
   DisplayTransaction,
   TransactionRepeatMode,
   TransactionType,
@@ -111,6 +113,15 @@ interface DashboardContextValue {
   comparison: ReturnType<typeof useMonthComparison>["comparison"];
   isLoadingComparison: boolean;
 
+  pendingDebts: DebtRow[];
+  settledDebts: DebtRow[];
+  totalToReceive: number;
+  totalToPay: number;
+  isLoadingDebts: boolean;
+  handleAddDebt: (data: DebtInput) => Promise<void>;
+  handleSettleDebt: (debt: DebtRow) => Promise<void>;
+  handleDeleteDebt: (id: number) => Promise<void>;
+
   alertVisible: boolean;
   alertTitle: string;
   alertMessage: string;
@@ -127,6 +138,9 @@ interface DashboardContextValue {
   handleDeleteSeries: (groupId: string) => Promise<void>;
   handleChangePIN: () => void;
   handleWipeData: () => void;
+  isWipeConfirmOpen: boolean;
+  setIsWipeConfirmOpen: (value: boolean) => void;
+  confirmWipeData: () => Promise<void>;
   openNewTransactionModal: () => void;
 
   currentMonthNum: string;
@@ -148,6 +162,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState("");
+  const [isWipeConfirmOpen, setIsWipeConfirmOpen] = useState(false);
 
   const [isLandscapePanoramaOpen, setIsLandscapePanoramaOpen] = useState(false);
 
@@ -206,7 +221,19 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const { comparison, isLoadingComparison } = useMonthComparison(
     selectedMonth,
     selectedYear,
+    transactions,
   );
+
+  const {
+    pendingDebts,
+    settledDebts,
+    totalToReceive,
+    totalToPay,
+    isLoadingDebts,
+    addDebt,
+    settleDebt,
+    removeDebt,
+  } = useDebts();
 
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
@@ -492,6 +519,53 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const handleAddDebt = async (data: DebtInput) => {
+    try {
+      await addDebt(data);
+      showAlert("Sucesso", "Registrado com sucesso.");
+    } catch (error) {
+      console.log("Erro ao registrar dívida/empréstimo:", error);
+      showAlert("Erro", "Não foi possível registrar.");
+    }
+  };
+
+  const handleSettleDebt = async (debt: DebtRow) => {
+    try {
+      const todayStr = `${currentDay}/${currentMonthNum}/${currentYearStr}`;
+      await settleDebt(debt.id, todayStr);
+
+      // Quitar de fato move dinheiro — só a partir de agora isso entra no
+      // saldo, como uma transação normal (não afeta meses já fechados).
+      const debtTransactionType: TransactionType =
+        debt.type === "lent" ? "income" : "expense";
+      await saveTransaction(null, {
+        amount: debt.amount,
+        date: todayStr,
+        description:
+          debt.type === "lent"
+            ? `Recebimento de ${debt.person}`
+            : `Pagamento a ${debt.person}`,
+        type: debtTransactionType,
+        category: "Empréstimos",
+      });
+
+      showAlert("Sucesso", "Dívida quitada e registrada no seu saldo.");
+    } catch (error) {
+      console.log("Erro ao quitar dívida:", error);
+      showAlert("Erro", "Não foi possível quitar a dívida.");
+    }
+  };
+
+  const handleDeleteDebt = async (id: number) => {
+    try {
+      await removeDebt(id);
+      showAlert("Sucesso", "Registro excluído com sucesso.");
+    } catch (error) {
+      console.log("Erro ao excluir dívida:", error);
+      showAlert("Erro", "Não foi possível excluir o registro.");
+    }
+  };
+
   const handleChangePIN = () => {
     setIsMenuOpen(false);
     // O PIN atual só é sobrescrito quando o novo for confirmado na tela
@@ -501,27 +575,19 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const handleWipeData = () => {
     setIsMenuOpen(false);
-    Alert.alert(
-      "Zerar Aplicativo",
-      "ATENÇÃO: Isso apagará todas as suas transações, categorias, nome, foto e PIN. Essa ação NÃO pode ser desfeita. Tem certeza?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Sim, apagar tudo",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await resetDatabase();
-              await clearPin();
-              router.replace("/" as any); // Volta para a tela de boas-vindas
-            } catch (error) {
-              console.log("Erro ao zerar dados:", error);
-              showAlert("Erro", "Não foi possível formatar o aplicativo.");
-            }
-          },
-        },
-      ],
-    );
+    setIsWipeConfirmOpen(true);
+  };
+
+  const confirmWipeData = async () => {
+    setIsWipeConfirmOpen(false);
+    try {
+      await resetDatabase();
+      await clearPin();
+      router.replace("/" as any); // Volta para a tela de boas-vindas
+    } catch (error) {
+      console.log("Erro ao zerar dados:", error);
+      showAlert("Erro", "Não foi possível formatar o aplicativo.");
+    }
   };
 
   const openNewTransactionModal = () => {
@@ -641,6 +707,15 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     comparison,
     isLoadingComparison,
 
+    pendingDebts,
+    settledDebts,
+    totalToReceive,
+    totalToPay,
+    isLoadingDebts,
+    handleAddDebt,
+    handleSettleDebt,
+    handleDeleteDebt,
+
     alertVisible,
     alertTitle,
     alertMessage,
@@ -657,6 +732,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     handleDeleteSeries,
     handleChangePIN,
     handleWipeData,
+    isWipeConfirmOpen,
+    setIsWipeConfirmOpen,
+    confirmWipeData,
     openNewTransactionModal,
 
     currentMonthNum,

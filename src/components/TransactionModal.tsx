@@ -15,26 +15,12 @@ import { colors } from "../constants/colors";
 import { getAllCategories } from "../database/categories";
 import type { CategoryRow } from "../types";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
+import { formatDateToString, parseDateString } from "../utils/dates";
 import { CalendarPicker } from "./CalendarPicker";
 import { CategoryModal } from "./CategoryModal";
 
 const INSTALLMENT_OPTIONS = [2, 3, 4, 6, 10, 12];
 const RECURRING_MONTHS_OPTIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-
-const parseDateString = (value: string): Date => {
-  const [day, month, year] = String(value).split("/").map(Number);
-  if (day && month && year) {
-    return new Date(year, month - 1, day);
-  }
-  return new Date();
-};
-
-const formatDateToString = (date: Date): string => {
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-};
 
 interface TransactionModalProps {
   visible: boolean;

@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
-  Alert,
   Modal,
   ScrollView,
   Text,
@@ -13,6 +12,7 @@ import { getTransactionsByGroupId } from "../database/transactions";
 import { styles as menuStyles } from "../styles/menuStyles";
 import type { DisplayTransaction, TransactionRow } from "../types";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
+import { ConfirmModal } from "./ConfirmModal";
 
 interface SeriesManagerModalProps {
   visible: boolean;
@@ -33,6 +33,9 @@ export function SeriesManagerModal({
 }: SeriesManagerModalProps) {
   const [occurrences, setOccurrences] = useState<TransactionRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<
+    "fromHere" | "series" | null
+  >(null);
 
   const groupId = transaction?.recurrenceGroupId;
 
@@ -61,42 +64,6 @@ export function SeriesManagerModal({
 
   const isInstallment = transaction.recurrenceType === "installment";
   const currentId = Number(transaction.id);
-
-  const confirmDeleteFromHere = () => {
-    Alert.alert(
-      "Excluir esta e as futuras",
-      "Isso vai apagar esta ocorrência e todas as que vêm depois dela nesta série. As ocorrências anteriores continuam intactas. Tem certeza?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Excluir",
-          style: "destructive",
-          onPress: () => {
-            onDeleteFromHere(groupId, currentId);
-            onClose();
-          },
-        },
-      ],
-    );
-  };
-
-  const confirmDeleteSeries = () => {
-    Alert.alert(
-      "Excluir série inteira",
-      `Isso vai apagar todas as ${occurrences.length || ""} ocorrências desta ${isInstallment ? "compra parcelada" : "transação recorrente"}, incluindo as que já passaram. Essa ação não pode ser desfeita. Tem certeza?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Excluir tudo",
-          style: "destructive",
-          onPress: () => {
-            onDeleteSeries(groupId);
-            onClose();
-          },
-        },
-      ],
-    );
-  };
 
   return (
     <Modal
@@ -220,7 +187,7 @@ export function SeriesManagerModal({
                 borderRadius: 12,
                 alignItems: "center",
               }}
-              onPress={confirmDeleteFromHere}
+              onPress={() => setConfirmAction("fromHere")}
             >
               <Text style={menuStyles.modalButtonText}>
                 Excluir esta e as futuras
@@ -234,7 +201,7 @@ export function SeriesManagerModal({
                 borderRadius: 12,
                 alignItems: "center",
               }}
-              onPress={confirmDeleteSeries}
+              onPress={() => setConfirmAction("series")}
             >
               <Text style={menuStyles.modalButtonText}>
                 Excluir série inteira
@@ -243,6 +210,34 @@ export function SeriesManagerModal({
           </View>
         </View>
       </View>
+
+      <ConfirmModal
+        visible={confirmAction === "fromHere"}
+        title="Excluir esta e as futuras"
+        message="Isso vai apagar esta ocorrência e todas as que vêm depois dela nesta série. As ocorrências anteriores continuam intactas. Tem certeza?"
+        confirmLabel="Excluir"
+        destructive
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={() => {
+          setConfirmAction(null);
+          onDeleteFromHere(groupId, currentId);
+          onClose();
+        }}
+      />
+
+      <ConfirmModal
+        visible={confirmAction === "series"}
+        title="Excluir série inteira"
+        message={`Isso vai apagar todas as ${occurrences.length || ""} ocorrências desta ${isInstallment ? "compra parcelada" : "transação recorrente"}, incluindo as que já passaram. Essa ação não pode ser desfeita. Tem certeza?`}
+        confirmLabel="Excluir tudo"
+        destructive
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={() => {
+          setConfirmAction(null);
+          onDeleteSeries(groupId);
+          onClose();
+        }}
+      />
     </Modal>
   );
 }

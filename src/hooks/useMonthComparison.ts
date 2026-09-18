@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { colors } from "../constants/colors";
 import { getAllCategories } from "../database/categories";
 import { getAllTransactions } from "../database/transactions";
-import type { TransactionRow } from "../types";
+import type { EnrichedTransaction, TransactionRow } from "../types";
 import { getMonthNumber, getPreviousMonth } from "../utils/dates";
 import { DEFAULT_CATEGORY_COLORS } from "./useTransactions";
 
@@ -40,7 +40,14 @@ function sumExpensesByCategory(
  * por categoria — reaproveita as transações já existentes no banco, sem
  * precisar de nenhuma tabela nova.
  */
-export function useMonthComparison(selectedMonth: string, selectedYear: string) {
+export function useMonthComparison(
+  selectedMonth: string,
+  selectedYear: string,
+  // Não é lido diretamente (esse hook busca o histórico completo por conta
+  // própria) — serve só de gatilho pra recalcular quando outra transação é
+  // criada/editada em outro lugar (ex: ao quitar uma dívida).
+  refreshTrigger: EnrichedTransaction[],
+) {
   const [comparison, setComparison] = useState<MonthComparisonResult | null>(
     null,
   );
@@ -144,8 +151,8 @@ export function useMonthComparison(selectedMonth: string, selectedYear: string) 
 
   useEffect(() => {
     refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh não é memoizada, roda só quando o período muda
-  }, [selectedMonth, selectedYear]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh não é memoizada, roda quando o período muda ou outra transação é criada/editada
+  }, [selectedMonth, selectedYear, refreshTrigger]);
 
   return { comparison, isLoadingComparison };
 }
