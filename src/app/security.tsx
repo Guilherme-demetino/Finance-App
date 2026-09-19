@@ -6,8 +6,27 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CustomAlert } from "../components/CustomAlert";
 import { colors } from "../constants/colors";
 import { clearLegacyPin, getLegacyPin } from "../database/security";
-import { getStoredPin, savePin } from "../utils/security";
 import { logError } from "../utils/logger";
+import {
+  attemptsBeforeFirstLock,
+  describeDuration,
+  EMPTY_LOCKOUT,
+  formatCountdown,
+  lockDurationMs,
+  registerFailure,
+  remainingLockMs,
+  type LockoutState,
+} from "../utils/pinLockout";
+import {
+  clearLockoutState,
+  getLockoutState,
+  getStoredPin,
+  savePin,
+  saveLockoutState,
+} from "../utils/security";
+
+// Fora do componente: o lint do React Compiler não aceita chamar Date.now() direto dentro dos handlers.
+const nowMs = () => Date.now();
 
 interface PinState {
   isSettingUp: boolean;
@@ -56,6 +75,11 @@ export default function SecurityScreen() {
   // rota evita depender de o "mode=change" sobreviver à navegação.
   const [hadExistingPin, setHadExistingPin] = useState(false);
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
+  // Bloqueio progressivo depois de PINs errados seguidos (só vale para digitar o PIN, não para cadastrar).
+  const [lockout, setLockout] = useState<LockoutState>(EMPTY_LOCKOUT);
+  const [now, setNow] = useState(nowMs);
+  const lockRemainingMs = isSettingUp ? 0 : remainingLockMs(lockout, now);
+  const isLocked = lockRemainingMs > 0;
 
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
@@ -75,6 +99,8 @@ export default function SecurityScreen() {
       });
 
       if (result.success) {
+        // A biometria é do sistema (que tem os próprios limites) e vale como desbloqueio.
+        await clearLockoutState();
         router.replace("/dashboard");
       }
     } catch (error) {
@@ -92,6 +118,12 @@ export default function SecurityScreen() {
       setIsSettingUp(state.isSettingUp);
     });
 
+    getLockoutState().then((state) => {
+      if (cancelled) return;
+      setLockout(state);
+      setNow(nowMs());
+    });
+
     Promise.all([
       LocalAuthentication.hasHardwareAsync(),
       LocalAuthentication.isEnrolledAsync(),
@@ -106,7 +138,20 @@ export default function SecurityScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Enquanto bloqueado, faz o contador regressivo andar e libera o teclado no fim.
+  useEffect(() => {
+    if (lockout.lockedUntil <= nowMs()) return;
+
+    const timer = setInterval(() => {
+      const current = nowMs();
+      setNow(current);
+      if (current >= lockout.lockedUntil) clearInterval(timer);
+    }, 500);
+    return () => clearInterval(timer);
+  }, [lockout.lockedUntil]);
+
   const handlePressNumber = (num: string) => {
+    if (isLocked) return;
     if (pin.length < 4) {
       const newPin = pin + num;
       setPin(newPin);
@@ -135,10 +180,29 @@ export default function SecurityScreen() {
         }, 1000);
       } else {
         if (enteredPin === storedPin) {
+          await clearLockoutState();
           router.replace("/dashboard");
         } else {
-          showAlert("Atenção", "PIN incorreto. Tente novamente.");
+          const attemptAt = nowMs();
+          const next = registerFailure(lockout, attemptAt);
+          setLockout(next);
+          setNow(attemptAt);
           setPin("");
+          await saveLockoutState(next);
+
+          const lockMs = lockDurationMs(next.failures);
+          if (lockMs > 0) {
+            showAlert(
+              "PIN incorreto",
+              `Por segurança, o PIN ficou bloqueado por ${describeDuration(lockMs)}.`,
+            );
+          } else {
+            const left = attemptsBeforeFirstLock(next);
+            showAlert(
+              "PIN incorreto",
+              `Restam ${left} ${left === 1 ? "tentativa" : "tentativas"} antes de um bloqueio temporário.`,
+            );
+          }
         }
       }
     } catch (error) {
@@ -171,6 +235,12 @@ export default function SecurityScreen() {
           ? "Escolha uma senha de 4 dígitos"
           : "Insira sua senha para desbloquear"}
       </Text>
+      {isLocked && (
+        <Text style={[styles.subtitle, styles.lockedText]}>
+          Muitas tentativas incorretas. Tente novamente em{" "}
+          {formatCountdown(lockRemainingMs)}.
+        </Text>
+      )}
 
       <View style={styles.pinDotsContainer}>
         {[0, 1, 2, 3].map((index) => (
@@ -184,7 +254,7 @@ export default function SecurityScreen() {
         ))}
       </View>
 
-      <View style={styles.keypad}>
+      <View style={[styles.keypad, isLocked && styles.keypadLocked]}>
         {["1", "2", "3", "4", "5", "6", "7", "8", "9", "bio", "0", "back"].map(
           (item, index) => {
             // Lógica do botão de Biometria
@@ -275,6 +345,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 32,
     textAlign: "center",
+  },
+  lockedText: {
+    color: colors.expense,
+    fontWeight: "700",
+    marginTop: -16,
+  },
+  keypadLocked: {
+    opacity: 0.35,
   },
   pinDotsContainer: {
     flexDirection: "row",

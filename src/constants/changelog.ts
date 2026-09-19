@@ -101,4 +101,14 @@ export const CHANGELOG: Release[] = [
       "Depois de zerar o app, cadastrar o nome de novo dava erro e só funcionava depois de fechar e abrir o app. Agora funciona direto.",
     ],
   },
+  {
+    id: 11,
+    date: "19/09/2026",
+    title: "PIN mais seguro",
+    items: [
+      "Depois de 5 PINs errados seguidos, o app bloqueia a digitação por um tempo que cresce a cada novo erro (30 segundos, 1, 5 e 15 minutos, até 1 hora).",
+      "O bloqueio continua valendo mesmo que você feche e abra o app, e a contagem só zera quando o PIN certo é digitado.",
+      "O desbloqueio por digital continua funcionando durante o bloqueio do PIN.",
+    ],
+  },
 ];
