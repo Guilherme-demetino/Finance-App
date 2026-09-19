@@ -27,14 +27,14 @@ describe("planBankCsvImport", () => {
         date: "05/03/2026",
         description: "Pix enviado - João Silva",
         type: "expense",
-        category: "Geral",
+        category: "Pix",
       },
       {
         amount: 200,
         date: "06/03/2026",
         description: "Pix recebido - Maria",
         type: "income",
-        category: "Salário",
+        category: "Pix",
       },
     ]);
   });
@@ -49,11 +49,11 @@ describe("planBankCsvImport", () => {
     const p = plan(csv);
     expect(p.toImport.map((t) => [t.type, t.amount, t.category])).toEqual([
       ["expense", 35.9, "Alimentação"],
-      ["income", 2500, "Salário"],
+      ["income", 2500, "Pix"],
     ]);
   });
 
-  it("ignora aplicações e resgates de caixinha (Nubank) e guarda receitas como Salário", () => {
+  it("ignora aplicações e resgates de caixinha (Nubank) e marca Pix com a categoria Pix", () => {
     const csv = [
       "Data,Valor,Identificador,Descrição",
       "01/03/2026,-500.00,a1,Aplicação RDB",
@@ -65,7 +65,7 @@ describe("planBankCsvImport", () => {
     const p = plan(csv);
     expect(p.ignoredTransfers).toBe(2);
     expect(p.toImport.map((t) => [t.description, t.type, t.category])).toEqual([
-      ["Transferência recebida pelo Pix - Empresa", "income", "Salário"],
+      ["Transferência recebida pelo Pix - Empresa", "income", "Pix"],
       ["Compra no débito - Padaria", "expense", "Alimentação"],
     ]);
   });

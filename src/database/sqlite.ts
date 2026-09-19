@@ -91,6 +91,15 @@ function createTables(db: SQLite.SQLiteDatabase) {
         created_date TEXT NOT NULL
       );
     `);
+
+    // Guarda avisos do próprio app (ex: qual novidade o usuário já viu).
+    // Fica fora do resetDatabase de propósito: não é dado financeiro.
+    db.runSync(`
+      CREATE TABLE IF NOT EXISTS app_meta (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `);
   });
 
   // Migração: instalações existentes já têm essas tabelas sem as colunas

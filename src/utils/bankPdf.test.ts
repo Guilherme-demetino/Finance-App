@@ -28,7 +28,7 @@ describe("parseStatementLines", () => {
         date: "06/03/2026",
         description: "Pix recebido João Silva",
         type: "income",
-        category: "Salário",
+        category: "Pix",
       },
     ]);
   });
@@ -125,7 +125,14 @@ describe("extrato de conta do Itaú", () => {
       ["02/09/2026", "IOF", "expense", 0.51],
       ["26/08/2026", "PIX TRANSF Titular", "income", 16.56],
     ]);
-    expect(transactions.filter((t) => t.type === "income").every((t) => t.category === "Salário")).toBe(true);
+    expect(transactions.map((t) => t.category)).toEqual([
+      "Geral",
+      "Salário",
+      "Pix",
+      "Pix",
+      "Geral",
+      "Pix",
+    ]);
   });
 
   it("mantém a parcela 'COMPRA 03/10' na descrição", () => {
@@ -133,6 +140,108 @@ describe("extrato de conta do Itaú", () => {
     expect(parseStatementLines(lines, TODAY).transactions[0].description).toBe(
       "Loja X COMPRA 03/10",
     );
+  });
+});
+
+// Dados fictícios, na mesma ordem de linhas que o pdf.js entrega para o extrato
+// do Banco do Brasil: título antes da linha da data, detalhe depois.
+const BANCO_DO_BRASIL = [
+  "Extrato de Conta Corrente",
+  "Cliente: NOME DO TITULAR",
+  "Período: 01 a 19/09/2026 Agência: 0000-0 Conta: 00000-0",
+  "Lançamentos",
+  "Dia Lote Documento Histórico Valor",
+  "13/08/2026 Saldo Anterior 0,00 (+)",
+  "Recebimento de Proventos",
+  "08/09/2026 10000 11111 00.000.000/0001-00 EMPRESA EXEMPLO 3.000,00 (+)",
+  "LTDA",
+  "Pix - Enviado",
+  "08/09/2026 20000 22201 25,00 (-)",
+  "05/09 10:44 Maria Souza Lima",
+  "Pix - Enviado",
+  "08/09/2026 20000 22202 1.500,00 (-)",
+  "05/09 10:45 Joao Pereira Alves",
+  "Pgto BB Consig Em Folha",
+  "08/09/2026 20100 333444555666777 400,00 (-)",
+  "123456789- BB CREDITO CONSIGNACAO",
+  "BB Rende Fácil",
+  "08/09/2026 9903 2,40 (-)",
+  "Rende Facil",
+  "08/09/2026 30000 Saldo do dia 0,00 (+)",
+  "Pix - Recebido",
+  "10/09/2026 30000 444555666777888 1.200,00 (+)",
+  "10/09 19:07 12345678900 Ana Clara Ramos",
+  "Pix - Enviado",
+  "10/09/2026 20000 33301 1.200,00 (-)",
+  "10/09 19:08 Carlos Eduardo Nunes",
+  "10/09/2026 30000 Saldo do dia 0,00 (+)",
+  "Pix - Recebido",
+  "18/09/2026 30000 555666777888999 18/09 11:55 00000000000000 PEDRO 730,00 (+)",
+  "SANTOS",
+  "Pix - Enviado",
+  "18/09/2026 20000 44401 325,00 (-)",
+  "18/09 13:19 Maria Souza Lima",
+  "Pix - Enviado",
+  "18/09/2026 20000 44402 30,00 (-)",
+  "18/09 21:04 Maria Souza Lima",
+  "18/09/2026 9903 BB Rende Fácil 375,00 (-)",
+  "18/09/2026 7000 Saldo do dia 0,00 (+)",
+  "21/09/2026 S A L D O 45,00 (-)",
+  "Informações Adicionais",
+  "Invest. Resgate Autom. 375,00 (+)",
+  "Saldo 330,00 (+)",
+  "Juros * 0,00",
+  "CREDITO BB-MELHOR OFERTA* 50.000,00 (+)",
+  "Lançamentos Futuros",
+  "Dia Histórico Valor",
+  "00/00/0000 0,00 (+)",
+  "Aplicações Financeiras",
+  "BB RENDE FACIL 375,00",
+];
+
+describe("extrato de conta do Banco do Brasil", () => {
+  const result = parseStatementLines(BANCO_DO_BRASIL, new Date(2026, 8, 19));
+
+  it("lê sinal (+)/(-), junta o histórico e tira lote, documento, CPF e CNPJ", () => {
+    expect(
+      result.transactions.map((t) => [t.date, t.description, t.type, t.amount]),
+    ).toEqual([
+      ["08/09/2026", "Recebimento de Proventos EMPRESA EXEMPLO LTDA", "income", 3000],
+      ["08/09/2026", "Pix - Enviado Maria Souza Lima", "expense", 25],
+      ["08/09/2026", "Pix - Enviado Joao Pereira Alves", "expense", 1500],
+      ["08/09/2026", "Pgto BB Consig Em Folha BB CREDITO CONSIGNACAO", "expense", 400],
+      ["10/09/2026", "Pix - Recebido Ana Clara Ramos", "income", 1200],
+      ["10/09/2026", "Pix - Enviado Carlos Eduardo Nunes", "expense", 1200],
+      ["18/09/2026", "Pix - Recebido PEDRO SANTOS", "income", 730],
+      ["18/09/2026", "Pix - Enviado Maria Souza Lima", "expense", 325],
+      ["18/09/2026", "Pix - Enviado Maria Souza Lima", "expense", 30],
+    ]);
+  });
+
+  it("marca Pix como Pix e proventos como Salário", () => {
+    expect(result.transactions.map((t) => t.category)).toEqual([
+      "Salário",
+      "Pix",
+      "Pix",
+      "Geral",
+      "Pix",
+      "Pix",
+      "Pix",
+      "Pix",
+      "Pix",
+    ]);
+  });
+
+  it("ignora saldos, BB Rende Fácil e o que vem depois de 'Informações Adicionais'", () => {
+    expect(result.totalRows).toBe(9);
+    expect(result.invalid).toBe(0);
+    expect(result.ignoredTransfers).toBe(2);
+  });
+
+  it("não deixa dados da conta na descrição", () => {
+    const text = result.transactions.map((t) => t.description).join(" ");
+    expect(text).not.toMatch(/\d{7,}/);
+    expect(text).not.toMatch(/Agência|Conta|Cliente/);
   });
 });
 

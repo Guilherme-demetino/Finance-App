@@ -100,9 +100,15 @@ describe("guessCategory", () => {
     expect(guessCategory("XPTO 123", "expense")).toBe("Geral");
   });
 
-  it("guarda toda receita como Salário", () => {
+  it("guarda a receita como Salário, exceto Pix e transferências", () => {
     expect(guessCategory("Salário", "income")).toBe("Salário");
-    expect(guessCategory("Transferência recebida pelo Pix", "income")).toBe("Salário");
     expect(guessCategory("Rendimento", "income")).toBe("Salário");
+  });
+
+  it("marca Pix e transferências como Pix, receita ou despesa", () => {
+    expect(guessCategory("Transferência recebida pelo Pix", "income")).toBe("Pix");
+    expect(guessCategory("Pix enviado João", "expense")).toBe("Pix");
+    expect(guessCategory("Transferência enviada Maria", "expense")).toBe("Pix");
+    expect(guessCategory("TRANSF. ENVIADA", "expense")).toBe("Pix");
   });
 });

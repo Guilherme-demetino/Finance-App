@@ -1,3 +1,4 @@
+import { PIX_CATEGORY } from "../constants/categories";
 import type { TransactionType } from "../types";
 
 /** Minúsculas e sem acentos, pra comparar cabeçalhos e descrições de bancos diferentes. */
@@ -256,6 +257,7 @@ const INTERNAL_TRANSFER_HINTS = [
   "dinheiro resgatado",
   "dinheiro retirado",
   "resgate planejado",
+  "rende facil", // BB Rende Fácil, aplicação automática do Banco do Brasil
 ];
 
 /**
@@ -268,16 +270,20 @@ export function isInternalTransfer(description: string): boolean {
   return INTERNAL_TRANSFER_HINTS.some((hint) => text.includes(` ${hint}`));
 }
 
+const PIX_HINTS = ["pix", "transf"];
+
 /**
  * Sugere uma das categorias padrão do app a partir de palavras da
- * descrição. Toda receita importada entra como "Salário"; despesa sem pista
- * clara usa "Geral".
+ * descrição. Pix e transferências (receita ou despesa) entram como "Pix"; o
+ * resto da receita importada entra como "Salário"; despesa sem pista clara
+ * usa "Geral".
  */
 export function guessCategory(
   description: string,
   type: TransactionType,
 ): string {
   const text = ` ${normalizeText(description)} `;
+  if (PIX_HINTS.some((hint) => text.includes(hint))) return PIX_CATEGORY;
   if (type === "income") return "Salário";
 
   const match = CATEGORY_KEYWORDS.find(({ words }) =>

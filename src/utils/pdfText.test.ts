@@ -131,7 +131,7 @@ describe("extractPdfLines (pdf.js de verdade)", () => {
         date: "06/03/2026",
         description: "Pix recebido Joao Silva",
         type: "income",
-        category: "Salário",
+        category: "Pix",
       },
     ]);
   });

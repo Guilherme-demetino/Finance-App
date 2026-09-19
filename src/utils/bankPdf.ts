@@ -1,4 +1,5 @@
 import type { TransactionRow, TransactionType } from "../types";
+import { parseBancoDoBrasilLines } from "./bankPdfBancoDoBrasil";
 import {
   buildImportPlan,
   type CsvImportResult,
@@ -159,6 +160,9 @@ export function parseStatementLines(
   totalRows: number;
   ignoredTransfers: number;
 } {
+  const bancoDoBrasil = parseBancoDoBrasilLines(lines);
+  if (bancoDoBrasil) return bancoDoBrasil;
+
   const anchor = detectAnchorDate(lines, today);
   const parsedRows: {
     amount: number;

@@ -57,6 +57,7 @@ const MONTH_INDEX_BY_NUMBER: Record<string, number> = {
 export const DEFAULT_CATEGORY_COLORS: Record<string, string> = {
   salário: colors.income,
   investimentos: colors.accent,
+  pix: colors.categoryCyan,
   alimentação: colors.categoryOrange,
   transporte: colors.categoryPurple,
   lazer: colors.categoryPink,

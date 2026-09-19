@@ -24,8 +24,11 @@ interface UserProfileHeaderProps {
 const BORDER_FADE_DISTANCE = 24;
 // Raio das bordas inferiores do cabeçalho — soft card em vez de corte reto.
 const HEADER_RADIUS = 20;
-// Largura da coluna do perfil (foto + nome); o espaçador do lado oposto usa a mesma.
-const PROFILE_COLUMN_WIDTH = 64;
+// Largura da coluna do perfil (foto + nome). É larga pra o nome caber inteiro:
+// o botão ocupa mais espaço à esquerda, e o espaçador do outro lado encolhe
+// pra os seletores de mês/ano manterem a mesma folga de antes.
+const PROFILE_COLUMN_WIDTH = 96;
+const SPACER_WIDTH = 32;
 
 const selectorButtonStyle = {
   backgroundColor: colors.surfaceAlt,
@@ -81,9 +84,7 @@ export function UserProfileHeader({
       ]}
     >
       <View style={[styles.header, { paddingHorizontal: 16 }]}>
-        {/* Espaçador do mesmo tamanho do bloco do perfil, pra manter os
-            seletores de mês/ano centralizados de verdade. */}
-        <View style={{ width: PROFILE_COLUMN_WIDTH }} />
+        <View style={{ width: SPACER_WIDTH }} />
 
         <View style={{ flexDirection: "row", gap: 8, flexShrink: 1 }}>
           <TouchableOpacity

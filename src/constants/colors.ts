@@ -30,6 +30,7 @@ export const colors = {
   categoryPurple: "#8B5CF6",
   categoryPink: "#EC4899",
   categoryIndigo: "#6366F1",
+  categoryCyan: "#06B6D4",
   categoryNeutral: "#A8A29E",
 
   shadow: "#000000",

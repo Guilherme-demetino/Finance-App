@@ -22,6 +22,7 @@ import {
   createRemainingInstallments,
 } from "../database/transactions";
 import { getUser, updateUserAvatar } from "../database/users";
+import { markReleaseNotesSeen } from "../hooks/useReleaseNotes";
 import { styles as indexStyles } from "../styles/indexStyles";
 import type { DebtDraft, InstallmentDraft, RecurringDraft } from "../types";
 import { formatCurrency, formatCurrencyInput } from "../utils/currency";
@@ -257,6 +258,8 @@ export default function OnboardingScreen() {
         });
       }
 
+      // Instalação nova não precisa ver o que mudou em atualizações anteriores.
+      await markReleaseNotesSeen().catch(() => {});
       goToDashboard();
     } catch (error) {
       console.log("Erro ao salvar o pré-cadastro:", error);

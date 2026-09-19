@@ -8,6 +8,7 @@ import { CustomAlert } from "../../components/CustomAlert";
 import { DebtModal } from "../../components/DebtModal";
 import { MonthModal, YearModal } from "../../components/FilterModals";
 import { LandscapePanoramaModal } from "../../components/LandscapePanoramaModal";
+import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 import { SavingsDepositModal } from "../../components/SavingsDepositModal";
 import { SavingsGoalModal } from "../../components/SavingsGoalModal";
 import {
@@ -23,6 +24,7 @@ import {
   useDashboardContext,
   YEARS_LIST,
 } from "../../context/DashboardContext";
+import { useReleaseNotes } from "../../hooks/useReleaseNotes";
 import { styles } from "../../styles/dashboardStyles";
 import { formatCurrencyInput } from "../../utils/currency";
 import { describeImportPlan } from "../../utils/importSummary";
@@ -104,6 +106,7 @@ function DashboardChrome() {
     alertMessage,
     setAlertVisible,
   } = useDashboardContext();
+  const { releases, dismiss: dismissReleaseNotes } = useReleaseNotes();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -353,6 +356,8 @@ function DashboardChrome() {
           </Text>
         </View>
       )}
+
+      <ReleaseNotesModal releases={releases} onClose={dismissReleaseNotes} />
 
       <ConfirmModal
         visible={isWipeConfirmOpen}
