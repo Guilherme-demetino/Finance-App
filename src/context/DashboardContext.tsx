@@ -39,7 +39,8 @@ import {
   buildTransactionsCsv,
   buildTransactionsHtmlReport,
 } from "../utils/export";
-import { planCsvImport, type CsvImportPlan } from "../utils/importCsv";
+import type { CsvImportPlan } from "../utils/importCsv";
+import { planImportFromBytes } from "../utils/statementImport";
 import { clearPin } from "../utils/security";
 
 export const YEARS_LIST = ["2024", "2025", "2026", "2027", "2028"];
@@ -147,7 +148,8 @@ interface DashboardContextValue {
 
   pendingImport: CsvImportPlan | null;
   setPendingImport: (plan: CsvImportPlan | null) => void;
-  handleImportCSV: () => Promise<void>;
+  handleImportFile: () => Promise<void>;
+  isReadingImport: boolean;
   confirmImport: () => Promise<void>;
 
   alertVisible: boolean;
@@ -197,6 +199,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [pendingImport, setPendingImport] = useState<CsvImportPlan | null>(
     null,
   );
+  const [isReadingImport, setIsReadingImport] = useState(false);
 
   const [isLandscapePanoramaOpen, setIsLandscapePanoramaOpen] = useState(false);
 
@@ -640,15 +643,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const handleImportCSV = async () => {
+  const handleImportFile = async () => {
     setIsMenuOpen(false);
     try {
       const picked = await File.pickFileAsync({ mimeTypes: "*/*" });
       if (picked.canceled) return;
 
-      const csvText = await picked.result.text();
+      setIsReadingImport(true);
+      const bytes = new Uint8Array(await picked.result.arrayBuffer());
       const existing = await getAllTransactions();
-      const result = planCsvImport(csvText, existing);
+      const result = await planImportFromBytes(bytes, existing);
 
       if (!result.ok) {
         showAlert("Arquivo inválido", result.error);
@@ -660,7 +664,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         showAlert(
           "Nada para importar",
           plan.totalRows === 0
-            ? "O arquivo não tem nenhuma transação."
+            ? plan.ignoredTransfers
+              ? "O arquivo só tem movimentações de caixinha/investimento, que não são importadas."
+              : "O arquivo não tem nenhuma transação."
             : `Todas as transações válidas do arquivo já estão no app${plan.invalid > 0 ? ` (${plan.invalid} linhas inválidas foram ignoradas)` : ""}.`,
         );
         return;
@@ -668,8 +674,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
       setPendingImport(plan);
     } catch (error) {
-      console.log("Erro ao ler o backup:", error);
+      console.log("Erro ao ler o arquivo de importação:", error);
       showAlert("Erro", "Não foi possível ler o arquivo selecionado.");
+    } finally {
+      setIsReadingImport(false);
     }
   };
 
@@ -855,7 +863,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
     pendingImport,
     setPendingImport,
-    handleImportCSV,
+    handleImportFile,
+    isReadingImport,
     confirmImport,
 
     alertVisible,

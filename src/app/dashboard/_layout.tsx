@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { TouchableOpacity } from "react-native";
+import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ConfirmModal } from "../../components/ConfirmModal";
@@ -25,6 +25,7 @@ import {
 } from "../../context/DashboardContext";
 import { styles } from "../../styles/dashboardStyles";
 import { formatCurrencyInput } from "../../utils/currency";
+import { describeImportPlan } from "../../utils/importSummary";
 import { MONTH_NAMES } from "../../utils/dates";
 
 function DashboardChrome() {
@@ -70,7 +71,8 @@ function DashboardChrome() {
     setDepositGoal,
     handleAddSavingsGoal,
     handleChangeSavings,
-    handleImportCSV,
+    handleImportFile,
+    isReadingImport,
     handleDeleteCategory,
     pendingImport,
     setPendingImport,
@@ -301,7 +303,7 @@ function DashboardChrome() {
         onOpenEditName={() => setIsEditingName(true)}
         onExportPDF={handleExportPDF}
         onExportCSV={handleExportCSV}
-        onImportCSV={handleImportCSV}
+        onImportFile={handleImportFile}
         onChangePIN={handleChangePIN}
         onWipeData={handleWipeData}
       />
@@ -323,16 +325,34 @@ function DashboardChrome() {
 
       <ConfirmModal
         visible={pendingImport !== null}
-        title="Importar backup"
-        message={
-          pendingImport
-            ? `Vamos importar ${pendingImport.toImport.length} ${pendingImport.toImport.length === 1 ? "transação nova" : "transações novas"}${pendingImport.duplicates > 0 ? `, ignorando ${pendingImport.duplicates} que já existem` : ""}${pendingImport.invalid > 0 ? ` e ${pendingImport.invalid} linhas inválidas` : ""}. Deseja continuar?`
-            : ""
-        }
+        title="Importar transações"
+        message={pendingImport ? describeImportPlan(pendingImport) : ""}
         confirmLabel="Importar"
         onCancel={() => setPendingImport(null)}
         onConfirm={confirmImport}
       />
+
+      {isReadingImport && (
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            elevation: 1000,
+          }}
+        >
+          <ActivityIndicator size="large" color={colors.textPrimary} />
+          <Text style={{ color: colors.textPrimary, marginTop: 12, fontSize: 14 }}>
+            Lendo o arquivo...
+          </Text>
+        </View>
+      )}
 
       <ConfirmModal
         visible={isWipeConfirmOpen}

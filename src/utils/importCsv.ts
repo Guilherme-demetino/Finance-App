@@ -1,6 +1,6 @@
 import type { TransactionRow, TransactionType } from "../types";
 
-interface ImportedTransaction {
+export interface ImportedTransaction {
   amount: number;
   date: string; // DD/MM/AAAA
   description: string;
@@ -9,6 +9,8 @@ interface ImportedTransaction {
 }
 
 export interface CsvImportPlan {
+  /** De onde veio o arquivo: backup do próprio app, CSV de banco ou extrato em PDF. */
+  source?: "backup" | "csv" | "pdf";
   /** Transações novas, prontas pra serem gravadas. */
   toImport: ImportedTransaction[];
   /** Linhas de dados lidas do arquivo (sem o cabeçalho). */
@@ -17,14 +19,16 @@ export interface CsvImportPlan {
   duplicates: number;
   /** Linhas ignoradas por data, tipo ou valor inválidos. */
   invalid: number;
+  /** Movimentações entre a conta e caixinhas/investimentos, que não viram receita nem despesa. */
+  ignoredTransfers?: number;
 }
 
-type CsvImportResult =
+export type CsvImportResult =
   | { ok: true; plan: CsvImportPlan }
   | { ok: false; error: string };
 
-/** Lê um CSV separado por `;`, com suporte a campos entre aspas (com `;`, aspas duplas e quebras de linha). */
-export function parseCsv(text: string): string[][] {
+/** Lê um CSV (separado por `;` por padrão), com suporte a campos entre aspas (com o separador, aspas duplas e quebras de linha). */
+export function parseCsv(text: string, delimiter = ";"): string[][] {
   const source = text.replace(/^﻿/, "");
   const rows: string[][] = [];
   let row: string[] = [];
@@ -47,7 +51,7 @@ export function parseCsv(text: string): string[][] {
       }
     } else if (char === '"') {
       inQuotes = true;
-    } else if (char === ";") {
+    } else if (char === delimiter) {
       row.push(field);
       field = "";
     } else if (char === "\n" || char === "\r") {
@@ -123,9 +127,60 @@ function duplicateKey(
 }
 
 /**
+ * Separa o que é novo do que já existe no app. Linhas repetidas no arquivo
+ * contam uma a uma: se o app já tem 1 de 2 iguais, só a outra é importada.
+ */
+export function buildImportPlan(
+  candidates: ImportedTransaction[],
+  existing: TransactionRow[],
+  counts: { totalRows: number; invalid: number; ignoredTransfers?: number },
+  source: CsvImportPlan["source"],
+): CsvImportPlan {
+  const remainingExisting = new Map<string, number>();
+  existing.forEach((t) => {
+    const key = duplicateKey(
+      t.date,
+      t.description || "",
+      t.category_id || "",
+      t.type,
+      Number(t.amount),
+    );
+    remainingExisting.set(key, (remainingExisting.get(key) ?? 0) + 1);
+  });
+
+  const toImport: ImportedTransaction[] = [];
+  let duplicates = 0;
+
+  candidates.forEach((candidate) => {
+    const key = duplicateKey(
+      candidate.date,
+      candidate.description,
+      candidate.category,
+      candidate.type,
+      candidate.amount,
+    );
+    const available = remainingExisting.get(key) ?? 0;
+    if (available > 0) {
+      remainingExisting.set(key, available - 1);
+      duplicates++;
+      return;
+    }
+    toImport.push(candidate);
+  });
+
+  return {
+    source,
+    toImport,
+    totalRows: counts.totalRows,
+    duplicates,
+    invalid: counts.invalid,
+    ignoredTransfers: counts.ignoredTransfers,
+  };
+}
+
+/**
  * Lê um CSV de backup (o mesmo formato gerado pela exportação) e separa o
- * que é novo do que já existe no app. Linhas repetidas no arquivo contam
- * uma a uma: se o app já tem 1 de 2 iguais, só a outra é importada.
+ * que é novo do que já existe no app.
  */
 export function planCsvImport(
   csvText: string,
@@ -147,20 +202,7 @@ export function planCsvImport(
     };
   }
 
-  const remainingExisting = new Map<string, number>();
-  existing.forEach((t) => {
-    const key = duplicateKey(
-      t.date,
-      t.description || "",
-      t.category_id || "",
-      t.type,
-      Number(t.amount),
-    );
-    remainingExisting.set(key, (remainingExisting.get(key) ?? 0) + 1);
-  });
-
-  const toImport: ImportedTransaction[] = [];
-  let duplicates = 0;
+  const candidates: ImportedTransaction[] = [];
   let invalid = 0;
   const dataRows = rows.slice(1);
 
@@ -175,20 +217,16 @@ export function planCsvImport(
 
     const description = (cols[1] ?? "").trim() || "Sem título";
     const category = (cols[2] ?? "").trim() || "Geral";
-
-    const key = duplicateKey(date, description, category, type, amount);
-    const available = remainingExisting.get(key) ?? 0;
-    if (available > 0) {
-      remainingExisting.set(key, available - 1);
-      duplicates++;
-      return;
-    }
-
-    toImport.push({ amount, date, description, type, category });
+    candidates.push({ amount, date, description, type, category });
   });
 
   return {
     ok: true,
-    plan: { toImport, totalRows: dataRows.length, duplicates, invalid },
+    plan: buildImportPlan(
+      candidates,
+      existing,
+      { totalRows: dataRows.length, invalid },
+      "backup",
+    ),
   };
 }
