@@ -192,7 +192,15 @@ export function planBankCsvImport(
   csvText: string,
   existing: TransactionRow[],
 ): CsvImportResult {
-  const rows = parseCsv(csvText, detectDelimiter(csvText));
+  return planBankRowsImport(parseCsv(csvText, detectDelimiter(csvText)), existing);
+}
+
+/** Mesma leitura do CSV de banco, a partir de linhas já separadas em colunas (ex: planilha do Excel). */
+export function planBankRowsImport(
+  rows: string[][],
+  existing: TransactionRow[],
+  source: "csv" | "xlsx" = "csv",
+): CsvImportResult {
 
   const found = findColumnMap(rows);
   const map = found?.map ?? guessColumnMap(rows);
@@ -276,7 +284,7 @@ export function planBankCsvImport(
       candidates,
       existing,
       { totalRows, invalid, ignoredTransfers },
-      "csv",
+      source,
     ),
   };
 }

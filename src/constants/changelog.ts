@@ -35,4 +35,13 @@ export const CHANGELOG: Release[] = [
       "Guardar e resgatar da poupança não entram como receita ou despesa.",
     ],
   },
+  {
+    id: 3,
+    date: "19/09/2026",
+    title: "Importar planilhas do Excel",
+    items: [
+      "Agora dá para importar extratos em planilha do Excel (.xlsx e .xls), pelo mesmo botão de importar.",
+      "Também funciona com o backup do app salvo como Excel.",
+    ],
+  },
 ];

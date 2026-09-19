@@ -9,8 +9,8 @@ export interface ImportedTransaction {
 }
 
 export interface CsvImportPlan {
-  /** De onde veio o arquivo: backup do próprio app, CSV de banco ou extrato em PDF. */
-  source?: "backup" | "csv" | "pdf";
+  /** De onde veio o arquivo: backup do próprio app, CSV de banco, extrato em PDF ou planilha do Excel. */
+  source?: "backup" | "csv" | "pdf" | "xlsx";
   /** Transações novas, prontas pra serem gravadas. */
   toImport: ImportedTransaction[];
   /** Linhas de dados lidas do arquivo (sem o cabeçalho). */
@@ -186,7 +186,15 @@ export function planCsvImport(
   csvText: string,
   existing: TransactionRow[],
 ): CsvImportResult {
-  const rows = parseCsv(csvText);
+  return planBackupRowsImport(parseCsv(csvText), existing);
+}
+
+/** Mesma leitura do backup, a partir de linhas já separadas em colunas (ex: planilha do Excel). */
+export function planBackupRowsImport(
+  rows: string[][],
+  existing: TransactionRow[],
+  source: CsvImportPlan["source"] = "backup",
+): CsvImportResult {
   const header = rows[0];
 
   if (
@@ -226,7 +234,7 @@ export function planCsvImport(
       candidates,
       existing,
       { totalRows: dataRows.length, invalid },
-      "backup",
+      source,
     ),
   };
 }

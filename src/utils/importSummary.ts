@@ -5,6 +5,7 @@ const SOURCE_LABEL: Record<NonNullable<CsvImportPlan["source"]>, string> = {
   backup: "Backup do app",
   csv: "Extrato em CSV",
   pdf: "Extrato em PDF",
+  xlsx: "Planilha do Excel",
 };
 
 const PREVIEW_LIMIT = 5;
