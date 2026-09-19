@@ -17,7 +17,20 @@ export function useUserProfile() {
   };
 
   useEffect(() => {
-    refresh();
+    let cancelled = false;
+    getUser()
+      .then((user) => {
+        if (cancelled) return;
+        setUserName(user?.name || "Meu Finanças");
+        if (user?.avatar) setUserImage(user.avatar);
+      })
+      .catch((error) => {
+        console.log("Erro ao buscar usuário:", error);
+        if (!cancelled) setUserName("Meu Finanças");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const updateName = async (newName: string) => {

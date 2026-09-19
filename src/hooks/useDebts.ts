@@ -31,7 +31,19 @@ export function useDebts() {
   };
 
   useEffect(() => {
-    refreshDebts();
+    // isLoadingDebts já começa true, então aqui só busca (sem setState síncrono).
+    let cancelled = false;
+    getAllDebts()
+      .then((rows) => {
+        if (!cancelled) setDebts(rows);
+      })
+      .catch((error) => console.log("Erro ao buscar dívidas:", error))
+      .finally(() => {
+        if (!cancelled) setIsLoadingDebts(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const addDebt = async (data: DebtInput) => {

@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Modal,
   ScrollView,
@@ -46,13 +46,18 @@ export function CategoryModal({
     transactionType,
   );
 
-  useEffect(() => {
-    if (visible) {
-      setSelectedType(transactionType);
+  // Reseta o formulário quando o modal abre (durante a renderização, sem setState no effect).
+  const openKey = visible ? transactionType : null;
+  const [prevOpenKey, setPrevOpenKey] = useState<typeof openKey>(null);
+  if (openKey !== prevOpenKey) {
+    setPrevOpenKey(openKey);
+    if (openKey) {
+      setSelectedType(openKey);
       setCategoryName("");
       setSelectedColor(COLORS[0]);
     }
-  }, [visible, transactionType]);
+  }
+
   const handleSave = async () => {
     const safeName = String(categoryName || "").trim();
     if (!safeName) return;

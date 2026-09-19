@@ -39,11 +39,18 @@ export function SeriesManagerModal({
 
   const groupId = transaction?.recurrenceGroupId;
 
+  // Ao abrir uma série, marca "carregando" já na renderização (sem setState síncrono no effect).
+  const loadKey = visible && groupId ? groupId : null;
+  const [prevLoadKey, setPrevLoadKey] = useState<typeof loadKey>(null);
+  if (loadKey !== prevLoadKey) {
+    setPrevLoadKey(loadKey);
+    if (loadKey) setIsLoading(true);
+  }
+
   useEffect(() => {
     if (!visible || !groupId) return;
     let cancelled = false;
 
-    setIsLoading(true);
     getTransactionsByGroupId(groupId)
       .then((rows) => {
         if (!cancelled) setOccurrences(rows);

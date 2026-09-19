@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { colors } from "../constants/colors";
 import { formatDateToString, parseDateString } from "../utils/dates";
@@ -43,7 +43,10 @@ export function SavingsGoalModal({
   const [showPicker, setShowPicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Reseta o formulário quando o modal abre (durante a renderização, sem setState no effect).
+  const [wasVisible, setWasVisible] = useState(false);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
     if (visible) {
       setName("");
       setTarget("");
@@ -51,7 +54,7 @@ export function SavingsGoalModal({
       setDeadline("");
       setError(null);
     }
-  }, [visible]);
+  }
 
   const handleSave = () => {
     const targetAmount = toNumber(target);

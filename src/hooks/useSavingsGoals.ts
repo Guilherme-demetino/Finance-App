@@ -28,7 +28,19 @@ export function useSavingsGoals() {
   };
 
   useEffect(() => {
-    refreshSavings();
+    // isLoadingSavings já começa true, então aqui só busca (sem setState síncrono).
+    let cancelled = false;
+    getAllSavingsGoals()
+      .then((rows) => {
+        if (!cancelled) setSavingsGoals(rows);
+      })
+      .catch((error) => console.log("Erro ao buscar metas de economia:", error))
+      .finally(() => {
+        if (!cancelled) setIsLoadingSavings(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const addSavingsGoal = async (data: SavingsGoalInput) => {

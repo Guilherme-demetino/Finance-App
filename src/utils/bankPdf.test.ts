@@ -359,6 +359,79 @@ describe("extrato consolidado do Santander", () => {
   });
 });
 
+describe("extrato de conta do Mercado Pago", () => {
+  const lines = [
+    "EXTRATO DE TESTE (dados ficticios)",
+    "Periodo: 01/09/2026 a 19/09/2026",
+    "Saldo inicial: R$ 1.500,00",
+    "Data Descricao ID da operacao Valor Saldo",
+    "01/09/2026 Voce recebeu um Pix de Joao da Silva 88250398513 150,00 1.650,00",
+    "03/09/2026 Transferencia enviada via Pix 88250399012 -230,00 1.465,90",
+    "04/09/2026 Pagamento de conta - Energia Eletrica 88250399555 -180,45 1.285,45",
+    "05/09/2026 Recebimento de venda - Mercado Livre 88250399888 320,00 1.605,45",
+    "10/09/2026 Transferencia enviada via Pix 88250400555 -1.200,00 910,65",
+    "Saldo final: R$ 910,65",
+  ];
+
+  it("lê entradas sem sinal e saídas com '-'", () => {
+    const { transactions, invalid, totalRows } = parseStatementLines(lines, TODAY);
+    expect(invalid).toBe(0);
+    expect(totalRows).toBe(5);
+    expect(transactions).toEqual([
+      {
+        amount: 150,
+        date: "01/09/2026",
+        description: "Voce recebeu um Pix de Joao da Silva",
+        type: "income",
+        category: "Pix",
+      },
+      {
+        amount: 230,
+        date: "03/09/2026",
+        description: "Transferencia enviada via Pix",
+        type: "expense",
+        category: "Pix",
+      },
+      {
+        amount: 180.45,
+        date: "04/09/2026",
+        description: "Pagamento de conta - Energia Eletrica",
+        type: "expense",
+        category: "Moradia",
+      },
+      {
+        amount: 320,
+        date: "05/09/2026",
+        description: "Recebimento de venda - Mercado Livre",
+        type: "income",
+        category: "Salário",
+      },
+      {
+        amount: 1200,
+        date: "10/09/2026",
+        description: "Transferencia enviada via Pix",
+        type: "expense",
+        category: "Pix",
+      },
+    ]);
+  });
+
+  it("aceita R$ e data com hífen, como no PDF real", () => {
+    const result = parseStatementLines(
+      [
+        "Data Descrição ID da operação Valor Saldo",
+        "02-09-2026 Pix enviado Maria 12345678901 R$ -50,00 R$ 950,00",
+        "03-09-2026 Pix recebido Ana 12345678902 R$ 20,00 R$ 970,00",
+      ],
+      TODAY,
+    );
+    expect(result.transactions.map((t) => [t.date, t.amount, t.type])).toEqual([
+      ["02/09/2026", 50, "expense"],
+      ["03/09/2026", 20, "income"],
+    ]);
+  });
+});
+
 describe("planPdfImport", () => {
   it("avisa quando não encontra nenhuma transação", () => {
     const result = planPdfImport(["texto qualquer"], []);

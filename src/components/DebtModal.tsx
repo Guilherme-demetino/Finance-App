@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { colors } from "../constants/colors";
 import type { DebtType } from "../types";
@@ -33,7 +33,10 @@ export function DebtModal({
   const [dueDate, setDueDate] = useState("");
   const [showDuePicker, setShowDuePicker] = useState(false);
 
-  useEffect(() => {
+  // Reseta o formulário quando o modal abre (durante a renderização, sem setState no effect).
+  const [wasVisible, setWasVisible] = useState(false);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
     if (visible) {
       setType("lent");
       setPerson("");
@@ -41,7 +44,7 @@ export function DebtModal({
       setDescription("");
       setDueDate("");
     }
-  }, [visible]);
+  }
 
   const handleSave = () => {
     const safePerson = person.trim();

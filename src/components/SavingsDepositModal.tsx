@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { colors } from "../constants/colors";
 import type { SavingsGoalRow } from "../types";
@@ -24,13 +24,16 @@ export function SavingsDepositModal({
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Reseta o formulário quando uma meta é selecionada (durante a renderização, sem setState no effect).
+  const [prevGoal, setPrevGoal] = useState<typeof goal | undefined>(undefined);
+  if (goal !== prevGoal) {
+    setPrevGoal(goal);
     if (goal) {
       setMode("deposit");
       setAmount("");
       setError(null);
     }
-  }, [goal]);
+  }
 
   const handleSave = () => {
     if (!goal) return;

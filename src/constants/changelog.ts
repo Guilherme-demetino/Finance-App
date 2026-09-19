@@ -44,4 +44,19 @@ export const CHANGELOG: Release[] = [
       "Também funciona com o backup do app salvo como Excel.",
     ],
   },
+  {
+    id: 4,
+    date: "19/09/2026",
+    title: "Extrato do Mercado Pago",
+    items: ["Agora dá para importar o extrato em PDF do Mercado Pago."],
+  },
+  {
+    id: 5,
+    date: "19/09/2026",
+    title: "Ajustes internos",
+    items: [
+      "Melhorias na forma como as telas carregam os dados, para evitar atualizações desnecessárias.",
+      "Ao abrir uma nova transação, os campos agora começam vazios, sem sobrar o texto de uma edição ou de um cadastro cancelado.",
+    ],
+  },
 ];

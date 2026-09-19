@@ -1,5 +1,6 @@
 import type { TransactionRow, TransactionType } from "../types";
 import { parseBancoDoBrasilLines } from "./bankPdfBancoDoBrasil";
+import { parseMercadoPagoLines } from "./bankPdfMercadoPago";
 import { parseSantanderLines } from "./bankPdfSantander";
 import {
   buildImportPlan,
@@ -161,6 +162,9 @@ export function parseStatementLines(
   totalRows: number;
   ignoredTransfers: number;
 } {
+  const mercadoPago = parseMercadoPagoLines(lines);
+  if (mercadoPago) return mercadoPago;
+
   const bancoDoBrasil = parseBancoDoBrasilLines(lines);
   if (bancoDoBrasil) return bancoDoBrasil;
 

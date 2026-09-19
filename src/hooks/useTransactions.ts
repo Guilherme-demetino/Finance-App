@@ -70,6 +70,78 @@ function emptyMonthsData(): MonthDatum[] {
   return MONTH_LABELS.map((label) => ({ label, income: 0, expense: 0 }));
 }
 
+interface PeriodData {
+  transactions: EnrichedTransaction[];
+  totalIncome: number;
+  totalExpense: number;
+  monthsData: MonthDatum[];
+}
+
+async function loadPeriodData(
+  selectedMonth: string,
+  selectedYear: string,
+): Promise<PeriodData> {
+  const [rawTransactions, rawCategories] = await Promise.all([
+    getAllTransactions(),
+    getAllCategories(),
+  ]);
+
+  const categoryColorMap: Record<string, string> = {
+    ...DEFAULT_CATEGORY_COLORS,
+  };
+  rawCategories.forEach((cat) => {
+    if (cat.name) {
+      categoryColorMap[cat.name.trim().toLowerCase()] = cat.color;
+    }
+  });
+
+  const enriched: EnrichedTransaction[] = rawTransactions.map((item) => {
+    const catKey = item.category_id
+      ? item.category_id.trim().toLowerCase()
+      : "";
+    return {
+      ...item,
+      category: item.category_id,
+      color: categoryColorMap[catKey] || colors.textSecondary,
+    };
+  });
+
+  const yearTransactions = enriched.filter(
+    (item) => item.date && item.date.endsWith(`/${selectedYear}`),
+  );
+
+  const monthNumber = getMonthNumber(selectedMonth);
+  const monthTransactions = yearTransactions.filter((item) =>
+    item.date.includes(`/${monthNumber}/${selectedYear}`),
+  );
+  let income = 0;
+  let expense = 0;
+  monthTransactions.forEach((item) => {
+    if (item.type === "income") income += item.amount;
+    else expense += item.amount;
+  });
+  const calculatedMonthsData = emptyMonthsData();
+  yearTransactions.forEach((item) => {
+    const parts = item.date.split("/");
+    if (parts.length === 3) {
+      const idx = MONTH_INDEX_BY_NUMBER[parts[1]];
+      if (idx !== undefined) {
+        if (item.type === "income") {
+          calculatedMonthsData[idx].income += item.amount;
+        } else {
+          calculatedMonthsData[idx].expense += item.amount;
+        }
+      }
+    }
+  });
+  return {
+    transactions: monthTransactions,
+    totalIncome: income,
+    totalExpense: expense,
+    monthsData: calculatedMonthsData,
+  };
+}
+
 /**
  * Busca, filtra por mês/ano e agrega as transações do app. Encapsula o
  * que antes vivia direto na tela do dashboard (fetch + soma + agrupamento
@@ -82,68 +154,17 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
   const [totalExpense, setTotalExpense] = useState(0);
   const [monthsData, setMonthsData] = useState<MonthDatum[]>(emptyMonthsData);
 
+  const applyPeriodData = (data: PeriodData) => {
+    setTransactions(data.transactions);
+    setTotalIncome(data.totalIncome);
+    setTotalExpense(data.totalExpense);
+    setMonthsData(data.monthsData);
+  };
+
   const refresh = async () => {
     setIsLoading(true);
     try {
-      const [rawTransactions, rawCategories] = await Promise.all([
-        getAllTransactions(),
-        getAllCategories(),
-      ]);
-
-      const categoryColorMap: Record<string, string> = {
-        ...DEFAULT_CATEGORY_COLORS,
-      };
-      rawCategories.forEach((cat) => {
-        if (cat.name) {
-          categoryColorMap[cat.name.trim().toLowerCase()] = cat.color;
-        }
-      });
-
-      const enriched: EnrichedTransaction[] = rawTransactions.map((item) => {
-        const catKey = item.category_id
-          ? item.category_id.trim().toLowerCase()
-          : "";
-        return {
-          ...item,
-          category: item.category_id,
-          color: categoryColorMap[catKey] || colors.textSecondary,
-        };
-      });
-
-      const yearTransactions = enriched.filter(
-        (item) => item.date && item.date.endsWith(`/${selectedYear}`),
-      );
-
-      const monthNumber = getMonthNumber(selectedMonth);
-      const monthTransactions = yearTransactions.filter((item) =>
-        item.date.includes(`/${monthNumber}/${selectedYear}`),
-      );
-      setTransactions(monthTransactions);
-
-      let income = 0;
-      let expense = 0;
-      monthTransactions.forEach((item) => {
-        if (item.type === "income") income += item.amount;
-        else expense += item.amount;
-      });
-      setTotalIncome(income);
-      setTotalExpense(expense);
-
-      const calculatedMonthsData = emptyMonthsData();
-      yearTransactions.forEach((item) => {
-        const parts = item.date.split("/");
-        if (parts.length === 3) {
-          const idx = MONTH_INDEX_BY_NUMBER[parts[1]];
-          if (idx !== undefined) {
-            if (item.type === "income") {
-              calculatedMonthsData[idx].income += item.amount;
-            } else {
-              calculatedMonthsData[idx].expense += item.amount;
-            }
-          }
-        }
-      });
-      setMonthsData(calculatedMonthsData);
+      applyPeriodData(await loadPeriodData(selectedMonth, selectedYear));
     } catch (error) {
       console.log("Erro ao buscar transações:", error);
     } finally {
@@ -151,9 +172,28 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
     }
   };
 
+  // Trocou o período: volta pra "carregando" já nesta renderização, sem
+  // setState dentro do effect.
+  const period = `${selectedMonth}/${selectedYear}`;
+  const [loadedPeriod, setLoadedPeriod] = useState(period);
+  if (loadedPeriod !== period) {
+    setLoadedPeriod(period);
+    setIsLoading(true);
+  }
+
   useEffect(() => {
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh não é memoizada, roda só quando o período muda
+    let cancelled = false;
+    loadPeriodData(selectedMonth, selectedYear)
+      .then((data) => {
+        if (!cancelled) applyPeriodData(data);
+      })
+      .catch((error) => console.log("Erro ao buscar transações:", error))
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedMonth, selectedYear]);
 
   const saveTransaction = async (

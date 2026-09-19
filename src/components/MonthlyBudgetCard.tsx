@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { colors } from "../constants/colors";
 import { styles } from "../styles/dashboardStyles";
@@ -24,13 +24,15 @@ export function MonthlyBudgetCard({
 }: MonthlyBudgetCardProps) {
   const [draftAmount, setDraftAmount] = useState("");
 
-  useEffect(() => {
+  // Ao entrar no modo de edição, o rascunho parte do orçamento atual (durante a renderização, sem setState no effect).
+  const [wasEditing, setWasEditing] = useState(false);
+  if (isEditingBudget !== wasEditing) {
+    setWasEditing(isEditingBudget);
     if (isEditingBudget) {
       const cents = budget ? Math.round(budget * 100).toString() : "";
       setDraftAmount(cents ? formatCurrency(cents) : "");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- só precisa rodar quando entra/sai do modo de edição
-  }, [isEditingBudget]);
+  }
 
   const handleSave = () => {
     const numericValue = Number(

@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { DEFAULT_EXPENSE_CATEGORIES } from "../constants/categories";
 import { colors } from "../constants/colors";
@@ -42,7 +42,10 @@ export function OnboardingInstallmentModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Reseta o formulário quando o modal abre (durante a renderização, sem setState no effect).
+  const [wasVisible, setWasVisible] = useState(false);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
     if (visible) {
       setTitle("");
       setAmount("");
@@ -52,7 +55,7 @@ export function OnboardingInstallmentModal({
       setCategory(DEFAULT_EXPENSE_CATEGORIES[0]);
       setError(null);
     }
-  }, [visible]);
+  }
 
   const numericCurrent = Number(current);
   const numericTotal = Number(total);

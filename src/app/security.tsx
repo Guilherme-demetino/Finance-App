@@ -8,6 +8,40 @@ import { colors } from "../constants/colors";
 import { clearLegacyPin, getLegacyPin } from "../database/security";
 import { getStoredPin, savePin } from "../utils/security";
 
+interface PinState {
+  isSettingUp: boolean;
+  storedPin?: string;
+  hadExistingPin?: boolean;
+}
+
+/** Decide se a tela cadastra um PIN novo ou pede o já existente (migrando o PIN legado, se houver). */
+async function resolvePinState(isChangeFlow: boolean): Promise<PinState> {
+  try {
+    const existingPin = await getStoredPin();
+
+    if (isChangeFlow) {
+      // Troca de PIN: o usuário já está autenticado, sempre pede um novo.
+      return { hadExistingPin: !!existingPin, isSettingUp: true };
+    }
+
+    if (existingPin) return { storedPin: existingPin, isSettingUp: false };
+
+    // Migração: PIN antigo pode existir em texto puro no SQLite
+    // (versão anterior, antes do expo-secure-store). Move para o
+    // SecureStore e limpa o registro legado.
+    const legacyPin = await getLegacyPin();
+    if (legacyPin) {
+      await savePin(legacyPin);
+      await clearLegacyPin();
+      return { storedPin: legacyPin, isSettingUp: false };
+    }
+    return { isSettingUp: true };
+  } catch (error) {
+    console.log("Erro ao verificar PIN:", error);
+    return { isSettingUp: true };
+  }
+}
+
 export default function SecurityScreen() {
   const router = useRouter();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
@@ -32,12 +66,6 @@ export default function SecurityScreen() {
     setAlertVisible(true);
   };
 
-  const checkBiometrics = async () => {
-    const compatible = await LocalAuthentication.hasHardwareAsync();
-    const enrolled = await LocalAuthentication.isEnrolledAsync();
-    setIsBiometricSupported(compatible && enrolled);
-  };
-
   const handleBiometricAuth = async () => {
     try {
       const result = await LocalAuthentication.authenticateAsync({
@@ -53,45 +81,28 @@ export default function SecurityScreen() {
     }
   };
 
-  const checkPin = async () => {
-    try {
-      const existingPin = await getStoredPin();
-
-      if (isChangeFlow) {
-        // Troca de PIN: o usuário já está autenticado, sempre pede um novo.
-        setHadExistingPin(!!existingPin);
-        setIsSettingUp(true);
-        return;
-      }
-
-      if (existingPin) {
-        setStoredPin(existingPin);
-        setIsSettingUp(false);
-        return;
-      }
-
-      // Migração: PIN antigo pode existir em texto puro no SQLite
-      // (versão anterior, antes do expo-secure-store). Move para o
-      // SecureStore e limpa o registro legado.
-      const legacyPin = await getLegacyPin();
-      if (legacyPin) {
-        await savePin(legacyPin);
-        await clearLegacyPin();
-        setStoredPin(legacyPin);
-        setIsSettingUp(false);
-      } else {
-        setIsSettingUp(true);
-      }
-    } catch (error) {
-      console.log("Erro ao verificar PIN:", error);
-      setIsSettingUp(true);
-    }
-  };
-
   useEffect(() => {
-    checkPin();
-    checkBiometrics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- roda só na montagem
+    let cancelled = false;
+
+    resolvePinState(isChangeFlow).then((state) => {
+      if (cancelled) return;
+      if (state.hadExistingPin !== undefined) setHadExistingPin(state.hadExistingPin);
+      if (state.storedPin !== undefined) setStoredPin(state.storedPin);
+      setIsSettingUp(state.isSettingUp);
+    });
+
+    Promise.all([
+      LocalAuthentication.hasHardwareAsync(),
+      LocalAuthentication.isEnrolledAsync(),
+    ]).then(([compatible, enrolled]) => {
+      if (!cancelled) setIsBiometricSupported(compatible && enrolled);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // isChangeFlow vem da rota e não muda durante a vida da tela: roda só na montagem.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handlePressNumber = (num: string) => {

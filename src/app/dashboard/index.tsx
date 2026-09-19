@@ -35,7 +35,7 @@ export default function DashboardHomeScreen() {
   } = useDashboardContext();
 
   const scrollHandler = useAnimatedScrollHandler((event) => {
-    scrollY.value = event.contentOffset.y;
+    scrollY.set(event.contentOffset.y);
   });
 
   // Previsão e avisos de gasto só fazem sentido no mês em curso.

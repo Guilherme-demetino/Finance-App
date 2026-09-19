@@ -726,6 +726,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const openNewTransactionModal = () => {
     setEditingTransactionId(null);
     setTransactionType("income");
+    setTransactionTitle("");
+    setTransactionAmount("");
     setTransactionCategory("Salário");
     setIsRecurring(false);
     setRecurringMonths(12);

@@ -97,10 +97,27 @@ export function TransactionModal({
     }
   };
 
+  // Ao abrir, marca "carregando" já na renderização (sem setState síncrono no effect).
+  const [wasVisible, setWasVisible] = useState(false);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    if (visible) setIsLoadingCategories(true);
+  }
+
   useEffect(() => {
-    if (visible) {
-      fetchCategories();
-    }
+    if (!visible) return;
+    let cancelled = false;
+    getAllCategories()
+      .then((result) => {
+        if (!cancelled) setDbCategories(result);
+      })
+      .catch((error) => console.log("Erro ao buscar categorias:", error))
+      .finally(() => {
+        if (!cancelled) setIsLoadingCategories(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [visible]);
 
   const customIncomeCategories = dbCategories

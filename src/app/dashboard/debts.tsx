@@ -24,7 +24,7 @@ export default function DashboardDebtsScreen() {
   } = useDashboardContext();
 
   const scrollHandler = useAnimatedScrollHandler((event) => {
-    scrollY.value = event.contentOffset.y;
+    scrollY.set(event.contentOffset.y);
   });
 
   return (

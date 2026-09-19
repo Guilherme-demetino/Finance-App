@@ -11,24 +11,27 @@ export function useBudget(selectedMonth: string, selectedYear: string) {
   const [budget, setBudgetState] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refresh = async () => {
+  // Trocou o período: volta pra "carregando" já nesta renderização (sem setState no effect).
+  const period = `${selectedMonth}/${selectedYear}`;
+  const [loadedPeriod, setLoadedPeriod] = useState(period);
+  if (loadedPeriod !== period) {
+    setLoadedPeriod(period);
     setIsLoading(true);
-    try {
-      const amount = await getBudget(
-        getMonthNumber(selectedMonth),
-        selectedYear,
-      );
-      setBudgetState(amount);
-    } catch (error) {
-      console.log("Erro ao buscar orçamento:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }
 
   useEffect(() => {
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh não é memoizada, roda só quando o período muda
+    let cancelled = false;
+    getBudget(getMonthNumber(selectedMonth), selectedYear)
+      .then((amount) => {
+        if (!cancelled) setBudgetState(amount);
+      })
+      .catch((error) => console.log("Erro ao buscar orçamento:", error))
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedMonth, selectedYear]);
 
   const updateBudget = async (amount: number) => {
