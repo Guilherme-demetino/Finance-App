@@ -4,7 +4,7 @@ import { act, create } from "react-test-renderer";
 import { useAlert, useAlertState } from "./AlertContext";
 import { useBudgetActions, useBudgetData } from "./BudgetContext";
 import { usePanorama, useScrollY } from "./DashboardUiContext";
-import { DashboardProviders } from "./DashboardProviders";
+import { DashboardProviders, useReloadDashboard } from "./DashboardProviders";
 import { useDebtsContext } from "./DebtsContext";
 import { usePeriod, useToday } from "./PeriodContext";
 import { useProfile } from "./ProfileContext";
@@ -328,5 +328,45 @@ describe("DashboardProviders: handlers movidos", () => {
     expect(seen.alertState.alertMessage).toBe(
       "Não foi possível atualizar o nome.",
     );
+  });
+});
+
+describe("DashboardProviders: recarregar depois de restaurar um backup", () => {
+  it("remonta o painel para ler tudo de novo, mas o aviso em tela continua", () => {
+    let mounts = 0;
+    const seen = {} as {
+      reload: () => void;
+      alert: ReturnType<typeof useAlert>;
+      state: ReturnType<typeof useAlertState>;
+    };
+
+    const Mount = () => {
+      React.useEffect(() => {
+        mounts++;
+      }, []);
+      return null;
+    };
+    const Reader = () => {
+      seen.reload = useReloadDashboard();
+      seen.alert = useAlert();
+      seen.state = useAlertState();
+      return <Mount />;
+    };
+
+    act(() => {
+      create(
+        <DashboardProviders>
+          <Reader />
+        </DashboardProviders>,
+      );
+    });
+    expect(mounts).toBe(1);
+
+    act(() => seen.alert.showAlert("Sucesso", "Backup restaurado."));
+    act(() => seen.reload());
+
+    expect(mounts).toBe(2);
+    expect(seen.state.alertVisible).toBe(true);
+    expect(seen.state.alertMessage).toBe("Backup restaurado.");
   });
 });

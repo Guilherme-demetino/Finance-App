@@ -111,4 +111,15 @@ export const CHANGELOG: Release[] = [
       "O desbloqueio por digital continua funcionando durante o bloqueio do PIN.",
     ],
   },
+  {
+    id: 12,
+    date: "19/09/2026",
+    title: "Backup completo e restauração",
+    items: [
+      "Novo “Backup Completo (arquivo)” no menu do perfil: salva transações, categorias, orçamentos, metas por categoria, dívidas, metas de economia e o nome num único arquivo, que você pode guardar no Drive ou enviar para si mesmo.",
+      "Novo “Restaurar Backup”: lê o arquivo, mostra o que há nele e o que há no app agora e, só se você confirmar, substitui tudo. Se algo falhar no meio, nada é alterado.",
+      "O PIN e a foto do perfil não entram no backup.",
+      "O item “Exportar Backup (CSV)” agora se chama “Exportar Transações (CSV)”, porque leva só as transações.",
+    ],
+  },
 ];

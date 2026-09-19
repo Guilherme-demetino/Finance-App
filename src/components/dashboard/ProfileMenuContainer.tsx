@@ -4,6 +4,7 @@ import { ActivityIndicator, Text, View } from "react-native";
 import { colors } from "../../constants/colors";
 import { useProfile } from "../../context/ProfileContext";
 import { useDataTransfer } from "../../hooks/useDataTransfer";
+import { describeRestore } from "../../utils/backup";
 import { describeImportPlan } from "../../utils/importSummary";
 import { ConfirmModal } from "../ConfirmModal";
 import { EditNameModal, ProfileMenuModal } from "../ProfileMenuModals";
@@ -27,6 +28,11 @@ export function ProfileMenuContainer({
     handleExportPDF,
     handleExportCSV,
     handleImportFile,
+    handleExportBackup,
+    handleRestoreBackup,
+    pendingRestore,
+    setPendingRestore,
+    confirmRestore,
     pendingImport,
     setPendingImport,
     isReadingImport,
@@ -53,6 +59,14 @@ export function ProfileMenuContainer({
         onImportFile={() => {
           onCloseMenu();
           handleImportFile();
+        }}
+        onExportBackup={() => {
+          onCloseMenu();
+          handleExportBackup();
+        }}
+        onRestoreBackup={() => {
+          onCloseMenu();
+          handleRestoreBackup();
         }}
         onChangePIN={() => {
           onCloseMenu();
@@ -85,6 +99,20 @@ export function ProfileMenuContainer({
         confirmLabel="Importar"
         onCancel={() => setPendingImport(null)}
         onConfirm={confirmImport}
+      />
+
+      <ConfirmModal
+        visible={pendingRestore !== null}
+        title="Restaurar backup"
+        message={
+          pendingRestore
+            ? describeRestore(pendingRestore.current, pendingRestore.backup)
+            : ""
+        }
+        confirmLabel="Substituir tudo"
+        destructive
+        onCancel={() => setPendingRestore(null)}
+        onConfirm={confirmRestore}
       />
 
       {isReadingImport && (
