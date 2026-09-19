@@ -165,7 +165,13 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   return dbInstance as SQLite.SQLiteDatabase;
 }
 
-/** Apaga todos os dados do app (transações, categorias, orçamentos, usuário e PIN legado). */
+/**
+ * Apaga todos os dados do app (transações, categorias, orçamentos, usuário e
+ * PIN legado) e recria as tabelas vazias. A conexão continua aberta e o
+ * initDatabase não roda de novo, então sem recriar aqui qualquer gravação
+ * seguinte (ex: cadastrar o nome de novo) falharia com "no such table" até o
+ * app ser reiniciado.
+ */
 export async function resetDatabase(): Promise<void> {
   const db = await getDatabase();
   db.withTransactionSync(() => {
@@ -178,4 +184,5 @@ export async function resetDatabase(): Promise<void> {
     db.runSync("DROP TABLE IF EXISTS users");
     db.runSync("DROP TABLE IF EXISTS security");
   });
+  createTables(db);
 }

@@ -93,4 +93,12 @@ export const CHANGELOG: Release[] = [
       "O painel foi reorganizado por áreas (transações, orçamento, dívidas, metas e perfil): abrir menus, avisos e modais agora redesenha bem menos partes da tela.",
     ],
   },
+  {
+    id: 10,
+    date: "19/09/2026",
+    title: "Correção ao zerar o app",
+    items: [
+      "Depois de zerar o app, cadastrar o nome de novo dava erro e só funcionava depois de fechar e abrir o app. Agora funciona direto.",
+    ],
+  },
 ];
