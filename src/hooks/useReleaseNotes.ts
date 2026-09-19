@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CHANGELOG, type Release } from "../constants/changelog";
 import { getMeta, setMeta } from "../database/appMeta";
 import { getUnseenReleases, parseLastSeenId } from "../utils/releaseNotes";
+import { logError } from "../utils/logger";
 
 const LAST_SEEN_KEY = "last_seen_release";
 
@@ -29,7 +30,7 @@ export function useReleaseNotes() {
         setReleases(getUnseenReleases(CHANGELOG, parseLastSeenId(raw)));
       })
       .catch((error) => {
-        console.log("Erro ao ler novidades da atualização:", error);
+        logError("Erro ao ler novidades da atualização:", error);
       });
 
     return () => {
@@ -40,7 +41,7 @@ export function useReleaseNotes() {
   const dismiss = useCallback(() => {
     setReleases([]);
     markReleaseNotesSeen().catch((error) => {
-      console.log("Erro ao salvar novidades vistas:", error);
+      logError("Erro ao salvar novidades vistas:", error);
     });
   }, []);
 

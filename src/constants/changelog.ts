@@ -77,4 +77,12 @@ export const CHANGELOG: Release[] = [
       "Séries recorrentes e parceladas passam a ser localizadas por um índice no banco, para continuarem rápidas quando o histórico crescer.",
     ],
   },
+  {
+    id: 8,
+    date: "19/09/2026",
+    title: "Ajustes internos",
+    items: [
+      "Os erros tratados pelo app passam a ser registrados num único lugar, o que facilita diagnosticar problemas.",
+    ],
+  },
 ];

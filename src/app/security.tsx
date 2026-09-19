@@ -7,6 +7,7 @@ import { CustomAlert } from "../components/CustomAlert";
 import { colors } from "../constants/colors";
 import { clearLegacyPin, getLegacyPin } from "../database/security";
 import { getStoredPin, savePin } from "../utils/security";
+import { logError } from "../utils/logger";
 
 interface PinState {
   isSettingUp: boolean;
@@ -37,7 +38,7 @@ async function resolvePinState(isChangeFlow: boolean): Promise<PinState> {
     }
     return { isSettingUp: true };
   } catch (error) {
-    console.log("Erro ao verificar PIN:", error);
+    logError("Erro ao verificar PIN:", error);
     return { isSettingUp: true };
   }
 }
@@ -74,10 +75,10 @@ export default function SecurityScreen() {
       });
 
       if (result.success) {
-        router.replace("/dashboard" as any);
+        router.replace("/dashboard");
       }
     } catch (error) {
-      console.log("Erro na biometria:", error);
+      logError("Erro na biometria:", error);
     }
   };
 
@@ -130,20 +131,18 @@ export default function SecurityScreen() {
         // pelo pré-cadastro antes de cair no dashboard.
         const isFirstTimeSetup = !isChangeFlow && !hadExistingPin;
         setTimeout(() => {
-          router.replace(
-            (isFirstTimeSetup ? "/onboarding" : "/dashboard") as any,
-          );
+          router.replace(isFirstTimeSetup ? "/onboarding" : "/dashboard");
         }, 1000);
       } else {
         if (enteredPin === storedPin) {
-          router.replace("/dashboard" as any);
+          router.replace("/dashboard");
         } else {
           showAlert("Atenção", "PIN incorreto. Tente novamente.");
           setPin("");
         }
       }
     } catch (error) {
-      console.log("Erro ao processar PIN:", error);
+      logError("Erro ao processar PIN:", error);
       showAlert("Erro", "Não foi possível validar a segurança.");
       setPin("");
     }
@@ -153,7 +152,7 @@ export default function SecurityScreen() {
       {isSettingUp && hadExistingPin && (
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.replace("/dashboard" as any)}
+          onPress={() => router.replace("/dashboard")}
         >
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>

@@ -15,6 +15,7 @@ import type {
 import { formatCurrencyInput } from "../utils/currency";
 import { getMonthNumber } from "../utils/dates";
 import { useDashboardContext } from "./DashboardContext";
+import { logError } from "../utils/logger";
 
 /**
  * Campos do formulário de transação. Mudam a cada tecla digitada, por isso
@@ -169,7 +170,7 @@ export function TransactionFormProvider({ children }: { children: ReactNode }) {
       setInstallmentCount(1);
       setIsTransactionModalOpen(false);
     } catch (error) {
-      console.log("Erro ao salvar transação:", error);
+      logError("Erro ao salvar transação:", error);
       showAlert("Erro", "Não foi possível salvar a transação.");
     }
   };

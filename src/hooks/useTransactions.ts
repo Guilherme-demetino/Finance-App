@@ -15,6 +15,7 @@ import {
 } from "../database/transactions";
 import type { EnrichedTransaction, TransactionRepeatMode } from "../types";
 import { getMonthNumber } from "../utils/dates";
+import { logError } from "../utils/logger";
 
 interface MonthDatum {
   label: string;
@@ -165,7 +166,7 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
     try {
       applyPeriodData(await loadPeriodData(selectedMonth, selectedYear));
     } catch (error) {
-      console.log("Erro ao buscar transações:", error);
+      logError("Erro ao buscar transações:", error);
     } finally {
       setIsLoading(false);
     }
@@ -186,7 +187,7 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
       .then((data) => {
         if (!cancelled) applyPeriodData(data);
       })
-      .catch((error) => console.log("Erro ao buscar transações:", error))
+      .catch((error) => logError("Erro ao buscar transações:", error))
       .finally(() => {
         if (!cancelled) setIsLoading(false);
       });

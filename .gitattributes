@@ -1,0 +1,17 @@
+# Texto sempre com LF, no repositorio e na pasta de trabalho (inclusive no Windows),
+# para nao aparecer diff so de fim de linha.
+* text=auto eol=lf
+
+# Binarios: nunca converter.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.xlsx binary
+*.xls binary

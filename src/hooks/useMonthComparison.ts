@@ -5,6 +5,7 @@ import { getTransactionsByMonth } from "../database/transactions";
 import type { EnrichedTransaction, TransactionRow } from "../types";
 import { getMonthNumber, getPreviousMonth } from "../utils/dates";
 import { DEFAULT_CATEGORY_COLORS } from "./useTransactions";
+import { logError } from "../utils/logger";
 
 interface CategoryComparisonItem {
   category: string;
@@ -163,7 +164,7 @@ export function useMonthComparison(
       .then((result) => {
         if (!cancelled) setComparison(result);
       })
-      .catch((error) => console.log("Erro ao calcular comparativo mensal:", error))
+      .catch((error) => logError("Erro ao calcular comparativo mensal:", error))
       .finally(() => {
         if (!cancelled) setIsLoadingComparison(false);
       });

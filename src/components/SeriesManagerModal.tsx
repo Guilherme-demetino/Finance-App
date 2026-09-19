@@ -13,6 +13,7 @@ import { styles as menuStyles } from "../styles/menuStyles";
 import type { DisplayTransaction, TransactionRow } from "../types";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
 import { ConfirmModal } from "./ConfirmModal";
+import { logError } from "../utils/logger";
 
 interface SeriesManagerModalProps {
   visible: boolean;
@@ -56,7 +57,7 @@ export function SeriesManagerModal({
         if (!cancelled) setOccurrences(rows);
       })
       .catch((error) => {
-        console.log("Erro ao buscar ocorrências da série:", error);
+        logError("Erro ao buscar ocorrências da série:", error);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);

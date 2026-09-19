@@ -12,6 +12,7 @@ import {
   readSpreadsheetSheets,
   SpreadsheetPasswordError,
 } from "./spreadsheet";
+import { logError } from "./logger";
 
 /**
  * Planilha do Excel: tenta cada aba com conteúdo, primeiro como backup do
@@ -33,7 +34,7 @@ function planSpreadsheetImport(
           "Essa planilha é protegida por senha. Remova a senha (ou exporte o extrato em CSV) e tente de novo.",
       };
     }
-    console.log("Erro ao ler a planilha:", error);
+    logError("Erro ao ler a planilha:", error);
     return {
       ok: false,
       error:
@@ -86,7 +87,7 @@ export async function planImportFromBytes(
             "Esse PDF é protegido por senha. Remova a senha (ou exporte o extrato em CSV) e tente de novo.",
         };
       }
-      console.log("Erro ao ler o PDF:", error);
+      logError("Erro ao ler o PDF:", error);
       return {
         ok: false,
         error:

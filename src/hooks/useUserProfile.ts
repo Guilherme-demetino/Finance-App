@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getUser, updateUserAvatar, updateUserName } from "../database/users";
+import { logError } from "../utils/logger";
 
 export function useUserProfile() {
   const [userName, setUserName] = useState("Carregando...");
@@ -11,7 +12,7 @@ export function useUserProfile() {
       setUserName(user?.name || "Meu Finanças");
       if (user?.avatar) setUserImage(user.avatar);
     } catch (error) {
-      console.log("Erro ao buscar usuário:", error);
+      logError("Erro ao buscar usuário:", error);
       setUserName("Meu Finanças");
     }
   };
@@ -25,7 +26,7 @@ export function useUserProfile() {
         if (user?.avatar) setUserImage(user.avatar);
       })
       .catch((error) => {
-        console.log("Erro ao buscar usuário:", error);
+        logError("Erro ao buscar usuário:", error);
         if (!cancelled) setUserName("Meu Finanças");
       });
     return () => {

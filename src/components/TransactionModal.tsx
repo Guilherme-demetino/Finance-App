@@ -23,6 +23,7 @@ import { formatDateToString, parseDateString } from "../utils/dates";
 import { CalendarPicker } from "./CalendarPicker";
 import { CategoryModal } from "./CategoryModal";
 import { ConfirmModal } from "./ConfirmModal";
+import { logError } from "../utils/logger";
 
 const INSTALLMENT_OPTIONS = [2, 3, 4, 6, 10, 12];
 const RECURRING_MONTHS_OPTIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -91,7 +92,7 @@ export function TransactionModal({
       const result = await getAllCategories();
       setDbCategories(result);
     } catch (error) {
-      console.log("Erro ao buscar categorias:", error);
+      logError("Erro ao buscar categorias:", error);
     } finally {
       setIsLoadingCategories(false);
     }
@@ -111,7 +112,7 @@ export function TransactionModal({
       .then((result) => {
         if (!cancelled) setDbCategories(result);
       })
-      .catch((error) => console.log("Erro ao buscar categorias:", error))
+      .catch((error) => logError("Erro ao buscar categorias:", error))
       .finally(() => {
         if (!cancelled) setIsLoadingCategories(false);
       });

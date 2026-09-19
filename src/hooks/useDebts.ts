@@ -7,6 +7,7 @@ import {
   type DebtInput,
 } from "../database/debts";
 import type { DebtRow } from "../types";
+import { logError } from "../utils/logger";
 
 /**
  * Dívidas/empréstimos entre você e outras pessoas — ficam fora do fluxo
@@ -24,7 +25,7 @@ export function useDebts() {
       const rows = await getAllDebts();
       setDebts(rows);
     } catch (error) {
-      console.log("Erro ao buscar dívidas:", error);
+      logError("Erro ao buscar dívidas:", error);
     } finally {
       setIsLoadingDebts(false);
     }
@@ -37,7 +38,7 @@ export function useDebts() {
       .then((rows) => {
         if (!cancelled) setDebts(rows);
       })
-      .catch((error) => console.log("Erro ao buscar dívidas:", error))
+      .catch((error) => logError("Erro ao buscar dívidas:", error))
       .finally(() => {
         if (!cancelled) setIsLoadingDebts(false);
       });

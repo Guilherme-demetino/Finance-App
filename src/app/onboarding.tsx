@@ -27,6 +27,7 @@ import { styles as indexStyles } from "../styles/indexStyles";
 import type { DebtDraft, InstallmentDraft, RecurringDraft } from "../types";
 import { formatCurrency, formatCurrencyInput } from "../utils/currency";
 import { formatDateToString } from "../utils/dates";
+import { logError } from "../utils/logger";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -164,7 +165,7 @@ export default function OnboardingScreen() {
   useEffect(() => {
     getUser()
       .then((user) => setUserName(user?.name ?? ""))
-      .catch((error) => console.log("Erro ao buscar usuário:", error));
+      .catch((error) => logError("Erro ao buscar usuário:", error));
   }, []);
 
   // O botão voltar do Android volta um passo em vez de fechar o app.
@@ -210,7 +211,7 @@ export default function OnboardingScreen() {
     }
   };
 
-  const goToDashboard = () => router.replace("/dashboard" as any);
+  const goToDashboard = () => router.replace("/dashboard");
 
   const handleFinish = async () => {
     setIsSaving(true);
@@ -262,7 +263,7 @@ export default function OnboardingScreen() {
       await markReleaseNotesSeen().catch(() => {});
       goToDashboard();
     } catch (error) {
-      console.log("Erro ao salvar o pré-cadastro:", error);
+      logError("Erro ao salvar o pré-cadastro:", error);
       setAlertState({
         title: "Erro",
         message:

@@ -1,4 +1,5 @@
 import * as SQLite from "expo-sqlite";
+import { logError } from "../utils/logger";
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
 let initPromise: Promise<void> | null = null;
@@ -141,7 +142,7 @@ export async function initDatabase() {
         createTables(db);
         dbInstance = db;
       } catch (error) {
-        console.log("Erro crítico ao inicializar o banco de dados:", error);
+        logError("Erro crítico ao inicializar o banco de dados:", error);
         // permite tentar novamente numa próxima chamada
         initPromise = null;
         throw error;

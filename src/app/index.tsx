@@ -7,6 +7,7 @@ import { getLegacyPin } from "../database/security";
 import { getUser, upsertUserName } from "../database/users";
 import { styles } from "../styles/indexStyles";
 import { hasPinConfigured } from "../utils/security";
+import { logError } from "../utils/logger";
 
 export default function WelcomeScreen() {
   const [name, setName] = useState("");
@@ -44,7 +45,7 @@ export default function WelcomeScreen() {
         router.replace("/security");
       }
     } catch (error) {
-      console.log("Erro ao verificar usuário/PIN:", error);
+      logError("Erro ao verificar usuário/PIN:", error);
     }
   };
 
@@ -64,7 +65,7 @@ export default function WelcomeScreen() {
       showAlert("Sucesso!", `Bem-vindo(a), ${name}!`);
       router.replace("/security");
     } catch (error) {
-      console.error("Erro ao salvar o nome:", error);
+      logError("Erro ao salvar o nome:", error);
       showAlert("Erro", "Ocorreu um problema ao salvar seu nome.");
     }
   };

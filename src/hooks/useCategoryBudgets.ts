@@ -5,6 +5,7 @@ import { getCategoryBudgets, setCategoryBudget } from "../database/categoryBudge
 import type { EnrichedTransaction } from "../types";
 import { getMonthNumber } from "../utils/dates";
 import { DEFAULT_CATEGORY_COLORS } from "./useTransactions";
+import { logError } from "../utils/logger";
 
 export interface CategoryBudgetItem {
   /** null quando a categoria não existe (mais) na tabela categories — só apareceu por causa de transações/meta antigas. */
@@ -105,7 +106,7 @@ export function useCategoryBudgets(
         await buildCategoryBudgets(selectedMonth, selectedYear, transactions),
       );
     } catch (error) {
-      console.log("Erro ao buscar metas por categoria:", error);
+      logError("Erro ao buscar metas por categoria:", error);
     } finally {
       setIsLoadingCategoryBudgets(false);
     }
@@ -133,7 +134,7 @@ export function useCategoryBudgets(
       .then((items) => {
         if (!cancelled) setCategoryBudgets(items);
       })
-      .catch((error) => console.log("Erro ao buscar metas por categoria:", error))
+      .catch((error) => logError("Erro ao buscar metas por categoria:", error))
       .finally(() => {
         if (!cancelled) setIsLoadingCategoryBudgets(false);
       });

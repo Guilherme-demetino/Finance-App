@@ -40,6 +40,7 @@ import {
 import type { CsvImportPlan } from "../utils/importCsv";
 import { planImportFromBytes } from "../utils/statementImport";
 import { clearPin } from "../utils/security";
+import { logError } from "../utils/logger";
 
 export const YEARS_LIST = ["2024", "2025", "2026", "2027", "2028"];
 
@@ -283,7 +284,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         await updateAvatar(result.assets[0].uri);
         showAlert("Sucesso", "Foto de perfil atualizada com sucesso!");
       } catch (error) {
-        console.log("Erro ao salvar foto no banco:", error);
+        logError("Erro ao salvar foto no banco:", error);
         showAlert("Erro", "Não foi possível salvar a imagem.");
       }
     }
@@ -302,7 +303,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setIsMenuOpen(false);
       showAlert("Sucesso", "Nome alterado com sucesso!");
     } catch (error) {
-      console.log("Erro ao atualizar nome:", error);
+      logError("Erro ao atualizar nome:", error);
       showAlert("Erro", "Não foi possível atualizar o nome.");
     }
   };
@@ -326,7 +327,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
       await Print.printAsync({ html: htmlContent });
     } catch (error) {
-      console.log("Erro ao gerar PDF:", error);
+      logError("Erro ao gerar PDF:", error);
       showAlert("Erro", "Não foi possível gerar o arquivo PDF.");
     }
   };
@@ -361,7 +362,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         );
       }
     } catch (error) {
-      console.log("Erro ao gerar CSV:", error);
+      logError("Erro ao gerar CSV:", error);
       showAlert("Erro", "Não foi possível gerar o arquivo CSV.");
     }
   };
@@ -371,7 +372,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       await removeTransaction(Number(id));
       showAlert("Sucesso", "Transação excluída com sucesso.");
     } catch (error) {
-      console.log("Erro ao excluir transação:", error);
+      logError("Erro ao excluir transação:", error);
       showAlert("Erro", "Não foi possível excluir a transação.");
     }
   };
@@ -384,7 +385,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         "Todas as transações deste período foram excluídas.",
       );
     } catch (error) {
-      console.log("Erro ao excluir transações:", error);
+      logError("Erro ao excluir transações:", error);
       showAlert("Erro", "Não foi possível excluir as transações.");
     }
   };
@@ -397,7 +398,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         "Esta e as próximas ocorrências da série foram excluídas.",
       );
     } catch (error) {
-      console.log("Erro ao excluir ocorrências futuras da série:", error);
+      logError("Erro ao excluir ocorrências futuras da série:", error);
       showAlert("Erro", "Não foi possível excluir as ocorrências futuras.");
     }
   };
@@ -407,7 +408,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       await removeSeries(groupId);
       showAlert("Sucesso", "Série excluída com sucesso.");
     } catch (error) {
-      console.log("Erro ao excluir série:", error);
+      logError("Erro ao excluir série:", error);
       showAlert("Erro", "Não foi possível excluir a série.");
     }
   };
@@ -417,7 +418,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       await removeCategory(id);
       showAlert("Sucesso", "Categoria excluída com sucesso.");
     } catch (error) {
-      console.log("Erro ao excluir categoria:", error);
+      logError("Erro ao excluir categoria:", error);
       showAlert("Erro", "Não foi possível excluir a categoria.");
     }
   };
@@ -427,7 +428,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       await addDebt(data);
       showAlert("Sucesso", "Registrado com sucesso.");
     } catch (error) {
-      console.log("Erro ao registrar dívida/empréstimo:", error);
+      logError("Erro ao registrar dívida/empréstimo:", error);
       showAlert("Erro", "Não foi possível registrar.");
     }
   };
@@ -454,7 +455,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
       showAlert("Sucesso", "Dívida quitada e registrada no seu saldo.");
     } catch (error) {
-      console.log("Erro ao quitar dívida:", error);
+      logError("Erro ao quitar dívida:", error);
       showAlert("Erro", "Não foi possível quitar a dívida.");
     }
   };
@@ -464,7 +465,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       await removeDebt(id);
       showAlert("Sucesso", "Registro excluído com sucesso.");
     } catch (error) {
-      console.log("Erro ao excluir dívida:", error);
+      logError("Erro ao excluir dívida:", error);
       showAlert("Erro", "Não foi possível excluir o registro.");
     }
   };
@@ -482,7 +483,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       });
       showAlert("Sucesso", "Meta de economia criada.");
     } catch (error) {
-      console.log("Erro ao criar meta de economia:", error);
+      logError("Erro ao criar meta de economia:", error);
       showAlert("Erro", "Não foi possível criar a meta.");
     }
   };
@@ -491,7 +492,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     try {
       await changeSavedAmount(goal, delta);
     } catch (error) {
-      console.log("Erro ao atualizar valor guardado:", error);
+      logError("Erro ao atualizar valor guardado:", error);
       showAlert("Erro", "Não foi possível atualizar a meta.");
     }
   };
@@ -501,7 +502,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       await removeSavingsGoal(id);
       showAlert("Sucesso", "Meta excluída com sucesso.");
     } catch (error) {
-      console.log("Erro ao excluir meta de economia:", error);
+      logError("Erro ao excluir meta de economia:", error);
       showAlert("Erro", "Não foi possível excluir a meta.");
     }
   };
@@ -537,7 +538,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
       setPendingImport(plan);
     } catch (error) {
-      console.log("Erro ao ler o arquivo de importação:", error);
+      logError("Erro ao ler o arquivo de importação:", error);
       showAlert("Erro", "Não foi possível ler o arquivo selecionado.");
     } finally {
       setIsReadingImport(false);
@@ -557,7 +558,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         `${plan.toImport.length} ${plan.toImport.length === 1 ? "transação importada" : "transações importadas"} com sucesso.`,
       );
     } catch (error) {
-      console.log("Erro ao importar backup:", error);
+      logError("Erro ao importar backup:", error);
       showAlert("Erro", "Não foi possível importar as transações.");
     }
   };
@@ -566,7 +567,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setIsMenuOpen(false);
     // O PIN atual só é sobrescrito quando o novo for confirmado na tela
     // de segurança — se o usuário voltar sem concluir, nada muda.
-    router.replace({ pathname: "/security", params: { mode: "change" } } as any);
+    router.replace({ pathname: "/security", params: { mode: "change" } });
   };
 
   const handleWipeData = () => {
@@ -579,9 +580,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     try {
       await resetDatabase();
       await clearPin();
-      router.replace("/" as any); // Volta para a tela de boas-vindas
+      router.replace("/"); // Volta para a tela de boas-vindas
     } catch (error) {
-      console.log("Erro ao zerar dados:", error);
+      logError("Erro ao zerar dados:", error);
       showAlert("Erro", "Não foi possível formatar o aplicativo.");
     }
   };

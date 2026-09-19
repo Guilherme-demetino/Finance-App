@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { colors } from "../constants/colors";
 import { createCategory } from "../database/categories";
+import { logError } from "../utils/logger";
 
 // Cores disponíveis para as categorias
 const COLORS = [
@@ -72,7 +73,7 @@ export function CategoryModal({
       // Repassa os dados corretos para o modal pai
       onSave(safeName, safeType);
     } catch (error) {
-      console.log("Erro ao salvar categoria:", error);
+      logError("Erro ao salvar categoria:", error);
     }
   };
 

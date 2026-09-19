@@ -7,6 +7,7 @@ import {
   type SavingsGoalInput,
 } from "../database/savingsGoals";
 import type { SavingsGoalRow } from "../types";
+import { logError } from "../utils/logger";
 
 /**
  * Metas de economia ("juntar R$ 5.000 até dezembro"). Ficam separadas do
@@ -21,7 +22,7 @@ export function useSavingsGoals() {
     try {
       setSavingsGoals(await getAllSavingsGoals());
     } catch (error) {
-      console.log("Erro ao buscar metas de economia:", error);
+      logError("Erro ao buscar metas de economia:", error);
     } finally {
       setIsLoadingSavings(false);
     }
@@ -34,7 +35,7 @@ export function useSavingsGoals() {
       .then((rows) => {
         if (!cancelled) setSavingsGoals(rows);
       })
-      .catch((error) => console.log("Erro ao buscar metas de economia:", error))
+      .catch((error) => logError("Erro ao buscar metas de economia:", error))
       .finally(() => {
         if (!cancelled) setIsLoadingSavings(false);
       });

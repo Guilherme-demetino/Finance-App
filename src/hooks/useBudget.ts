@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getBudget, setBudget } from "../database/budgets";
 import { getMonthNumber } from "../utils/dates";
+import { logError } from "../utils/logger";
 
 /**
  * Orçamento definido pelo usuário para o mês/ano selecionado. Diferente
@@ -25,7 +26,7 @@ export function useBudget(selectedMonth: string, selectedYear: string) {
       .then((amount) => {
         if (!cancelled) setBudgetState(amount);
       })
-      .catch((error) => console.log("Erro ao buscar orçamento:", error))
+      .catch((error) => logError("Erro ao buscar orçamento:", error))
       .finally(() => {
         if (!cancelled) setIsLoading(false);
       });
