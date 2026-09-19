@@ -245,6 +245,120 @@ describe("extrato de conta do Banco do Brasil", () => {
   });
 });
 
+// Dados fictícios, na mesma ordem de linhas que o pdf.js entrega para o extrato
+// consolidado do Santander: data só na 1ª linha do dia, "-" depois do valor de
+// débito, nome do Pix na linha de baixo e quebra de página no meio da tabela.
+const SANTANDER = [
+  "EXTRATO CONSOLIDADO INTELIGENTE",
+  "agosto/2026",
+  "Resumo - agosto/2026",
+  "Nome",
+  "NOME DO TITULAR",
+  "Agência",
+  "0000",
+  "Conta Corrente",
+  "00.000000-0",
+  "Conta Corrente",
+  "Movimentação",
+  "Data Descrição Nº Documento Movimento (R$) Saldo (R$)",
+  "SALDO EM 31/07 0,00",
+  "03/08 PIX RECEBIDO MARIA SOUZA LIMA - 100,00",
+  "PIX ENVIADO - 40,00- 60,00",
+  "Joao Pereira Alves",
+  "05/08 PIX ENVIADO - 10,00-",
+  "Ana Clara Ramos",
+  "PIX ENVIADO - 50,00- 0,00",
+  "Ana Clara Ramos",
+  "07/08 PIX RECEBIDO - 1.180,00 1.180,00",
+  "CARLOS EDUARDO NUNES",
+  "10/08 TRANSFERENCIA PROGRAMADA - 50,00- 1.130,00",
+  "PARA: 0000.60.000000-0",
+  "11/08 COMPRA CARTAO DEB MC 111222 68,87- 1.061,13",
+  "11/08 MERCADO EXEMPLO 001 AS",
+  "12/08 RESG POUP - CENTRAL/INTERNET/APP 333444 50,00",
+  "DE: 0000.60.000000-0",
+  "Extrato_PF_A4_Inteligente - 01/01/2024",
+  "BALP_XX_M0000000_MXDD0000.PIM -",
+  "Pagina: 2/5",
+  "EXTRATO CONSOLIDADO INTELIGENTE",
+  "agosto/2026",
+  "Data Descrição Nº Documento Movimento (R$) Saldo (R$)",
+  "PIX ENVIADO - 31,00- 1.080,13",
+  "Ana Clara Ramos",
+  "17/08 EMPRESTIMO CONSIGNADO 123456789 444555 221,68- 858,45",
+  "SALDO EM 31/08 858,45",
+  "Se você não tem Limite da Conta e a sua conta ficou com saldo devedor, terá sido prestado o serviço",
+  "Saldos por Período",
+  "03 60,00 0,00 0,00 0,00 0,00 0,00 60,00",
+  "Compras com Cartão de Débito",
+  "11/08 5201.0000 MERCADO EXEMPLO 001 AS 68,87",
+  "Comprovantes de Pagamento",
+  "03/08 INTERNET BANKING PIX JOAO PEREIRA ALVES 00000000 0000 0000000000000 40,00",
+  "Poupança",
+  "Data Descrição Movimento (R$) Saldo (R$)",
+  "10/08 TRANSFERENCIA PROGRAMADA 50,00 50,00",
+  "DE: 0000.01.000000-0",
+];
+
+describe("extrato consolidado do Santander", () => {
+  const result = parseStatementLines(SANTANDER, new Date(2026, 8, 19));
+
+  it("usa a data da 1ª linha do dia, o ano do título e o '-' pra achar despesas", () => {
+    expect(
+      result.transactions.map((t) => [t.date, t.description, t.type, t.amount]),
+    ).toEqual([
+      ["03/08/2026", "PIX RECEBIDO MARIA SOUZA LIMA", "income", 100],
+      ["03/08/2026", "PIX ENVIADO Joao Pereira Alves", "expense", 40],
+      ["05/08/2026", "PIX ENVIADO Ana Clara Ramos", "expense", 10],
+      ["05/08/2026", "PIX ENVIADO Ana Clara Ramos", "expense", 50],
+      ["07/08/2026", "PIX RECEBIDO CARLOS EDUARDO NUNES", "income", 1180],
+      ["11/08/2026", "COMPRA CARTAO DEB MC MERCADO EXEMPLO 001 AS", "expense", 68.87],
+      ["12/08/2026", "PIX ENVIADO Ana Clara Ramos", "expense", 31],
+      ["17/08/2026", "EMPRESTIMO CONSIGNADO", "expense", 221.68],
+    ]);
+  });
+
+  it("marca Pix como Pix e compra de mercado como Alimentação", () => {
+    expect(result.transactions.map((t) => t.category)).toEqual([
+      "Pix",
+      "Pix",
+      "Pix",
+      "Pix",
+      "Pix",
+      "Alimentação",
+      "Pix",
+      "Geral",
+    ]);
+  });
+
+  it("ignora o vai e volta da poupança, saldos, comprovantes e a tabela da poupança", () => {
+    expect(result.totalRows).toBe(8);
+    expect(result.invalid).toBe(0);
+    expect(result.ignoredTransfers).toBe(2);
+  });
+
+  it("recua o ano quando o mês do lançamento é depois do mês do extrato", () => {
+    const lines = [
+      "janeiro/2026",
+      "Data Descrição Nº Documento Movimento (R$) Saldo (R$)",
+      "30/12 PIX ENVIADO - 10,00- 5,00",
+      "Joao Pereira Alves",
+      "02/01 PIX RECEBIDO - 20,00 25,00",
+      "Maria Souza Lima",
+    ];
+    const dates = parseStatementLines(lines, new Date(2026, 8, 19)).transactions.map(
+      (t) => t.date,
+    );
+    expect(dates).toEqual(["30/12/2025", "02/01/2026"]);
+  });
+
+  it("não deixa dados da conta na descrição", () => {
+    const text = result.transactions.map((t) => t.description).join(" ");
+    expect(text).not.toMatch(/\d{7,}/);
+    expect(text).not.toMatch(/Agência|Conta Corrente|0000\.\d{2}/);
+  });
+});
+
 describe("planPdfImport", () => {
   it("avisa quando não encontra nenhuma transação", () => {
     const result = planPdfImport(["texto qualquer"], []);

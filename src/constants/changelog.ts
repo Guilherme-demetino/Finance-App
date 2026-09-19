@@ -26,4 +26,13 @@ export const CHANGELOG: Release[] = [
       "O app passa a avisar aqui o que mudou a cada atualização.",
     ],
   },
+  {
+    id: 2,
+    date: "19/09/2026",
+    title: "Extrato do Santander",
+    items: [
+      "Agora dá para importar o extrato em PDF do Santander.",
+      "Guardar e resgatar da poupança não entram como receita ou despesa.",
+    ],
+  },
 ];
