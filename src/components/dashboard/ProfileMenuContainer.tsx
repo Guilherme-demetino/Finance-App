@@ -3,9 +3,11 @@ import { ActivityIndicator, Text, View } from "react-native";
 
 import { colors } from "../../constants/colors";
 import { useProfile } from "../../context/ProfileContext";
+import { useAutoBackup } from "../../hooks/useAutoBackup";
 import { useDataTransfer } from "../../hooks/useDataTransfer";
 import { describeRestore } from "../../utils/backup";
 import { describeImportPlan } from "../../utils/importSummary";
+import { AutoBackupModal } from "../AutoBackupModal";
 import { ConfirmModal } from "../ConfirmModal";
 import { EditNameModal, ProfileMenuModal } from "../ProfileMenuModals";
 
@@ -42,6 +44,8 @@ export function ProfileMenuContainer({
     setIsWipeConfirmOpen,
     confirmWipeData,
   } = useDataTransfer();
+  const autoBackup = useAutoBackup();
+  const [isAutoBackupOpen, setIsAutoBackupOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState("");
 
@@ -68,6 +72,10 @@ export function ProfileMenuContainer({
           onCloseMenu();
           handleRestoreBackup();
         }}
+        onOpenAutoBackup={() => {
+          onCloseMenu();
+          setIsAutoBackupOpen(true);
+        }}
         onChangePIN={() => {
           onCloseMenu();
           handleChangePIN();
@@ -90,6 +98,16 @@ export function ProfileMenuContainer({
             onCloseMenu();
           })
         }
+      />
+
+      <AutoBackupModal
+        visible={isAutoBackupOpen}
+        settings={autoBackup.settings}
+        isBusy={autoBackup.isBusy}
+        onClose={() => setIsAutoBackupOpen(false)}
+        onChooseFolder={autoBackup.chooseFolder}
+        onBackupNow={autoBackup.backupNow}
+        onDisable={autoBackup.disable}
       />
 
       <ConfirmModal

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AlertContainer } from "../../components/dashboard/AlertContainer";
+import { AutoBackupRunner } from "../../components/dashboard/AutoBackupRunner";
 import { DashboardHeader } from "../../components/dashboard/DashboardHeader";
 import { DebtModalContainer } from "../../components/dashboard/DebtModalContainer";
 import { NewTransactionFab } from "../../components/dashboard/NewTransactionFab";
@@ -131,6 +132,7 @@ function DashboardChrome() {
       <ReleaseNotesModal releases={releases} onClose={dismissReleaseNotes} />
 
       <AlertContainer />
+      <AutoBackupRunner />
     </SafeAreaView>
   );
 }

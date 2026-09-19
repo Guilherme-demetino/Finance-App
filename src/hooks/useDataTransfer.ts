@@ -13,6 +13,8 @@ import {
   useTransactionsMutations,
 } from "../context/TransactionsContext";
 import { resetDatabase } from "../database/sqlite";
+import { recordManualBackup } from "../services/autoBackup";
+import { realAutoBackupDeps } from "../services/autoBackupDeps";
 import { readBackupData, replaceAllData } from "../database/backup";
 import {
   getAllTransactions,
@@ -139,6 +141,8 @@ export function useDataTransfer() {
           dialogTitle: "Salvar backup completo",
           UTI: "public.json",
         });
+        // Só serve para o lembrete de backup; se falhar, o backup em si já foi entregue.
+        await recordManualBackup(realAutoBackupDeps).catch(() => {});
       } else {
         showAlert(
           "Erro",

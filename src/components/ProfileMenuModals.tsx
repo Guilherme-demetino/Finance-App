@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   Image,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -22,6 +23,7 @@ interface ProfileMenuModalProps {
   onImportFile: () => void;
   onExportBackup: () => void;
   onRestoreBackup: () => void;
+  onOpenAutoBackup: () => void;
   onChangePIN: () => void;
   onWipeData: () => void;
 }
@@ -38,6 +40,7 @@ export function ProfileMenuModal({
   onImportFile,
   onExportBackup,
   onRestoreBackup,
+  onOpenAutoBackup,
   onChangePIN,
   onWipeData,
 }: ProfileMenuModalProps) {
@@ -71,6 +74,7 @@ export function ProfileMenuModal({
 
           <View style={styles.divider} />
 
+          <ScrollView showsVerticalScrollIndicator={false}>
           <TouchableOpacity style={styles.menuItem} onPress={onExportPDF}>
             <Ionicons name="document-text-outline" size={24} color={colors.textPrimary} />
             <Text style={styles.menuItemText}>Exportar Relatório PDF</Text>
@@ -96,6 +100,11 @@ export function ProfileMenuModal({
             <Text style={styles.menuItemText}>Restaurar Backup</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity style={styles.menuItem} onPress={onOpenAutoBackup}>
+            <Ionicons name="cloud-done-outline" size={24} color={colors.textPrimary} />
+            <Text style={styles.menuItemText}>Backup Automático</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.menuItem} onPress={onChangePIN}>
             <Ionicons name="lock-closed-outline" size={24} color={colors.textPrimary} />
             <Text style={styles.menuItemText}>Alterar PIN de Segurança</Text>
@@ -109,6 +118,7 @@ export function ProfileMenuModal({
               Zerar Dados do App
             </Text>
           </TouchableOpacity>
+          </ScrollView>
         </TouchableOpacity>
       </TouchableOpacity>
     </Modal>
@@ -178,6 +188,7 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     width: "85%",
+    maxHeight: "90%",
     backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,

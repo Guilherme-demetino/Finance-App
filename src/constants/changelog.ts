@@ -122,4 +122,15 @@ export const CHANGELOG: Release[] = [
       "O item “Exportar Backup (CSV)” agora se chama “Exportar Transações (CSV)”, porque leva só as transações.",
     ],
   },
+  {
+    id: 13,
+    date: "19/09/2026",
+    title: "Backup automático",
+    items: [
+      "Novo “Backup Automático” no menu do perfil: escolha uma pasta (pode ser do Google Drive) e o app salva ali um backup completo, no máximo uma vez por dia, quando você abre o app. Ficam os 30 mais recentes.",
+      "Ao escolher a pasta o app já faz um backup para você ver na hora se ela aceita gravar. Se um dia a pasta deixar de funcionar, o app avisa.",
+      "Quem não ativou nenhum backup recebe, de vez em quando, um lembrete de que os dados ficam só neste aparelho.",
+      "O menu do perfil agora rola quando não cabe na tela.",
+    ],
+  },
 ];
