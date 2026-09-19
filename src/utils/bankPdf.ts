@@ -10,6 +10,7 @@ import {
   isInternalTransfer,
   normalizeText,
   parseSignedAmount,
+  type AmountSign,
 } from "./statementParsing";
 
 const MONTH_ABBREVIATIONS = [
@@ -137,6 +138,8 @@ function cleanDescription(text: string): string {
     .replace(/R\$/g, " ")
     .replace(/\s+/g, " ")
     .replace(/^[\s\-–—:|.]+|[\s\-–—:|.]+$/g, "")
+    // Data do Pix colada no nome ("Fulano08/09"); "COMPRA 03/10" (parcela) fica.
+    .replace(/([A-Za-zÀ-ÿ])\d{2}\/\d{2}$/, "$1")
     .slice(0, 80);
 }
 
@@ -144,8 +147,8 @@ function cleanDescription(text: string): string {
  * Interpreta as linhas de texto de um extrato em PDF. Cada transação é uma
  * linha que começa com data e tem um valor em reais (o primeiro valor da
  * linha é o da transação; um segundo costuma ser o saldo). Sinal "-", "D" ou
- * parênteses = despesa; "+" ou "C" = receita; sem sinal, decide pela
- * descrição. Linhas de saldo e totais são ignoradas.
+ * parênteses = despesa; "+" ou "C" = receita; sem sinal, é receita em extrato
+ * de conta que usa "-" nas despesas (estilo Itaú) e, senão, decide pela descrição. Linhas de saldo e totais são ignoradas.
  */
 export function parseStatementLines(
   lines: string[],
@@ -157,10 +160,16 @@ export function parseStatementLines(
   ignoredTransfers: number;
 } {
   const anchor = detectAnchorDate(lines, today);
-  const transactions: ImportedTransaction[] = [];
+  const parsedRows: {
+    amount: number;
+    sign: AmountSign;
+    date: string;
+    title: string;
+  }[] = [];
   let invalid = 0;
   let totalRows = 0;
   let ignoredTransfers = 0;
+  let sawBalanceRows = false;
 
   lines.forEach((rawLine) => {
     const line = rawLine.replace(/\s+/g, " ").trim();
@@ -175,6 +184,7 @@ export function parseStatementLines(
     const description = cleanDescription(rest.slice(0, firstMoney.index));
     const normalized = normalizeText(description);
     if (/^(saldo|total|subtotal)\b/.test(normalized) || normalized.includes("saldo")) {
+      if (normalized.includes("saldo")) sawBalanceRows = true;
       return;
     }
 
@@ -190,21 +200,38 @@ export function parseStatementLines(
       return;
     }
 
-    const title = description || "Sem título";
-    const type: TransactionType =
-      parsed.sign === "negative"
-        ? "expense"
-        : parsed.sign === "positive"
-          ? "income"
-          : guessTypeFromDescription(title);
-
-    transactions.push({
+    parsedRows.push({
       amount: parsed.amount,
+      sign: parsed.sign,
       date: leading.date,
-      description: title,
-      type,
-      category: guessCategory(title, type),
+      title: description || "Sem título",
     });
+  });
+
+  // Extratos de conta como o do Itaú (têm linhas de "saldo do dia") marcam só
+  // a despesa com "-" e mostram a receita sem sinal. Nesses, o que vier sem
+  // sinal é receita. Em faturas de cartão, sem linhas de saldo, o "-" costuma
+  // ser crédito e o resto compra, então decide pela descrição.
+  const negatives = parsedRows.filter((r) => r.sign === "negative").length;
+  const unsigned = parsedRows.filter((r) => r.sign === "none").length;
+  const unsignedIsIncome =
+    negatives > 0 && (sawBalanceRows || negatives > unsigned);
+
+  const transactions: ImportedTransaction[] = parsedRows.map((row) => {
+    const type: TransactionType =
+      row.sign === "negative"
+        ? "expense"
+        : row.sign === "positive" || unsignedIsIncome
+          ? "income"
+          : guessTypeFromDescription(row.title);
+
+    return {
+      amount: row.amount,
+      date: row.date,
+      description: row.title,
+      type,
+      category: guessCategory(row.title, type),
+    };
   });
 
   return { transactions, invalid, totalRows, ignoredTransfers };

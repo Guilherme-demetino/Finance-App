@@ -91,6 +91,51 @@ describe("parseStatementLines", () => {
   });
 });
 
+describe("extrato de conta do Itaú", () => {
+  const ITAU = [
+    "NOME DO TITULAR 000.000.000-00 agência: 0000 conta: 000000-0",
+    "R$ -194,25 R$ 180,00 R$ 0,00 R$ 180,00",
+    "período de visualização: 12/08/2026 até 11/09/2026 emitido em: 11/09/2026 18:18:50",
+    "data lançamentos valor (R$) saldo (R$)",
+    "09/09/2026 SALDO DO DIA -194,25",
+    "08/09/2026 FATURA PAGA ITAU + PLATI -1.049,00",
+    "08/09/2026 TED 001.0000.TITULAR D 5.888,04",
+    "08/09/2026 PIX TRANSF Titular08/09 -5.800,00",
+    "08/09/2026 PIX TRANSF Amigo05/09 2.000,00",
+    "08/09/2026 SALDO DO DIA -194,25",
+    "02/09/2026 IOF -0,51",
+    "26/08/2026 PIX TRANSF Titular26/08 16,56",
+    "11/08/2026 SALDO DO DIA -194,05",
+    "Aviso!",
+  ];
+
+  it("trata valor sem sinal como receita e com '-' como despesa", () => {
+    const { transactions, totalRows } = parseStatementLines(
+      ITAU,
+      new Date(2026, 8, 19),
+    );
+    expect(totalRows).toBe(6);
+    expect(
+      transactions.map((t) => [t.date, t.description, t.type, t.amount]),
+    ).toEqual([
+      ["08/09/2026", "FATURA PAGA ITAU + PLATI", "expense", 1049],
+      ["08/09/2026", "TED 001.0000.TITULAR D", "income", 5888.04],
+      ["08/09/2026", "PIX TRANSF Titular", "expense", 5800],
+      ["08/09/2026", "PIX TRANSF Amigo", "income", 2000],
+      ["02/09/2026", "IOF", "expense", 0.51],
+      ["26/08/2026", "PIX TRANSF Titular", "income", 16.56],
+    ]);
+    expect(transactions.filter((t) => t.type === "income").every((t) => t.category === "Salário")).toBe(true);
+  });
+
+  it("mantém a parcela 'COMPRA 03/10' na descrição", () => {
+    const lines = ["05/03/2026 Loja X COMPRA 03/10 -50,00", "06/03/2026 Loja Y -10,00"];
+    expect(parseStatementLines(lines, TODAY).transactions[0].description).toBe(
+      "Loja X COMPRA 03/10",
+    );
+  });
+});
+
 describe("planPdfImport", () => {
   it("avisa quando não encontra nenhuma transação", () => {
     const result = planPdfImport(["texto qualquer"], []);
