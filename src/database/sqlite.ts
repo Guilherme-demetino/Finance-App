@@ -119,6 +119,14 @@ function createTables(db: SQLite.SQLiteDatabase) {
       // coluna já existe — instalação recente, nada a fazer
     }
   }
+
+  // Buscar, apagar tudo e apagar "daqui pra frente" numa série recorrente ou
+  // parcelada filtram por recurrence_group_id. Parcial: as transações avulsas
+  // (a maioria) ficam de fora. Vem depois da migração de colunas, que é quem
+  // cria a coluna nas instalações antigas.
+  db.runSync(
+    "CREATE INDEX IF NOT EXISTS idx_transactions_recurrence_group ON transactions(recurrence_group_id) WHERE recurrence_group_id IS NOT NULL;",
+  );
 }
 
 /**

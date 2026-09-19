@@ -69,4 +69,12 @@ export const CHANGELOG: Release[] = [
       "A lista de últimas transações da tela inicial não é mais filtrada pelo texto da busca do histórico.",
     ],
   },
+  {
+    id: 7,
+    date: "19/09/2026",
+    title: "Recorrências e parcelamentos",
+    items: [
+      "Séries recorrentes e parceladas passam a ser localizadas por um índice no banco, para continuarem rápidas quando o histórico crescer.",
+    ],
+  },
 ];
