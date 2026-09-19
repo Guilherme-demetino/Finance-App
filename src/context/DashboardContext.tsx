@@ -30,11 +30,9 @@ import type {
   DebtRow,
   DisplayTransaction,
   SavingsGoalRow,
-  TransactionRepeatMode,
   TransactionType,
 } from "../types";
-import { formatCurrencyInput } from "../utils/currency";
-import { getMonthNumber, MONTH_NAMES } from "../utils/dates";
+import { MONTH_NAMES } from "../utils/dates";
 import {
   buildTransactionsCsv,
   buildTransactionsHtmlReport,
@@ -72,31 +70,8 @@ interface DashboardContextValue {
   isYearModalOpen: boolean;
   setIsYearModalOpen: (value: boolean) => void;
 
-  searchText: string;
-  setSearchText: (value: string) => void;
-
-  isTransactionModalOpen: boolean;
-  setIsTransactionModalOpen: (value: boolean) => void;
-  editingTransactionId: string | null;
-  setEditingTransactionId: (value: string | null) => void;
-  transactionType: TransactionType;
-  setTransactionType: (value: TransactionType) => void;
-  transactionTitle: string;
-  setTransactionTitle: (value: string) => void;
-  transactionAmount: string;
-  setTransactionAmount: (value: string) => void;
-  transactionDate: string;
-  setTransactionDate: (value: string) => void;
-  transactionCategory: string;
-  setTransactionCategory: (value: string) => void;
-  isRecurring: boolean;
-  setIsRecurring: (value: boolean) => void;
-  recurringMonths: number;
-  setRecurringMonths: (value: number) => void;
-  installmentCount: number;
-  setInstallmentCount: (value: number) => void;
-
   transactions: ReturnType<typeof useTransactions>["transactions"];
+  saveTransaction: ReturnType<typeof useTransactions>["saveTransaction"];
   isLoadingTransactions: boolean;
   totalIncome: number;
   totalExpense: number;
@@ -160,8 +135,6 @@ interface DashboardContextValue {
 
   handleExportPDF: () => Promise<void>;
   handleExportCSV: () => Promise<void>;
-  handleOpenEditTransaction: (item: DisplayTransaction) => void;
-  handleSaveTransaction: () => Promise<void>;
   handleDeleteTransaction: (id: string) => Promise<void>;
   handleDeleteAllTransactions: () => Promise<void>;
   handleDeleteSeriesFromId: (groupId: string, fromId: number) => Promise<void>;
@@ -171,7 +144,6 @@ interface DashboardContextValue {
   isWipeConfirmOpen: boolean;
   setIsWipeConfirmOpen: (value: boolean) => void;
   confirmWipeData: () => Promise<void>;
-  openNewTransactionModal: () => void;
 
   currentMonthNum: string;
   currentYearStr: string;
@@ -212,23 +184,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [selectedYear, setSelectedYear] = useState(currentYearStr);
   const [isMonthModalOpen, setIsMonthModalOpen] = useState(false);
   const [isYearModalOpen, setIsYearModalOpen] = useState(false);
-
-  const [searchText, setSearchText] = useState("");
-  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
-  const [editingTransactionId, setEditingTransactionId] = useState<
-    string | null
-  >(null);
-  const [transactionType, setTransactionType] =
-    useState<TransactionType>("income");
-  const [transactionTitle, setTransactionTitle] = useState("");
-  const [transactionAmount, setTransactionAmount] = useState("");
-  const [transactionDate, setTransactionDate] = useState(
-    `${currentDay}/${currentMonthNum}/${currentYearStr}`,
-  );
-  const [transactionCategory, setTransactionCategory] = useState("Salário");
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [recurringMonths, setRecurringMonths] = useState(12);
-  const [installmentCount, setInstallmentCount] = useState(1);
 
   const {
     transactions,
@@ -408,98 +363,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.log("Erro ao gerar CSV:", error);
       showAlert("Erro", "Não foi possível gerar o arquivo CSV.");
-    }
-  };
-
-  const handleOpenEditTransaction = (item: DisplayTransaction) => {
-    setEditingTransactionId(item.id);
-    setTransactionType(item.type);
-    setTransactionTitle(item.description);
-
-    const rawCents = Math.round(item.amount * 100).toString();
-    setTransactionAmount(formatCurrencyInput(rawCents));
-
-    setTransactionDate(item.date);
-    setTransactionCategory(
-      item.category || (item.type === "income" ? "Salário" : "Alimentação"),
-    );
-    // Editar sempre mexe só nessa ocorrência — nunca reabre como
-    // recorrente/parcelada, mesmo se a transação original era uma delas.
-    setIsRecurring(false);
-    setRecurringMonths(12);
-    setInstallmentCount(1);
-    setIsTransactionModalOpen(true);
-  };
-
-  const handleSaveTransaction = async () => {
-    if (
-      !transactionTitle ||
-      !String(transactionTitle).trim() ||
-      !transactionAmount ||
-      !String(transactionAmount).trim()
-    ) {
-      showAlert("Atenção", "Preencha o título e o valor da transação.");
-      return;
-    }
-
-    const cleanNumericValue = Number(
-      String(transactionAmount).replace(/\./g, "").replace(",", "."),
-    );
-
-    if (isNaN(cleanNumericValue) || cleanNumericValue <= 0) {
-      showAlert("Atenção", "Insira um valor válido.");
-      return;
-    }
-
-    const safeTitle = String(transactionTitle).trim();
-    const safeDate =
-      String(transactionDate).trim() ||
-      `${currentDay}/${currentMonthNum}/${currentYearStr}`;
-    const safeType: TransactionType =
-      transactionType === "income" ? "income" : "expense";
-
-    const rawCat = String(transactionCategory || "").trim();
-    const safeCategory =
-      rawCat !== "" ? rawCat : safeType === "income" ? "Salário" : "Outros";
-
-    const repeatMode: TransactionRepeatMode = isRecurring
-      ? { kind: "recurring", months: recurringMonths }
-      : installmentCount > 1
-        ? { kind: "installment", count: installmentCount }
-        : { kind: "single" };
-
-    try {
-      await saveTransaction(
-        editingTransactionId ? Number(editingTransactionId) : null,
-        {
-          amount: cleanNumericValue,
-          date: safeDate,
-          description: safeTitle,
-          type: safeType,
-          category: safeCategory,
-        },
-        repeatMode,
-      );
-
-      const successMessage = editingTransactionId
-        ? "Transação atualizada com sucesso!"
-        : repeatMode.kind === "recurring"
-          ? `Transação recorrente cadastrada! Ela vai aparecer todo mês pelos próximos ${repeatMode.months} meses.`
-          : repeatMode.kind === "installment"
-            ? `Compra parcelada em ${repeatMode.count}x cadastrada com sucesso!`
-            : "Transação salva com sucesso!";
-      showAlert("Sucesso", successMessage);
-
-      setTransactionTitle("");
-      setTransactionAmount("");
-      setEditingTransactionId(null);
-      setIsRecurring(false);
-      setRecurringMonths(12);
-      setInstallmentCount(1);
-      setIsTransactionModalOpen(false);
-    } catch (error) {
-      console.log("Erro ao salvar transação:", error);
-      showAlert("Erro", "Não foi possível salvar a transação.");
     }
   };
 
@@ -723,36 +586,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const openNewTransactionModal = () => {
-    setEditingTransactionId(null);
-    setTransactionType("income");
-    setTransactionTitle("");
-    setTransactionAmount("");
-    setTransactionCategory("Salário");
-    setIsRecurring(false);
-    setRecurringMonths(12);
-    setInstallmentCount(1);
-
-    const targetMonth = getMonthNumber(selectedMonth);
-    let dayToUse = "01";
-    if (targetMonth === currentMonthNum && selectedYear === currentYearStr) {
-      dayToUse = currentDay;
-    }
-
-    setTransactionDate(`${dayToUse}/${targetMonth}/${selectedYear}`);
-    setIsTransactionModalOpen(true);
-  };
-
-  const filteredTransactions = transactions.filter((item) => {
-    const searchLower = searchText.toLowerCase();
-    return (
-      (item.description &&
-        item.description.toLowerCase().includes(searchLower)) ||
-      (item.category_id && item.category_id.toLowerCase().includes(searchLower))
-    );
-  });
-
-  const formattedTransactions: DisplayTransaction[] = filteredTransactions.map(
+  const formattedTransactions: DisplayTransaction[] = transactions.map(
     (item) => ({
       id: String(item.id),
       description: item.description || "Sem título",
@@ -796,31 +630,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     isYearModalOpen,
     setIsYearModalOpen,
 
-    searchText,
-    setSearchText,
-
-    isTransactionModalOpen,
-    setIsTransactionModalOpen,
-    editingTransactionId,
-    setEditingTransactionId,
-    transactionType,
-    setTransactionType,
-    transactionTitle,
-    setTransactionTitle,
-    transactionAmount,
-    setTransactionAmount,
-    transactionDate,
-    setTransactionDate,
-    transactionCategory,
-    setTransactionCategory,
-    isRecurring,
-    setIsRecurring,
-    recurringMonths,
-    setRecurringMonths,
-    installmentCount,
-    setInstallmentCount,
-
     transactions,
+    saveTransaction,
     isLoadingTransactions,
     totalIncome,
     totalExpense,
@@ -877,8 +688,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
     handleExportPDF,
     handleExportCSV,
-    handleOpenEditTransaction,
-    handleSaveTransaction,
     handleDeleteTransaction,
     handleDeleteAllTransactions,
     handleDeleteSeriesFromId,
@@ -888,7 +697,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     isWipeConfirmOpen,
     setIsWipeConfirmOpen,
     confirmWipeData,
-    openNewTransactionModal,
 
     currentMonthNum,
     currentYearStr,

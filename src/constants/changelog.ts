@@ -59,4 +59,14 @@ export const CHANGELOG: Release[] = [
       "Ao abrir uma nova transação, os campos agora começam vazios, sem sobrar o texto de uma edição ou de um cadastro cancelado.",
     ],
   },
+  {
+    id: 6,
+    date: "19/09/2026",
+    title: "Mais fluidez",
+    items: [
+      "Digitar na busca e no formulário de transação ficou mais leve, porque as outras telas deixam de ser redesenhadas a cada letra.",
+      "O painel carrega só as transações do ano (e dos dois meses comparados) em vez do histórico inteiro.",
+      "A lista de últimas transações da tela inicial não é mais filtrada pelo texto da busca do histórico.",
+    ],
+  },
 ];

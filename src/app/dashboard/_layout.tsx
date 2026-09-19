@@ -24,6 +24,11 @@ import {
   useDashboardContext,
   YEARS_LIST,
 } from "../../context/DashboardContext";
+import {
+  TransactionFormProvider,
+  useTransactionActions,
+  useTransactionForm,
+} from "../../context/TransactionFormContext";
 import { useReleaseNotes } from "../../hooks/useReleaseNotes";
 import { styles } from "../../styles/dashboardStyles";
 import { formatCurrencyInput } from "../../utils/currency";
@@ -79,6 +84,12 @@ function DashboardChrome() {
     pendingImport,
     setPendingImport,
     confirmImport,
+    alertVisible,
+    alertTitle,
+    alertMessage,
+    setAlertVisible,
+  } = useDashboardContext();
+  const {
     isTransactionModalOpen,
     setIsTransactionModalOpen,
     setEditingTransactionId,
@@ -100,12 +111,8 @@ function DashboardChrome() {
     setInstallmentCount,
     editingTransactionId,
     handleSaveTransaction,
-    openNewTransactionModal,
-    alertVisible,
-    alertTitle,
-    alertMessage,
-    setAlertVisible,
-  } = useDashboardContext();
+  } = useTransactionForm();
+  const { openNewTransactionModal } = useTransactionActions();
   const { releases, dismiss: dismissReleaseNotes } = useReleaseNotes();
 
   return (
@@ -375,7 +382,9 @@ function DashboardChrome() {
 export default function DashboardLayout() {
   return (
     <DashboardProvider>
-      <DashboardChrome />
+      <TransactionFormProvider>
+        <DashboardChrome />
+      </TransactionFormProvider>
     </DashboardProvider>
   );
 }

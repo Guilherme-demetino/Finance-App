@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Animated, {
   useAnimatedScrollHandler,
 } from "react-native-reanimated";
@@ -5,6 +6,7 @@ import Animated, {
 import { TransactionsHistoryList } from "../../components/TransactionsHistoryList";
 
 import { useDashboardContext } from "../../context/DashboardContext";
+import { useTransactionActions } from "../../context/TransactionFormContext";
 import { styles } from "../../styles/dashboardStyles";
 
 export default function DashboardHistoryScreen() {
@@ -12,15 +14,22 @@ export default function DashboardHistoryScreen() {
     formattedTransactions,
     transactions,
     isLoadingTransactions,
-    searchText,
-    setSearchText,
-    handleOpenEditTransaction,
     handleDeleteTransaction,
     handleDeleteAllTransactions,
     handleDeleteSeriesFromId,
     handleDeleteSeries,
     scrollY,
   } = useDashboardContext();
+  const { handleOpenEditTransaction } = useTransactionActions();
+
+  // A busca só afeta esta tela; guardar o texto aqui evita re-renderizar o resto do dashboard a cada tecla.
+  const [searchText, setSearchText] = useState("");
+  const searchLower = searchText.toLowerCase();
+  const visibleTransactions = formattedTransactions.filter(
+    (item) =>
+      item.description.toLowerCase().includes(searchLower) ||
+      (item.category && item.category.toLowerCase().includes(searchLower)),
+  );
 
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollY.set(event.contentOffset.y);
@@ -33,7 +42,7 @@ export default function DashboardHistoryScreen() {
       contentContainerStyle={[styles.scrollContent, { paddingTop: 10 }]}
     >
       <TransactionsHistoryList
-        transactions={formattedTransactions}
+        transactions={visibleTransactions}
         hasAnyTransactions={transactions.length > 0}
         isLoading={isLoadingTransactions}
         searchText={searchText}

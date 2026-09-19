@@ -19,6 +19,32 @@ export async function getAllTransactions(): Promise<TransactionRow[]> {
   );
 }
 
+/**
+ * Transações de um ano inteiro (datas no formato DD/MM/AAAA). Traz só o que o
+ * painel precisa em vez da tabela toda; o mês é filtrado em cima desse recorte.
+ */
+export async function getTransactionsByYear(
+  year: string,
+): Promise<TransactionRow[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<TransactionRow>(
+    "SELECT * FROM transactions WHERE date LIKE ? ORDER BY id DESC",
+    `%/${year}`,
+  );
+}
+
+/** Transações de um mês/ano específico (formato DD/MM/AAAA). */
+export async function getTransactionsByMonth(
+  monthNumber: string,
+  year: string,
+): Promise<TransactionRow[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<TransactionRow>(
+    "SELECT * FROM transactions WHERE date LIKE ? ORDER BY id DESC",
+    `%/${monthNumber}/${year}`,
+  );
+}
+
 export interface TransactionInput {
   amount: number;
   date: string;

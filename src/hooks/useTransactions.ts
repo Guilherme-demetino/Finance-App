@@ -9,7 +9,7 @@ import {
   deleteTransactionsByGroupId,
   deleteTransactionsByMonth,
   deleteTransactionsFromIdInGroup,
-  getAllTransactions,
+  getTransactionsByYear,
   TransactionInput,
   updateTransaction,
 } from "../database/transactions";
@@ -82,7 +82,7 @@ async function loadPeriodData(
   selectedYear: string,
 ): Promise<PeriodData> {
   const [rawTransactions, rawCategories] = await Promise.all([
-    getAllTransactions(),
+    getTransactionsByYear(selectedYear),
     getAllCategories(),
   ]);
 
@@ -106,9 +106,8 @@ async function loadPeriodData(
     };
   });
 
-  const yearTransactions = enriched.filter(
-    (item) => item.date && item.date.endsWith(`/${selectedYear}`),
-  );
+  // A consulta já traz só o ano selecionado.
+  const yearTransactions = enriched;
 
   const monthNumber = getMonthNumber(selectedMonth);
   const monthTransactions = yearTransactions.filter((item) =>

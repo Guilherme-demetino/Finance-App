@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { colors } from "../constants/colors";
 import { getAllCategories } from "../database/categories";
-import { getAllTransactions } from "../database/transactions";
+import { getTransactionsByMonth } from "../database/transactions";
 import type { EnrichedTransaction, TransactionRow } from "../types";
 import { getMonthNumber, getPreviousMonth } from "../utils/dates";
 import { DEFAULT_CATEGORY_COLORS } from "./useTransactions";
@@ -39,8 +39,17 @@ async function buildComparison(
   selectedMonth: string,
   selectedYear: string,
 ): Promise<MonthComparisonResult> {
-  const [allTransactions, categories] = await Promise.all([
-    getAllTransactions(),
+  const { month: prevMonth, year: prevYear } = getPreviousMonth(
+    selectedMonth,
+    selectedYear,
+  );
+  const currentMonthNumber = getMonthNumber(selectedMonth);
+  const prevMonthNumber = getMonthNumber(prevMonth);
+
+  // Só os dois meses comparados, em vez do histórico inteiro.
+  const [currentMonthRows, previousMonthRows, categories] = await Promise.all([
+    getTransactionsByMonth(currentMonthNumber, selectedYear),
+    getTransactionsByMonth(prevMonthNumber, prevYear),
     getAllCategories(),
   ]);
 
@@ -53,22 +62,9 @@ async function buildComparison(
     }
   });
 
-  const { month: prevMonth, year: prevYear } = getPreviousMonth(
-    selectedMonth,
-    selectedYear,
-  );
-  const currentMonthNumber = getMonthNumber(selectedMonth);
-  const prevMonthNumber = getMonthNumber(prevMonth);
-
-  const currentExpenses = allTransactions.filter(
-    (t) =>
-      t.type === "expense" &&
-      t.date.includes(`/${currentMonthNumber}/${selectedYear}`),
-  );
-  const previousExpenses = allTransactions.filter(
-    (t) =>
-      t.type === "expense" &&
-      t.date.includes(`/${prevMonthNumber}/${prevYear}`),
+  const currentExpenses = currentMonthRows.filter((t) => t.type === "expense");
+  const previousExpenses = previousMonthRows.filter(
+    (t) => t.type === "expense",
   );
 
   const currentTotal = currentExpenses.reduce((sum, t) => sum + t.amount, 0);
@@ -135,8 +131,8 @@ async function buildComparison(
 export function useMonthComparison(
   selectedMonth: string,
   selectedYear: string,
-  // Não é lido diretamente (esse hook busca o histórico completo por conta
-  // própria) — serve só de gatilho pra recalcular quando outra transação é
+  // Não é lido diretamente (esse hook busca os meses por conta própria) —
+  // serve só de gatilho pra recalcular quando outra transação é
   // criada/editada em outro lugar (ex: ao quitar uma dívida).
   refreshTrigger: EnrichedTransaction[],
 ) {
