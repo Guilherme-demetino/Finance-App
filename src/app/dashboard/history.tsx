@@ -5,7 +5,8 @@ import Animated, {
 
 import { TransactionsHistoryList } from "../../components/TransactionsHistoryList";
 
-import { useDashboardContext } from "../../context/DashboardContext";
+import { useScrollY } from "../../context/DashboardUiContext";
+import { useTransactionsData } from "../../context/TransactionsContext";
 import { useTransactionActions } from "../../context/TransactionFormContext";
 import { styles } from "../../styles/dashboardStyles";
 
@@ -18,8 +19,8 @@ export default function DashboardHistoryScreen() {
     handleDeleteAllTransactions,
     handleDeleteSeriesFromId,
     handleDeleteSeries,
-    scrollY,
-  } = useDashboardContext();
+  } = useTransactionsData();
+  const scrollY = useScrollY();
   const { handleOpenEditTransaction } = useTransactionActions();
 
   // A busca só afeta esta tela; guardar o texto aqui evita re-renderizar o resto do dashboard a cada tecla.

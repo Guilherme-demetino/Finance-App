@@ -10,29 +10,30 @@ import { MonthComparisonCard } from "../../components/MonthComparisonCard";
 import { MonthProjectionCard } from "../../components/MonthProjectionCard";
 import { SummaryCards } from "../../components/SummaryCards";
 
-import { useDashboardContext } from "../../context/DashboardContext";
+import { useBudgetData } from "../../context/BudgetContext";
+import { useDebtsContext } from "../../context/DebtsContext";
+import { usePanorama, useScrollY } from "../../context/DashboardUiContext";
+import { usePeriod } from "../../context/PeriodContext";
+import { useTransactionsData } from "../../context/TransactionsContext";
 import { styles } from "../../styles/dashboardStyles";
 import { buildAlerts } from "../../utils/alerts";
 import { MONTH_NAMES } from "../../utils/dates";
 import { computeMonthProjection } from "../../utils/monthProjection";
 
 export default function DashboardHomeScreen() {
+  const { selectedMonth, selectedYear } = usePeriod();
   const {
     totalBalance,
-    selectedMonth,
-    selectedYear,
     totalIncome,
     totalExpense,
     formattedTransactions,
-    openLandscapePanorama,
-    comparison,
-    isLoadingComparison,
     transactions,
-    budget,
-    categoryBudgets,
-    pendingDebts,
-    scrollY,
-  } = useDashboardContext();
+  } = useTransactionsData();
+  const { budget, categoryBudgets, comparison, isLoadingComparison } =
+    useBudgetData();
+  const { pendingDebts } = useDebtsContext();
+  const { openLandscapePanorama } = usePanorama();
+  const scrollY = useScrollY();
 
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollY.set(event.contentOffset.y);

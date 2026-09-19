@@ -11,16 +11,19 @@ import {
 const mockSaveTransaction = jest.fn();
 const mockShowAlert = jest.fn();
 
-jest.mock("./DashboardContext", () => ({
-  useDashboardContext: () => ({
-    selectedMonth: "Setembro",
-    selectedYear: "2026",
+jest.mock("./PeriodContext", () => ({
+  usePeriod: () => ({ selectedMonth: "Setembro", selectedYear: "2026" }),
+  useToday: () => ({
     currentMonthNum: "09",
     currentYearStr: "2026",
     currentDay: "19",
-    saveTransaction: mockSaveTransaction,
-    showAlert: mockShowAlert,
   }),
+}));
+jest.mock("./TransactionsContext", () => ({
+  useTransactionsMutations: () => ({ saveTransaction: mockSaveTransaction }),
+}));
+jest.mock("./AlertContext", () => ({
+  useAlert: () => ({ showAlert: mockShowAlert }),
 }));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =

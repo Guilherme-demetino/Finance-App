@@ -12,7 +12,7 @@ import { logError } from "../utils/logger";
 /**
  * Dívidas/empréstimos entre você e outras pessoas — ficam fora do fluxo
  * normal de receita/despesa enquanto pendentes. Só entram no cálculo do
- * saldo quando quitadas (ver handleSettleDebt no DashboardContext, que
+ * saldo quando quitadas (ver handleSettleDebt no DebtsContext, que
  * cria a transação correspondente nesse momento).
  */
 export function useDebts() {

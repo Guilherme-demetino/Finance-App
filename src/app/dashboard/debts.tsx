@@ -4,7 +4,9 @@ import Animated, {
 
 import { DebtsList } from "../../components/DebtsList";
 
-import { useDashboardContext } from "../../context/DashboardContext";
+import { useScrollY } from "../../context/DashboardUiContext";
+import { useDebtsContext } from "../../context/DebtsContext";
+import { useToday } from "../../context/PeriodContext";
 import { styles } from "../../styles/dashboardStyles";
 
 export default function DashboardDebtsScreen() {
@@ -17,11 +19,9 @@ export default function DashboardDebtsScreen() {
     setIsDebtModalOpen,
     handleSettleDebt,
     handleDeleteDebt,
-    currentDay,
-    currentMonthNum,
-    currentYearStr,
-    scrollY,
-  } = useDashboardContext();
+  } = useDebtsContext();
+  const { currentDay, currentMonthNum, currentYearStr } = useToday();
+  const scrollY = useScrollY();
 
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollY.set(event.contentOffset.y);

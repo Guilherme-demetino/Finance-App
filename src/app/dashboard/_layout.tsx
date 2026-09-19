@@ -1,132 +1,35 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ConfirmModal } from "../../components/ConfirmModal";
-import { CustomAlert } from "../../components/CustomAlert";
-import { DebtModal } from "../../components/DebtModal";
-import { MonthModal, YearModal } from "../../components/FilterModals";
-import { LandscapePanoramaModal } from "../../components/LandscapePanoramaModal";
+import { AlertContainer } from "../../components/dashboard/AlertContainer";
+import { DashboardHeader } from "../../components/dashboard/DashboardHeader";
+import { DebtModalContainer } from "../../components/dashboard/DebtModalContainer";
+import { NewTransactionFab } from "../../components/dashboard/NewTransactionFab";
+import { PanoramaContainer } from "../../components/dashboard/PanoramaContainer";
+import { ProfileMenuContainer } from "../../components/dashboard/ProfileMenuContainer";
+import { SavingsModalsContainer } from "../../components/dashboard/SavingsModalsContainer";
+import { TransactionModalContainer } from "../../components/dashboard/TransactionModalContainer";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
-import { SavingsDepositModal } from "../../components/SavingsDepositModal";
-import { SavingsGoalModal } from "../../components/SavingsGoalModal";
-import {
-  EditNameModal,
-  ProfileMenuModal,
-} from "../../components/ProfileMenuModals";
-import { TransactionModal } from "../../components/TransactionModal";
-import { UserProfileHeader } from "../../components/UserProfileHeader";
 
 import { colors } from "../../constants/colors";
-import {
-  DashboardProvider,
-  useDashboardContext,
-  YEARS_LIST,
-} from "../../context/DashboardContext";
-import {
-  TransactionFormProvider,
-  useTransactionActions,
-  useTransactionForm,
-} from "../../context/TransactionFormContext";
+import { DashboardProviders } from "../../context/DashboardProviders";
 import { useReleaseNotes } from "../../hooks/useReleaseNotes";
 import { styles } from "../../styles/dashboardStyles";
-import { formatCurrencyInput } from "../../utils/currency";
-import { describeImportPlan } from "../../utils/importSummary";
-import { MONTH_NAMES } from "../../utils/dates";
 
+/**
+ * Moldura do dashboard. Não lê nenhum contexto de dados: cada parte abaixo
+ * (cabeçalho, modais, botão "+") assina só o domínio de que precisa, então
+ * uma mudança num domínio não redesenha o resto.
+ */
 function DashboardChrome() {
-  const {
-    userName,
-    userImage,
-    selectedMonth,
-    setSelectedMonth,
-    selectedYear,
-    setSelectedYear,
-    isMonthModalOpen,
-    setIsMonthModalOpen,
-    isYearModalOpen,
-    setIsYearModalOpen,
-    isMenuOpen,
-    setIsMenuOpen,
-    scrollY,
-    isLandscapePanoramaOpen,
-    closeLandscapePanorama,
-    monthsData,
-    pickImage,
-    isEditingName,
-    setIsEditingName,
-    newName,
-    setNewName,
-    handleUpdateName,
-    handleExportPDF,
-    handleExportCSV,
-    handleChangePIN,
-    handleWipeData,
-    isWipeConfirmOpen,
-    setIsWipeConfirmOpen,
-    confirmWipeData,
-    isDebtModalOpen,
-    setIsDebtModalOpen,
-    handleAddDebt,
-    currentDay,
-    currentMonthNum,
-    currentYearStr,
-    isSavingsModalOpen,
-    setIsSavingsModalOpen,
-    depositGoal,
-    setDepositGoal,
-    handleAddSavingsGoal,
-    handleChangeSavings,
-    handleImportFile,
-    isReadingImport,
-    handleDeleteCategory,
-    pendingImport,
-    setPendingImport,
-    confirmImport,
-    alertVisible,
-    alertTitle,
-    alertMessage,
-    setAlertVisible,
-  } = useDashboardContext();
-  const {
-    isTransactionModalOpen,
-    setIsTransactionModalOpen,
-    setEditingTransactionId,
-    transactionType,
-    setTransactionType,
-    transactionTitle,
-    setTransactionTitle,
-    transactionAmount,
-    setTransactionAmount,
-    transactionDate,
-    setTransactionDate,
-    transactionCategory,
-    setTransactionCategory,
-    isRecurring,
-    setIsRecurring,
-    recurringMonths,
-    setRecurringMonths,
-    installmentCount,
-    setInstallmentCount,
-    editingTransactionId,
-    handleSaveTransaction,
-  } = useTransactionForm();
-  const { openNewTransactionModal } = useTransactionActions();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { releases, dismiss: dismissReleaseNotes } = useReleaseNotes();
 
   return (
     <SafeAreaView style={styles.container}>
-      <UserProfileHeader
-        userName={userName}
-        userImage={userImage}
-        selectedMonth={selectedMonth}
-        selectedYear={selectedYear}
-        onOpenMonthModal={() => setIsMonthModalOpen(true)}
-        onOpenYearModal={() => setIsYearModalOpen(true)}
-        onOpenMenu={() => setIsMenuOpen(true)}
-        scrollY={scrollY}
-      />
+      <DashboardHeader onOpenMenu={() => setIsMenuOpen(true)} />
 
       <Tabs
         screenOptions={{
@@ -213,178 +116,29 @@ function DashboardChrome() {
         />
       </Tabs>
 
-      <TouchableOpacity
-        style={[styles.fab, { bottom: 108 }]}
-        onPress={openNewTransactionModal}
-      >
-        <Ionicons name="add" size={28} color={colors.textPrimary} />
-      </TouchableOpacity>
+      <NewTransactionFab />
 
-      <TransactionModal
-        visible={isTransactionModalOpen}
-        onClose={() => {
-          setEditingTransactionId(null);
-          setIsTransactionModalOpen(false);
-        }}
-        transactionType={transactionType}
-        setTransactionType={setTransactionType}
-        transactionTitle={transactionTitle}
-        setTransactionTitle={setTransactionTitle}
-        transactionAmount={transactionAmount}
-        setTransactionAmount={setTransactionAmount}
-        transactionDate={transactionDate}
-        setTransactionDate={setTransactionDate}
-        transactionCategory={transactionCategory}
-        setTransactionCategory={setTransactionCategory}
-        isRecurring={isRecurring}
-        setIsRecurring={setIsRecurring}
-        recurringMonths={recurringMonths}
-        setRecurringMonths={setRecurringMonths}
-        installmentCount={installmentCount}
-        setInstallmentCount={setInstallmentCount}
-        isEditing={!!editingTransactionId}
-        formatCurrency={formatCurrencyInput}
-        onSave={handleSaveTransaction}
-        onDeleteCategory={handleDeleteCategory}
+      <TransactionModalContainer />
+      <DebtModalContainer />
+      <SavingsModalsContainer />
+      <PanoramaContainer />
+
+      <ProfileMenuContainer
+        isMenuOpen={isMenuOpen}
+        onCloseMenu={() => setIsMenuOpen(false)}
       />
-
-      <DebtModal
-        visible={isDebtModalOpen}
-        onClose={() => setIsDebtModalOpen(false)}
-        formatCurrency={formatCurrencyInput}
-        onSave={(data) => {
-          setIsDebtModalOpen(false);
-          handleAddDebt({
-            ...data,
-            date: `${currentDay}/${currentMonthNum}/${currentYearStr}`,
-          });
-        }}
-      />
-
-      <SavingsGoalModal
-        visible={isSavingsModalOpen}
-        onClose={() => setIsSavingsModalOpen(false)}
-        formatCurrency={formatCurrencyInput}
-        onSave={(data) => {
-          setIsSavingsModalOpen(false);
-          handleAddSavingsGoal(data);
-        }}
-      />
-
-      <SavingsDepositModal
-        goal={depositGoal}
-        onClose={() => setDepositGoal(null)}
-        formatCurrency={formatCurrencyInput}
-        onConfirm={(goal, delta) => {
-          setDepositGoal(null);
-          handleChangeSavings(goal, delta);
-        }}
-      />
-
-      <MonthModal
-        visible={isMonthModalOpen}
-        onClose={() => setIsMonthModalOpen(false)}
-        months={MONTH_NAMES}
-        selectedMonth={selectedMonth}
-        onSelectMonth={setSelectedMonth}
-      />
-
-      <YearModal
-        visible={isYearModalOpen}
-        onClose={() => setIsYearModalOpen(false)}
-        years={YEARS_LIST}
-        selectedYear={selectedYear}
-        onSelectYear={setSelectedYear}
-      />
-
-      <LandscapePanoramaModal
-        visible={isLandscapePanoramaOpen}
-        selectedYear={selectedYear}
-        monthsData={monthsData}
-        onClose={closeLandscapePanorama}
-      />
-
-      <ProfileMenuModal
-        visible={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
-        userName={userName}
-        userImage={userImage}
-        onPickImage={pickImage}
-        onOpenEditName={() => setIsEditingName(true)}
-        onExportPDF={handleExportPDF}
-        onExportCSV={handleExportCSV}
-        onImportFile={handleImportFile}
-        onChangePIN={handleChangePIN}
-        onWipeData={handleWipeData}
-      />
-
-      <EditNameModal
-        visible={isEditingName}
-        onClose={() => setIsEditingName(false)}
-        newName={newName}
-        setNewName={setNewName}
-        onSave={handleUpdateName}
-      />
-
-      <CustomAlert
-        visible={alertVisible}
-        title={alertTitle}
-        message={alertMessage}
-        onClose={() => setAlertVisible(false)}
-      />
-
-      <ConfirmModal
-        visible={pendingImport !== null}
-        title="Importar transações"
-        message={pendingImport ? describeImportPlan(pendingImport) : ""}
-        confirmLabel="Importar"
-        onCancel={() => setPendingImport(null)}
-        onConfirm={confirmImport}
-      />
-
-      {isReadingImport && (
-        <View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.6)",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            elevation: 1000,
-          }}
-        >
-          <ActivityIndicator size="large" color={colors.textPrimary} />
-          <Text style={{ color: colors.textPrimary, marginTop: 12, fontSize: 14 }}>
-            Lendo o arquivo...
-          </Text>
-        </View>
-      )}
 
       <ReleaseNotesModal releases={releases} onClose={dismissReleaseNotes} />
 
-      <ConfirmModal
-        visible={isWipeConfirmOpen}
-        title="Zerar Aplicativo"
-        message="ATENÇÃO: Isso apagará todas as suas transações, categorias, nome, foto e PIN. Essa ação NÃO pode ser desfeita. Tem certeza?"
-        confirmLabel="Sim, apagar tudo"
-        destructive
-        onCancel={() => setIsWipeConfirmOpen(false)}
-        onConfirm={confirmWipeData}
-      />
+      <AlertContainer />
     </SafeAreaView>
   );
 }
 
 export default function DashboardLayout() {
   return (
-    <DashboardProvider>
-      <TransactionFormProvider>
-        <DashboardChrome />
-      </TransactionFormProvider>
-    </DashboardProvider>
+    <DashboardProviders>
+      <DashboardChrome />
+    </DashboardProviders>
   );
 }

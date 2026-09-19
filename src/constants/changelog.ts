@@ -85,4 +85,12 @@ export const CHANGELOG: Release[] = [
       "Os erros tratados pelo app passam a ser registrados num único lugar, o que facilita diagnosticar problemas.",
     ],
   },
+  {
+    id: 9,
+    date: "19/09/2026",
+    title: "Painel mais leve",
+    items: [
+      "O painel foi reorganizado por áreas (transações, orçamento, dívidas, metas e perfil): abrir menus, avisos e modais agora redesenha bem menos partes da tela.",
+    ],
+  },
 ];

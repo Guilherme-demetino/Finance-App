@@ -14,12 +14,14 @@ import type {
 } from "../types";
 import { formatCurrencyInput } from "../utils/currency";
 import { getMonthNumber } from "../utils/dates";
-import { useDashboardContext } from "./DashboardContext";
+import { useAlert } from "./AlertContext";
+import { usePeriod, useToday } from "./PeriodContext";
+import { useTransactionsMutations } from "./TransactionsContext";
 import { logError } from "../utils/logger";
 
 /**
  * Campos do formulário de transação. Mudam a cada tecla digitada, por isso
- * ficam fora do DashboardContext: assim digitar não re-renderiza as telas.
+ * ficam num contexto próprio: assim digitar não re-renderiza as telas.
  */
 interface TransactionFormContextValue {
   isTransactionModalOpen: boolean;
@@ -57,15 +59,10 @@ const TransactionActionsContext =
   createContext<TransactionActionsContextValue | null>(null);
 
 export function TransactionFormProvider({ children }: { children: ReactNode }) {
-  const {
-    selectedMonth,
-    selectedYear,
-    currentMonthNum,
-    currentYearStr,
-    currentDay,
-    saveTransaction,
-    showAlert,
-  } = useDashboardContext();
+  const { selectedMonth, selectedYear } = usePeriod();
+  const { currentMonthNum, currentYearStr, currentDay } = useToday();
+  const { saveTransaction } = useTransactionsMutations();
+  const { showAlert } = useAlert();
 
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<

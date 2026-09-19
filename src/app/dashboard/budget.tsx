@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Animated, {
   useAnimatedScrollHandler,
 } from "react-native-reanimated";
@@ -6,29 +7,34 @@ import { CategoryBudgetsCard } from "../../components/CategoryBudgetsCard";
 import { MonthlyBudgetCard } from "../../components/MonthlyBudgetCard";
 import { SavingsGoalsCard } from "../../components/SavingsGoalsCard";
 
-import { useDashboardContext } from "../../context/DashboardContext";
+import { useBudgetActions, useBudgetData } from "../../context/BudgetContext";
+import { useScrollY } from "../../context/DashboardUiContext";
+import { useSavingsContext } from "../../context/SavingsContext";
+import { useTransactionsData } from "../../context/TransactionsContext";
 import { styles } from "../../styles/dashboardStyles";
 import { formatCurrencyInput } from "../../utils/currency";
 
 export default function DashboardBudgetScreen() {
+  const { totalExpense } = useTransactionsData();
   const {
     budget,
-    totalExpense,
-    isEditingBudget,
-    setIsEditingBudget,
     updateBudget,
     categoryBudgets,
     isLoadingCategoryBudgets,
     saveCategoryGoal,
-    handleDeleteCategory,
     refreshCategoryBudgets,
+  } = useBudgetData();
+  const { handleDeleteCategory } = useBudgetActions();
+  const {
     savingsGoals,
     isLoadingSavings,
     setIsSavingsModalOpen,
     setDepositGoal,
     handleDeleteSavingsGoal,
-    scrollY,
-  } = useDashboardContext();
+  } = useSavingsContext();
+  const scrollY = useScrollY();
+  // Só o cartão de orçamento usa esse estado, então não precisa ficar num contexto.
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
 
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollY.set(event.contentOffset.y);
