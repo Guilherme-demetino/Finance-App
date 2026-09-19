@@ -22,6 +22,7 @@ import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
 import { formatDateToString, parseDateString } from "../utils/dates";
 import { CalendarPicker } from "./CalendarPicker";
 import { CategoryModal } from "./CategoryModal";
+import { ConfirmModal } from "./ConfirmModal";
 
 const INSTALLMENT_OPTIONS = [2, 3, 4, 6, 10, 12];
 const RECURRING_MONTHS_OPTIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -48,6 +49,8 @@ interface TransactionModalProps {
   isEditing: boolean;
   formatCurrency: (value: string) => string;
   onSave: () => void;
+  /** Exclui uma categoria criada pelo usuário (as padrão não podem ser apagadas). */
+  onDeleteCategory: (id: number) => Promise<void>;
 }
 
 export function TransactionModal({
@@ -72,8 +75,12 @@ export function TransactionModal({
   isEditing,
   formatCurrency,
   onSave,
+  onDeleteCategory,
 }: TransactionModalProps) {
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<CategoryRow | null>(
+    null,
+  );
   const [dbCategories, setDbCategories] = useState<CategoryRow[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -110,6 +117,36 @@ export function TransactionModal({
       : [...DEFAULT_EXPENSE_CATEGORIES, ...customExpenseCategories];
 
   displayCategories = Array.from(new Set(displayCategories));
+
+  const defaultCategories =
+    transactionType === "income"
+      ? DEFAULT_INCOME_CATEGORIES
+      : DEFAULT_EXPENSE_CATEGORIES;
+
+  // Só as categorias criadas pelo usuário (fora da lista padrão) podem ser excluídas.
+  const findDeletableCategory = (name: string) => {
+    if (defaultCategories.includes(name)) return null;
+    return (
+      dbCategories.find(
+        (c) =>
+          String(c.name).trim() === name &&
+          (String(c.type).trim().toLowerCase() === "income") ===
+            (transactionType === "income"),
+      ) ?? null
+    );
+  };
+
+  const confirmDeleteCategory = async () => {
+    const category = categoryToDelete;
+    setCategoryToDelete(null);
+    if (!category) return;
+
+    await onDeleteCategory(category.id);
+    if (transactionCategory === String(category.name).trim()) {
+      setTransactionCategory(defaultCategories[0]);
+    }
+    fetchCategories();
+  };
 
   if (!visible) return null;
 
@@ -355,6 +392,7 @@ export function TransactionModal({
 
                   {displayCategories.map((catName, index) => {
                     const isSelected = transactionCategory === catName;
+                    const deletable = findDeletableCategory(catName);
                     return (
                       <TouchableOpacity
                         key={index}
@@ -367,6 +405,9 @@ export function TransactionModal({
                           paddingVertical: 8,
                           borderRadius: 8,
                           opacity: isSelected ? 1 : 0.5,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
                         }}
                       >
                         <Text
@@ -378,6 +419,18 @@ export function TransactionModal({
                         >
                           {catName}
                         </Text>
+                        {deletable && (
+                          <TouchableOpacity
+                            onPress={() => setCategoryToDelete(deletable)}
+                            hitSlop={8}
+                          >
+                            <Ionicons
+                              name="trash-outline"
+                              size={14}
+                              color={colors.expense}
+                            />
+                          </TouchableOpacity>
+                        )}
                       </TouchableOpacity>
                     );
                   })}
@@ -619,6 +672,20 @@ export function TransactionModal({
           setTransactionCategory(String(novaCategoria).trim());
           fetchCategories();
         }}
+      />
+
+      <ConfirmModal
+        visible={!!categoryToDelete}
+        title="Excluir categoria"
+        message={
+          categoryToDelete
+            ? `Excluir a categoria "${String(categoryToDelete.name).trim()}"? As transações e metas já registradas com ela continuam existindo, só deixam de aparecer atreladas a essa categoria.`
+            : ""
+        }
+        confirmLabel="Excluir"
+        destructive
+        onCancel={() => setCategoryToDelete(null)}
+        onConfirm={confirmDeleteCategory}
       />
     </>
   );

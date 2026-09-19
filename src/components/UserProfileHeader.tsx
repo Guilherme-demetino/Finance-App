@@ -24,6 +24,25 @@ interface UserProfileHeaderProps {
 const BORDER_FADE_DISTANCE = 24;
 // Raio das bordas inferiores do cabeçalho — soft card em vez de corte reto.
 const HEADER_RADIUS = 20;
+// Largura da coluna do perfil (foto + nome); o espaçador do lado oposto usa a mesma.
+const PROFILE_COLUMN_WIDTH = 64;
+
+const selectorButtonStyle = {
+  backgroundColor: colors.surfaceAlt,
+  borderWidth: 1,
+  borderColor: colors.textPrimary,
+  borderRadius: 12,
+  paddingVertical: 10,
+  paddingHorizontal: 14,
+  alignItems: "center",
+  justifyContent: "center",
+} as const;
+
+const selectorTextStyle = {
+  color: colors.textPrimary,
+  fontSize: 15,
+  fontWeight: "bold",
+} as const;
 
 export function UserProfileHeader({
   userName,
@@ -61,57 +80,35 @@ export function UserProfileHeader({
         animatedHeaderStyle,
       ]}
     >
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.greeting}>Olá,</Text>
-          <Text style={styles.userName} numberOfLines={1}>
-            {userName}
-          </Text>
-        </View>
+      <View style={[styles.header, { paddingHorizontal: 16 }]}>
+        {/* Espaçador do mesmo tamanho do bloco do perfil, pra manter os
+            seletores de mês/ano centralizados de verdade. */}
+        <View style={{ width: PROFILE_COLUMN_WIDTH }} />
 
-        <View style={{ flexDirection: "row", gap: 6, marginHorizontal: 8 }}>
+        <View style={{ flexDirection: "row", gap: 8, flexShrink: 1 }}>
           <TouchableOpacity
-            style={{
-              backgroundColor: colors.surfaceAlt,
-              borderWidth: 1,
-              borderColor: colors.textPrimary,
-              borderRadius: 10,
-              paddingVertical: 6,
-              paddingHorizontal: 10,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            style={selectorButtonStyle}
             onPress={onOpenMonthModal}
           >
-            <Text
-              style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "bold" }}
-            >
+            <Text style={selectorTextStyle} numberOfLines={1}>
               {selectedMonth}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={{
-              backgroundColor: colors.surfaceAlt,
-              borderWidth: 1,
-              borderColor: colors.textPrimary,
-              borderRadius: 10,
-              paddingVertical: 6,
-              paddingHorizontal: 10,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            style={selectorButtonStyle}
             onPress={onOpenYearModal}
           >
-            <Text
-              style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "bold" }}
-            >
+            <Text style={selectorTextStyle} numberOfLines={1}>
               {selectedYear}
             </Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.profileButton} onPress={onOpenMenu}>
+        <TouchableOpacity
+          style={[styles.profileButton, { width: PROFILE_COLUMN_WIDTH, alignItems: "center" }]}
+          onPress={onOpenMenu}
+        >
           {userImage ? (
             <Image
               source={{ uri: userImage }}
@@ -120,6 +117,18 @@ export function UserProfileHeader({
           ) : (
             <Ionicons name="person-circle-outline" size={40} color={colors.accent} />
           )}
+          <Text
+            style={{
+              color: colors.textPrimary,
+              fontSize: 12,
+              fontWeight: "bold",
+              marginTop: 2,
+              maxWidth: "100%",
+            }}
+            numberOfLines={1}
+          >
+            {userName}
+          </Text>
         </TouchableOpacity>
       </View>
     </Animated.View>

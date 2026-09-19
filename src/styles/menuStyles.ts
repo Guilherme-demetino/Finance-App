@@ -2,28 +2,6 @@ import { StyleSheet } from "react-native";
 import { colors } from "../constants/colors";
 
 export const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    flexDirection: "row",
-    justifyContent: "flex-end",
-  },
-  menuContainer: {
-    width: "75%",
-    backgroundColor: colors.surface,
-    height: "100%",
-    padding: 24,
-    paddingTop: 60,
-    justifyContent: "space-between",
-    borderLeftWidth: 1,
-    borderLeftColor: colors.border,
-  },
-  menuTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: colors.textPrimary,
-    textAlign: "center",
-  },
   closeButton: {
     backgroundColor: colors.border,
     padding: 16,

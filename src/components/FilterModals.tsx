@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import type { ComponentProps } from "react";
+import { useRef, type ComponentProps } from "react";
 import {
   DimensionValue,
   Modal,
@@ -30,6 +30,8 @@ function SelectionModal({
   selectedItem,
   onSelectItem,
 }: SelectionModalProps) {
+  const scrollRef = useRef<ScrollView>(null);
+
   return (
     <Modal
       visible={visible}
@@ -37,17 +39,23 @@ function SelectionModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={menuStyles.overlay}>
-        <View
-          style={[menuStyles.menuContainer, { height: "auto", maxHeight }]}
-        >
-          <Text style={[menuStyles.menuTitle, { marginBottom: 16 }]}>
-            {title}
-          </Text>
-          <ScrollView>
+      <View style={menuStyles.modalContainer}>
+        <View style={[menuStyles.modalContent, { maxHeight }]}>
+          <Text style={menuStyles.modalTitle}>{title}</Text>
+          <ScrollView ref={scrollRef}>
             {items.map((item, idx) => (
               <TouchableOpacity
                 key={idx}
+                // Ao abrir, rola até o item selecionado (ex: o mês atual).
+                onLayout={
+                  selectedItem === item
+                    ? (e) =>
+                        scrollRef.current?.scrollTo({
+                          y: Math.max(0, e.nativeEvent.layout.y - 60),
+                          animated: false,
+                        })
+                    : undefined
+                }
                 style={{
                   paddingVertical: 12,
                   borderBottomWidth: 1,
@@ -169,9 +177,9 @@ export function SortModal<T extends string>({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={menuStyles.overlay}>
-        <View style={[menuStyles.menuContainer, { height: "auto", maxHeight: "60%" }]}>
-          <Text style={[menuStyles.menuTitle, { marginBottom: 16 }]}>{title}</Text>
+      <View style={menuStyles.modalContainer}>
+        <View style={[menuStyles.modalContent, { maxHeight: "60%" }]}>
+          <Text style={menuStyles.modalTitle}>{title}</Text>
           <ScrollView>
             {options.map((option) => {
               const isSelected = option.key === selectedKey;

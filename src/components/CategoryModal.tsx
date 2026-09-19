@@ -1,9 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -74,25 +72,33 @@ export function CategoryModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent
+      onRequestClose={onClose}
+    >
+      {/* Ancorado no topo pra o teclado não cobrir os campos. */}
       <View
         style={{
           flex: 1,
           backgroundColor: "rgba(0,0,0,0.6)",
-          justifyContent: "flex-end",
+          justifyContent: "flex-start",
+          paddingTop: 60,
         }}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          style={{ flexGrow: 0 }}
+          contentContainerStyle={{
+            backgroundColor: colors.surface,
+            borderRadius: 24,
+            marginHorizontal: 16,
+            padding: 24,
+          }}
         >
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              padding: 24,
-            }}
-          >
+          <View>
             <View
               style={{
                 flexDirection: "row",
@@ -228,7 +234,7 @@ export function CategoryModal({
               </Text>
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </ScrollView>
       </View>
     </Modal>
   );

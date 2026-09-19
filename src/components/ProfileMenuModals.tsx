@@ -200,6 +200,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 14,
     marginTop: 4,
+    textDecorationLine: "underline",
   },
   divider: {
     height: 1,

@@ -71,6 +71,7 @@ function DashboardChrome() {
     handleAddSavingsGoal,
     handleChangeSavings,
     handleImportCSV,
+    handleDeleteCategory,
     pendingImport,
     setPendingImport,
     confirmImport,
@@ -201,7 +202,7 @@ function DashboardChrome() {
       </Tabs>
 
       <TouchableOpacity
-        style={[styles.fab, { bottom: 96 }]}
+        style={[styles.fab, { bottom: 108 }]}
         onPress={openNewTransactionModal}
       >
         <Ionicons name="add" size={28} color={colors.textPrimary} />
@@ -232,6 +233,7 @@ function DashboardChrome() {
         isEditing={!!editingTransactionId}
         formatCurrency={formatCurrencyInput}
         onSave={handleSaveTransaction}
+        onDeleteCategory={handleDeleteCategory}
       />
 
       <DebtModal
