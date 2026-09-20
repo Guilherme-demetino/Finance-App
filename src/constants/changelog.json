@@ -150,5 +150,15 @@
       "Você escolhe quantos dias antes (no dia, 1, 2, 3 ou 7 dias) e a hora do aviso. Vencimentos do mesmo dia viram uma notificação só.",
       "A tela mostra os próximos avisos e tem um botão de teste para conferir que a notificação aparece no seu aparelho."
     ]
+  },
+  {
+    "id": 17,
+    "date": "20/09/2026",
+    "title": "Atualizar o app por dentro",
+    "items": [
+      "Em “Atualizações do App”, o novo cartão “Nova versão do aplicativo” verifica se saiu uma versão nova do app e mostra o que mudou e o tamanho do arquivo.",
+      "“Baixar e instalar” baixa o arquivo com barra de progresso (dá para cancelar) e abre o instalador do Android; a instalação é por cima e mantém seus dados.",
+      "O Android pede a sua confirmação para instalar e, na primeira vez, para permitir que o app instale atualizações. Prefira uma rede Wi-Fi."
+    ]
   }
 ]

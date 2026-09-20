@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { ActivityIndicator, ScrollView, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { ApkUpdateCard } from "../components/ApkUpdateCard";
 import { CHANGELOG, type Release } from "../constants/changelog";
 import { useAppUpdates } from "../hooks/useAppUpdates";
 import { formatDateTime, formatProgress } from "../utils/appUpdates";
@@ -184,6 +185,8 @@ export default function UpdatesScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        <ApkUpdateCard currentVersion={info.appVersion} />
 
         <Text style={styles.sectionTitle}>Histórico de novidades</Text>
         <ReleaseList releases={[...CHANGELOG].reverse()} />
