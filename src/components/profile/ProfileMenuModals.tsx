@@ -118,7 +118,7 @@ export function ProfileMenuModal({
 
           <TouchableOpacity style={styles.menuItem} onPress={onOpenReminders}>
             <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
-            <Text style={styles.menuItemText}>Lembretes de Vencimento</Text>
+            <Text style={styles.menuItemText}>Lembretes e Alertas</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={onOpenUpdates}>

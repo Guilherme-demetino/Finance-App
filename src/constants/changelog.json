@@ -181,5 +181,16 @@
       "Restaurar um backup protegido pede a senha (neste aparelho, com a proteção ligada, abre sozinho) e pode continuar protegendo os próximos backups com a mesma senha. Backups antigos, sem senha, continuam abrindo normalmente.",
       "Gerar a chave e abrir um backup protegido levam alguns segundos, e a tela pode ficar parada nesse tempo."
     ]
+  },
+  {
+    "id": 20,
+    "date": "20/09/2026",
+    "title": "Alertas de orçamento",
+    "items": [
+      "Nova seção “Alertas de orçamento” em “Lembretes e Alertas” (menu do perfil): uma notificação na hora em que uma categoria chega a 80% da meta do mês ou passa dela. Vale também para o orçamento do mês.",
+      "Usa os mesmos números dos avisos do Início. Cada aviso vem uma vez por mês e por categoria, e vários que cruzam juntos viram uma notificação só.",
+      "Só avisa o que acontecer depois de ligar: o que já estava perto do limite não vira aviso. Mudar a meta não dispara alerta, só gastar.",
+      "O menu “Lembretes de Vencimento” agora se chama “Lembretes e Alertas”."
+    ]
   }
 ]

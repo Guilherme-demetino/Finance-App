@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AlertContainer } from "../../components/dashboard/AlertContainer";
 import { AutoBackupRunner } from "../../components/dashboard/AutoBackupRunner";
+import { BudgetAlertsRunner } from "../../components/dashboard/BudgetAlertsRunner";
 import { DashboardHeader } from "../../components/dashboard/DashboardHeader";
 import { DebtModalContainer } from "../../components/dashboard/DebtModalContainer";
 import { DueRemindersRunner } from "../../components/dashboard/DueRemindersRunner";
@@ -139,6 +140,7 @@ function DashboardChrome() {
       <AlertContainer />
       <AutoBackupRunner />
       <DueRemindersRunner />
+      <BudgetAlertsRunner />
     </SafeAreaView>
   );
 }

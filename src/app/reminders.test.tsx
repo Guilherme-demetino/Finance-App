@@ -34,6 +34,12 @@ jest.mock("../services/dueRemindersDeps", () => {
   return { realDueReminderDeps: deps };
 });
 
+// Os alertas de orçamento têm testes próprios; aqui só precisam existir sem tocar no banco.
+jest.mock("../services/budgetAlertsDeps", () => {
+  const { createFakeBudgetDeps: create } = jest.requireActual("../test/fakeBudgetAlertDeps");
+  return { realBudgetAlertDeps: create().deps };
+});
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const mounted: ReactTestRenderer[] = [];
@@ -67,6 +73,13 @@ const textOf = (tree: ReactTestRenderer) =>
     .map((node) => flat(node.props.children))
     .join(" | ");
 
+/** O interruptor dos lembretes de vencimento (a tela tem outro, o dos alertas de orçamento). */
+const reminderSwitch = (tree: ReactTestRenderer) => {
+  const found = tree.root.findAllByType(Switch).find((node) => node.props.accessibilityLabel === "Avisar antes de vencer");
+  if (!found) throw new Error("interruptor dos lembretes não encontrado");
+  return found;
+};
+
 function button(tree: ReactTestRenderer, label: string) {
   const found = tree.root
     .findAllByType(TouchableOpacity)
@@ -90,12 +103,12 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe("tela Lembretes de vencimento", () => {
+describe("tela Lembretes e alertas", () => {
   it("começa desligada, explica e mostra as opções", async () => {
     const tree = await mount();
     const text = textOf(tree);
 
-    expect(tree.root.findByType(Switch).props.value).toBe(false);
+    expect(reminderSwitch(tree).props.value).toBe(false);
     expect(text).toContain("Avisar antes de vencer");
     expect(text).toContain("No dia | 1 dia antes | 2 dias antes | 3 dias antes | 7 dias antes");
     expect(text).toContain("08:00 | 09:00 | 12:00 | 18:00 | 20:00");
@@ -120,11 +133,11 @@ describe("tela Lembretes de vencimento", () => {
     const tree = await mount();
 
     await act(async () => {
-      await tree.root.findByType(Switch).props.onValueChange(true);
+      await reminderSwitch(tree).props.onValueChange(true);
     });
 
     expect(mockEnv.fake.state.requested).toBe(1);
-    expect(tree.root.findByType(Switch).props.value).toBe(true);
+    expect(reminderSwitch(tree).props.value).toBe(true);
     expect([...mockEnv.fake.state.scheduled.keys()]).toEqual(["due-reminder-20260921"]);
     expect(textOf(tree)).not.toContain("Ligue");
   });
@@ -134,15 +147,15 @@ describe("tela Lembretes de vencimento", () => {
     const tree = await mount();
 
     await act(async () => {
-      await tree.root.findByType(Switch).props.onValueChange(true);
+      await reminderSwitch(tree).props.onValueChange(true);
     });
 
-    expect(tree.root.findByType(Switch).props.value).toBe(false);
+    expect(reminderSwitch(tree).props.value).toBe(false);
     expect(textOf(tree)).toContain("Sem a permissão de notificação o app não consegue avisar");
 
     // Segunda recusa: o Android não pergunta mais, só pelas configurações.
     await act(async () => {
-      await tree.root.findByType(Switch).props.onValueChange(true);
+      await reminderSwitch(tree).props.onValueChange(true);
     });
     expect(textOf(tree)).toContain("As notificações do app estão bloqueadas no Android");
   });
@@ -165,7 +178,7 @@ describe("tela Lembretes de vencimento", () => {
     mockEnv.debts = [debt()];
     const tree = await mount();
     await act(async () => {
-      await tree.root.findByType(Switch).props.onValueChange(true);
+      await reminderSwitch(tree).props.onValueChange(true);
     });
 
     await act(async () => {
@@ -186,15 +199,15 @@ describe("tela Lembretes de vencimento", () => {
     mockEnv.debts = [debt()];
     const tree = await mount();
     await act(async () => {
-      await tree.root.findByType(Switch).props.onValueChange(true);
+      await reminderSwitch(tree).props.onValueChange(true);
     });
     expect(mockEnv.fake.state.scheduled.size).toBe(1);
 
     await act(async () => {
-      await tree.root.findByType(Switch).props.onValueChange(false);
+      await reminderSwitch(tree).props.onValueChange(false);
     });
 
-    expect(tree.root.findByType(Switch).props.value).toBe(false);
+    expect(reminderSwitch(tree).props.value).toBe(false);
     expect(mockEnv.fake.state.scheduled.size).toBe(0);
   });
 

@@ -23,6 +23,8 @@ import {
   type ProtectionKey,
 } from "../services/backupProtection";
 import { realBackupProtectionDeps } from "../services/backupProtectionDeps";
+import { resetBudgetAlertState } from "../services/budgetAlerts";
+import { realBudgetAlertDeps } from "../services/budgetAlertsDeps";
 import { syncDueReminders } from "../services/dueReminders";
 import { realDueReminderDeps } from "../services/dueRemindersDeps";
 import { readBackupData, replaceAllData } from "../database/backup";
@@ -264,6 +266,10 @@ export function useDataTransfer() {
 
     try {
       await replaceAllData(restore.backup.data);
+      // Dados novos: os alertas de orçamento recomeçam do ponto de partida, sem avisar o que já vinha assim.
+      await resetBudgetAlertState(realBudgetAlertDeps).catch((error) =>
+        logError("Erro ao reiniciar os alertas de orçamento:", error),
+      );
 
       // Continua protegendo com a mesma senha (se o usuário quis). Não falha a restauração, que já foi feita.
       let keptProtection = false;
@@ -368,6 +374,9 @@ export function useDataTransfer() {
     try {
       await resetDatabase();
       await clearPin();
+      await resetBudgetAlertState(realBudgetAlertDeps).catch((error) =>
+        logError("Erro ao reiniciar os alertas de orçamento:", error),
+      );
       // Sem dívidas nem parcelas, os lembretes agendados não fazem mais sentido.
       syncDueReminders(realDueReminderDeps).catch((error) =>
         logError("Erro ao cancelar os lembretes de vencimento:", error),

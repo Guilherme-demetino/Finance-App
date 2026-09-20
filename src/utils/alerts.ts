@@ -17,7 +17,7 @@ interface CategoryUsage {
 }
 
 // A partir de quanto da meta/orçamento usado o aviso amarelo aparece.
-const WARNING_THRESHOLD = 0.8;
+export const WARNING_THRESHOLD = 0.8;
 // Quantos dias antes do vencimento a dívida já entra nos avisos.
 const DEBT_DUE_SOON_DAYS = 3;
 

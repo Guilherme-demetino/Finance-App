@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { ScrollView, Switch, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BudgetAlertsCard } from "../components/BudgetAlertsCard";
 import { useDueReminders } from "../hooks/useDueReminders";
 import { makeStyles, Text, useTheme } from "../theme";
 import {
@@ -16,7 +17,7 @@ import {
 // Quantos dos próximos avisos aparecem na tela.
 const UPCOMING_SHOWN = 5;
 
-/** Lembretes de contas a vencer: liga/desliga, antecedência, horário, próximos avisos e um teste. */
+/** Lembretes de contas a vencer (antecedência, horário, próximos avisos e um teste) e alertas de orçamento. */
 export default function RemindersScreen() {
   const router = useRouter();
   const styles = useStyles();
@@ -45,7 +46,7 @@ export default function RemindersScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} accessibilityRole="header">
-          Lembretes de vencimento
+          Lembretes e alertas
         </Text>
       </View>
 
@@ -177,6 +178,10 @@ export default function RemindersScreen() {
             </TouchableOpacity>
           </>
         )}
+
+        <View style={styles.alertsSection}>
+          <BudgetAlertsCard />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -247,4 +252,5 @@ const useStyles = makeStyles(({ colors }) => ({
   },
   secondaryText: { color: colors.textPrimary, fontSize: 15, fontWeight: "600" },
   disabled: { opacity: 0.4 },
+  alertsSection: { marginTop: 24 },
 }));
