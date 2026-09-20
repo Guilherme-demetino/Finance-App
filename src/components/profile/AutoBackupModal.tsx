@@ -1,6 +1,7 @@
 import { ActivityIndicator, Modal, TouchableOpacity, View } from "react-native";
 
 import type { AutoBackupSettings } from "../../services/autoBackup";
+import type { ProtectionStatus } from "../../services/backupProtection";
 import { describeLastBackup, KEEP_BACKUPS } from "../../utils/backup/autoBackup";
 import { Text, makeStyles, useTheme } from "../../theme";
 
@@ -8,6 +9,8 @@ interface AutoBackupModalProps {
   visible: boolean;
   settings: AutoBackupSettings | null;
   isBusy: boolean;
+  /** Se os backups saem protegidos por senha (só informativo; a configuração fica em Proteger Backups com Senha). */
+  protection?: ProtectionStatus | null;
   onClose: () => void;
   onChooseFolder: () => void;
   onBackupNow: () => void;
@@ -19,6 +22,7 @@ export function AutoBackupModal({
   visible,
   settings,
   isBusy,
+  protection = null,
   onClose,
   onChooseFolder,
   onBackupNow,
@@ -50,6 +54,10 @@ export function AutoBackupModal({
                 <Text style={styles.statusValue}>{settings?.folderName ?? "Pasta escolhida"}</Text>
                 <Text style={styles.statusLabel}>Último backup</Text>
                 <Text style={styles.statusValue}>{lastBackup}</Text>
+                <Text style={styles.statusLabel}>Proteção por senha</Text>
+                <Text style={styles.statusValue}>
+                  {protection === "on" ? "Ligada" : protection === "broken" ? "Com problema" : "Desligada"}
+                </Text>
               </>
             )}
             {settings?.lastError ? (

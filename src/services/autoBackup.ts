@@ -13,6 +13,7 @@ import {
   type BackupData,
 } from "../utils/backup/backup";
 import { logError } from "../utils/logger";
+import { PROTECTION_FAILED_MESSAGE } from "./backupProtection";
 
 /** Chaves da tabela app_meta usadas pelo backup. Texto vazio = sem valor. */
 export const BACKUP_META = {
@@ -29,6 +30,8 @@ export interface AutoBackupDeps {
   getMeta(key: string): Promise<string | null>;
   setMeta(key: string, value: string): Promise<void>;
   readData(): Promise<BackupData>;
+  /** Cifra o texto do backup se a proteção por senha estiver ligada. Sem isto, o texto sai como está. */
+  protectBackup?(text: string): Promise<string>;
   writeBackup(folderUri: string, fileName: string, text: string): Promise<void>;
   listBackupNames(folderUri: string): Promise<string[]>;
   deleteBackup(folderUri: string, fileName: string): Promise<void>;
@@ -114,8 +117,20 @@ export async function runAutoBackup(
     const data = await deps.readData();
     if (isBackupEmpty(countBackup(data))) return { status: "empty" };
 
+    // Com a proteção ligada e algo dando errado, o backup NÃO é gravado sem senha.
+    let text = serializeBackup(buildBackupFile(data, now));
+    if (deps.protectBackup) {
+      try {
+        text = await deps.protectBackup(text);
+      } catch (error) {
+        logError("Erro ao proteger o backup automático:", error);
+        await deps.setMeta(BACKUP_META.lastError, PROTECTION_FAILED_MESSAGE).catch(() => {});
+        return { status: "failed", error: PROTECTION_FAILED_MESSAGE };
+      }
+    }
+
     const fileName = autoBackupFileName(now);
-    await deps.writeBackup(folderUri, fileName, serializeBackup(buildBackupFile(data, now)));
+    await deps.writeBackup(folderUri, fileName, text);
 
     await deps.setMeta(BACKUP_META.lastAt, now.toISOString());
     await deps.setMeta(BACKUP_META.lastError, "");

@@ -170,5 +170,16 @@
       "Toque em “Ver detalhes” para ver a nota de cada área e o porquê (por exemplo, quanto da receita sobrou ou quanto do orçamento já foi usado).",
       "Uma área em situação ruim impede o selo de Saudável, mesmo que as outras estejam bem. As dívidas em aberto só entram na nota do mês atual."
     ]
+  },
+  {
+    "id": 19,
+    "date": "20/09/2026",
+    "title": "Backups protegidos por senha",
+    "items": [
+      "Novo “Proteger Backups com Senha” no menu do perfil: ao ligar, o backup completo e o backup automático saem criptografados. Só quem tem a senha consegue abrir os arquivos, mesmo que outra pessoa acesse a pasta do Drive.",
+      "Guarde a senha fora do celular: se você esquecer, não existe como recuperar os backups protegidos. O backup automático continua sem pedir a senha.",
+      "Restaurar um backup protegido pede a senha (neste aparelho, com a proteção ligada, abre sozinho) e pode continuar protegendo os próximos backups com a mesma senha. Backups antigos, sem senha, continuam abrindo normalmente.",
+      "Gerar a chave e abrir um backup protegido levam alguns segundos, e a tela pode ficar parada nesse tempo."
+    ]
   }
 ]

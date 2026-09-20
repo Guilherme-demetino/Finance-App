@@ -15,6 +15,7 @@ interface ProfileMenuModalProps {
   onExportBackup: () => void;
   onRestoreBackup: () => void;
   onOpenAutoBackup: () => void;
+  onOpenBackupProtection: () => void;
   onOpenUpdates: () => void;
   onOpenAppearance: () => void;
   onOpenReminders: () => void;
@@ -35,6 +36,7 @@ export function ProfileMenuModal({
   onExportBackup,
   onRestoreBackup,
   onOpenAutoBackup,
+  onOpenBackupProtection,
   onOpenUpdates,
   onOpenAppearance,
   onOpenReminders,
@@ -102,6 +104,11 @@ export function ProfileMenuModal({
           <TouchableOpacity style={styles.menuItem} onPress={onOpenAutoBackup}>
             <Ionicons name="cloud-done-outline" size={24} color={colors.textPrimary} />
             <Text style={styles.menuItemText}>Backup Automático</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={onOpenBackupProtection}>
+            <Ionicons name="shield-checkmark-outline" size={24} color={colors.textPrimary} />
+            <Text style={styles.menuItemText}>Proteger Backups com Senha</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={onOpenAppearance}>

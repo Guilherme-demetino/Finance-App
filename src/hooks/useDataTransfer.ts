@@ -15,6 +15,14 @@ import {
 import { resetDatabase } from "../database/sqlite";
 import { recordManualBackup } from "../services/autoBackup";
 import { realAutoBackupDeps } from "../services/autoBackupDeps";
+import {
+  adoptProtection,
+  BackupProtectionError,
+  protectBackupText,
+  unlockBackup,
+  type ProtectionKey,
+} from "../services/backupProtection";
+import { realBackupProtectionDeps } from "../services/backupProtectionDeps";
 import { syncDueReminders } from "../services/dueReminders";
 import { realDueReminderDeps } from "../services/dueRemindersDeps";
 import { readBackupData, replaceAllData } from "../database/backup";
@@ -39,6 +47,7 @@ import {
 import { decodeText } from "../utils/statements/fileText";
 import type { CsvImportPlan } from "../utils/statements/importCsv";
 import { logError } from "../utils/logger";
+import { yieldToUi } from "../utils/yieldToUi";
 import { clearPin } from "../utils/security";
 import { planImportFromBytes } from "../utils/statements/statementImport";
 
@@ -64,7 +73,13 @@ export function useDataTransfer() {
   const [pendingRestore, setPendingRestore] = useState<{
     backup: BackupFile;
     current: BackupCounts;
+    /** A chave do arquivo aberto pela senha, para continuar protegendo depois de restaurar (se o usuário quis). */
+    adopt: ProtectionKey | null;
   } | null>(null);
+  // Arquivo protegido que ainda espera a senha, e o estado da abertura.
+  const [pendingPassword, setPendingPassword] = useState<{ text: string } | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isUnlocking, setIsUnlocking] = useState(false);
   const reloadDashboard = useReloadDashboard();
 
   const handleExportPDF = async () => {
@@ -130,7 +145,11 @@ export function useDataTransfer() {
   const handleExportBackup = async () => {
     try {
       const now = new Date();
-      const text = serializeBackup(buildBackupFile(await readBackupData(), now));
+      // Com a proteção por senha ligada o arquivo sai cifrado; se não der para cifrar, não sai (nunca aberto).
+      const text = await protectBackupText(
+        realBackupProtectionDeps,
+        serializeBackup(buildBackupFile(await readBackupData(), now)),
+      );
 
       const file = new File(Paths.cache, backupFileName(now));
       if (file.exists) file.delete();
@@ -153,33 +172,89 @@ export function useDataTransfer() {
       }
     } catch (error) {
       logError("Erro ao gerar o backup completo:", error);
-      showAlert("Erro", "Não foi possível gerar o backup.");
+      showAlert(
+        "Erro",
+        error instanceof BackupProtectionError ? error.message : "Não foi possível gerar o backup.",
+      );
     }
   };
 
-  /** Lê e valida o arquivo; nada é alterado até o usuário confirmar. */
+  /** Valida o conteúdo já aberto e prepara a confirmação. */
+  const prepareRestore = async (text: string, adopt: ProtectionKey | null) => {
+    const result = parseBackup(text);
+    if (!result.ok) {
+      showAlert("Backup inválido", result.error);
+      return;
+    }
+
+    setPendingRestore({
+      backup: result.backup,
+      current: countBackup(await readBackupData()),
+      adopt,
+    });
+  };
+
+  /**
+   * Lê e valida o arquivo; nada é alterado até o usuário confirmar. Um backup protegido
+   * abre sozinho se a chave deste aparelho é a dele; senão pede a senha.
+   */
   const handleRestoreBackup = async () => {
     try {
       const picked = await File.pickFileAsync({ mimeTypes: "*/*" });
       if (picked.canceled) return;
 
       setIsReadingImport(true);
-      const result = parseBackup(await picked.result.text());
-      if (!result.ok) {
-        showAlert("Backup inválido", result.error);
-        return;
-      }
+      const text = await picked.result.text();
+      const unlocked = await unlockBackup(realBackupProtectionDeps, text);
 
-      setPendingRestore({
-        backup: result.backup,
-        current: countBackup(await readBackupData()),
-      });
+      if (unlocked.status === "invalid") {
+        showAlert("Backup inválido", unlocked.error);
+      } else if (unlocked.status === "needs-password") {
+        setPasswordError(null);
+        setPendingPassword({ text });
+      } else if (unlocked.status === "wrong-password") {
+        showAlert("Backup inválido", "Senha incorreta ou arquivo alterado.");
+      } else {
+        await prepareRestore(unlocked.text, unlocked.status === "opened" ? unlocked.adoptable : null);
+      }
     } catch (error) {
       logError("Erro ao ler o backup:", error);
       showAlert("Erro", "Não foi possível ler o arquivo selecionado.");
     } finally {
       setIsReadingImport(false);
     }
+  };
+
+  /** A senha digitada para abrir o backup protegido (pode levar alguns segundos: é o custo da chave). */
+  const submitRestorePassword = async (password: string, keepProtection: boolean) => {
+    const pending = pendingPassword;
+    if (!pending) return;
+
+    setIsUnlocking(true);
+    setPasswordError(null);
+    try {
+      await yieldToUi();
+      const unlocked = await unlockBackup(realBackupProtectionDeps, pending.text, password);
+      if (unlocked.status === "wrong-password") {
+        setPasswordError("Senha incorreta ou arquivo alterado.");
+      } else if (unlocked.status === "opened") {
+        setPendingPassword(null);
+        await prepareRestore(unlocked.text, keepProtection ? unlocked.adoptable : null);
+      } else {
+        setPendingPassword(null);
+        showAlert("Backup inválido", "Não foi possível abrir esse arquivo.");
+      }
+    } catch (error) {
+      logError("Erro ao abrir o backup protegido:", error);
+      setPasswordError("Não foi possível abrir o backup. Tente de novo.");
+    } finally {
+      setIsUnlocking(false);
+    }
+  };
+
+  const cancelRestorePassword = () => {
+    setPendingPassword(null);
+    setPasswordError(null);
   };
 
   const confirmRestore = async () => {
@@ -189,8 +264,25 @@ export function useDataTransfer() {
 
     try {
       await replaceAllData(restore.backup.data);
+
+      // Continua protegendo com a mesma senha (se o usuário quis). Não falha a restauração, que já foi feita.
+      let keptProtection = false;
+      if (restore.adopt) {
+        try {
+          await adoptProtection(realBackupProtectionDeps, restore.adopt);
+          keptProtection = true;
+        } catch (error) {
+          logError("Erro ao manter a proteção do backup:", error);
+        }
+      }
+
       reloadDashboard();
-      showAlert("Sucesso", "Backup restaurado. Os dados do app foram substituídos.");
+      showAlert(
+        "Sucesso",
+        keptProtection
+          ? "Backup restaurado. Os dados do app foram substituídos e seus próximos backups continuam protegidos com a mesma senha."
+          : "Backup restaurado. Os dados do app foram substituídos.",
+      );
     } catch (error) {
       logError("Erro ao restaurar o backup:", error);
       showAlert(
@@ -296,6 +388,11 @@ export function useDataTransfer() {
     pendingRestore,
     setPendingRestore,
     confirmRestore,
+    pendingPassword,
+    passwordError,
+    isUnlocking,
+    submitRestorePassword,
+    cancelRestorePassword,
     pendingImport,
     setPendingImport,
     isReadingImport,

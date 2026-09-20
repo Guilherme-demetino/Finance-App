@@ -1,4 +1,6 @@
+import { createFakeProtectionDeps } from "../test/fakeBackupProtectionDeps";
 import type { BackupData } from "../utils/backup/backup";
+import { parseBackup } from "../utils/backup/backup";
 import {
   BACKUP_META,
   checkBackupReminder,
@@ -9,6 +11,7 @@ import {
   saveBackupFolder,
   type AutoBackupDeps,
 } from "./autoBackup";
+import { enableProtection, PROTECTION_FAILED_MESSAGE, protectBackupText, unlockBackup } from "./backupProtection";
 
 const NOW = new Date(2026, 8, 19, 20, 30);
 const FOLDER = "content://drive/tree/backups";
@@ -209,5 +212,75 @@ describe("checkBackupReminder", () => {
     const { deps } = makeDeps();
     await recordManualBackup(deps);
     await expect(checkBackupReminder(deps)).resolves.toBe(false);
+  });
+});
+
+describe("runAutoBackup com proteção por senha", () => {
+  const PASSWORD = "minha frase de senha";
+
+  it("com a proteção ligada, grava o arquivo cifrado (nada legível) e ele abre com a senha", async () => {
+    const protection = createFakeProtectionDeps();
+    await enableProtection(protection.deps, PASSWORD, PASSWORD);
+    const { deps, folder } = makeDeps({ protectBackup: (text) => protectBackupText(protection.deps, text) });
+    await saveBackupFolder(deps, FOLDER, "Backups");
+
+    await expect(runAutoBackup(deps, { force: true })).resolves.toMatchObject({ status: "done" });
+
+    const [written] = [...folder.values()];
+    expect(written).not.toContain("Padaria");
+    expect(written).not.toContain("Ana");
+    const unlocked = await unlockBackup(protection.deps, written);
+    expect(unlocked.status).toBe("opened");
+    const parsed = parseBackup((unlocked as { text: string }).text);
+    expect(parsed).toMatchObject({ ok: true });
+    expect((parsed as { backup: { data: BackupData } }).backup.data.transactions[0].description).toBe("Padaria");
+  });
+
+  it("proteção desligada: grava o backup comum, como sempre", async () => {
+    const protection = createFakeProtectionDeps();
+    const { deps, folder } = makeDeps({ protectBackup: (text) => protectBackupText(protection.deps, text) });
+    await saveBackupFolder(deps, FOLDER, "Backups");
+
+    await runAutoBackup(deps, { force: true });
+
+    expect(parseBackup([...folder.values()][0])).toMatchObject({ ok: true });
+  });
+
+  it("se não dá para proteger, NÃO grava sem senha: falha com a mensagem certa e anota o erro", async () => {
+    const { deps, folder, meta } = makeDeps({
+      protectBackup: async () => {
+        throw new Error("cofre indisponível");
+      },
+    });
+    await saveBackupFolder(deps, FOLDER, "Backups");
+
+    const result = await runAutoBackup(deps, { force: true });
+
+    expect(result).toEqual({ status: "failed", error: PROTECTION_FAILED_MESSAGE });
+    expect(folder.size).toBe(0);
+    expect(meta.get(BACKUP_META.lastError)).toBe(PROTECTION_FAILED_MESSAGE);
+    expect(meta.get(BACKUP_META.lastAt)).toBeUndefined();
+  });
+
+  it("cofre estragado com a proteção ligada também não grava nada aberto", async () => {
+    const protection = createFakeProtectionDeps();
+    protection.state.secret = "cofre corrompido";
+    const { deps, folder } = makeDeps({ protectBackup: (text) => protectBackupText(protection.deps, text) });
+    await saveBackupFolder(deps, FOLDER, "Backups");
+
+    await expect(runAutoBackup(deps, { force: true })).resolves.toMatchObject({ status: "failed" });
+
+    expect(folder.size).toBe(0);
+  });
+
+  it("backup vazio continua sem ser gravado, protegido ou não", async () => {
+    const protect = jest.fn(async (text: string) => text);
+    const { deps, folder } = makeDeps({ readData: async () => EMPTY, protectBackup: protect });
+    await saveBackupFolder(deps, FOLDER, "Backups");
+
+    await expect(runAutoBackup(deps, { force: true })).resolves.toEqual({ status: "empty" });
+
+    expect(folder.size).toBe(0);
+    expect(protect).not.toHaveBeenCalled();
   });
 });

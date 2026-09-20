@@ -4,10 +4,12 @@ import { ActivityIndicator, View } from "react-native";
 
 import { useProfile } from "../../context/ProfileContext";
 import { useAutoBackup } from "../../hooks/useAutoBackup";
+import { useBackupProtection } from "../../hooks/useBackupProtection";
 import { useDataTransfer } from "../../hooks/useDataTransfer";
 import { describeRestore } from "../../utils/backup/backup";
 import { describeImportPlan } from "../../utils/statements/importSummary";
 import { AutoBackupModal } from "../profile/AutoBackupModal";
+import { BackupProtectionModal, RestorePasswordModal } from "../profile/BackupProtectionModals";
 import { ConfirmModal } from "../ConfirmModal";
 import { EditNameModal, ProfileMenuModal } from "../profile/ProfileMenuModals";
 import { Text, useTheme } from "../../theme";
@@ -37,6 +39,11 @@ export function ProfileMenuContainer({
     pendingRestore,
     setPendingRestore,
     confirmRestore,
+    pendingPassword,
+    passwordError,
+    isUnlocking,
+    submitRestorePassword,
+    cancelRestorePassword,
     pendingImport,
     setPendingImport,
     isReadingImport,
@@ -48,7 +55,9 @@ export function ProfileMenuContainer({
   } = useDataTransfer();
   const router = useRouter();
   const autoBackup = useAutoBackup();
+  const protection = useBackupProtection();
   const [isAutoBackupOpen, setIsAutoBackupOpen] = useState(false);
+  const [isProtectionOpen, setIsProtectionOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState("");
 
@@ -77,7 +86,15 @@ export function ProfileMenuContainer({
         }}
         onOpenAutoBackup={() => {
           onCloseMenu();
+          // Reler: restaurar um backup pode ter passado a proteger com a senha dele.
+          protection.refresh();
           setIsAutoBackupOpen(true);
+        }}
+        onOpenBackupProtection={() => {
+          onCloseMenu();
+          protection.clearError();
+          protection.refresh();
+          setIsProtectionOpen(true);
         }}
         onOpenUpdates={() => {
           onCloseMenu();
@@ -119,10 +136,29 @@ export function ProfileMenuContainer({
         visible={isAutoBackupOpen}
         settings={autoBackup.settings}
         isBusy={autoBackup.isBusy}
+        protection={protection.status}
         onClose={() => setIsAutoBackupOpen(false)}
         onChooseFolder={autoBackup.chooseFolder}
         onBackupNow={autoBackup.backupNow}
         onDisable={autoBackup.disable}
+      />
+
+      <BackupProtectionModal
+        visible={isProtectionOpen}
+        status={protection.status}
+        isBusy={protection.isBusy}
+        error={protection.error}
+        onClose={() => setIsProtectionOpen(false)}
+        onEnable={protection.enable}
+        onDisable={protection.disable}
+      />
+
+      <RestorePasswordModal
+        visible={pendingPassword !== null}
+        isBusy={isUnlocking}
+        error={passwordError}
+        onSubmit={submitRestorePassword}
+        onCancel={cancelRestorePassword}
       />
 
       <ConfirmModal
