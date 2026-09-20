@@ -1,6 +1,7 @@
 import {
   formatCurrency,
   formatCurrencyInput,
+  parseCurrencyInput,
   splitAmountIntoInstallments,
 } from "./currency";
 
@@ -78,5 +79,25 @@ describe("splitAmountIntoInstallments", () => {
   it("retorna o valor cheio numa lista de 1 elemento quando count <= 1", () => {
     expect(splitAmountIntoInstallments(150, 1)).toEqual([150]);
     expect(splitAmountIntoInstallments(150, 0)).toEqual([150]);
+  });
+});
+
+describe("parseCurrencyInput", () => {
+  it("lê o valor como o campo mostra: milhar com ponto, centavos com vírgula", () => {
+    expect(parseCurrencyInput("1.250,50")).toBe(1250.5);
+    expect(parseCurrencyInput("0,99")).toBe(0.99);
+    expect(parseCurrencyInput("150")).toBe(150);
+    expect(parseCurrencyInput("  20,00  ")).toBe(20);
+  });
+
+  it("vazio ou ilegível é 'sem valor' (null), nunca 0", () => {
+    expect(parseCurrencyInput("")).toBeNull();
+    expect(parseCurrencyInput("   ")).toBeNull();
+    expect(parseCurrencyInput("abc")).toBeNull();
+    expect(parseCurrencyInput("1,2,3")).toBeNull();
+  });
+
+  it("um zero digitado de verdade continua sendo 0", () => {
+    expect(parseCurrencyInput("0,00")).toBe(0);
   });
 });

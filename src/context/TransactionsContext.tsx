@@ -1,10 +1,10 @@
 import { createContext, useMemo, type ReactNode } from "react";
 
-import { CATEGORY_COLORS } from "../constants/colors";
 import { useStableCallback } from "../hooks/useStableCallback";
 import { useTransactions } from "../hooks/useTransactions";
 import type { DisplayTransaction } from "../types";
 import { logError } from "../utils/logger";
+import { toDisplayTransaction } from "../utils/transactionDisplay";
 import { useAlert } from "./AlertContext";
 import { usePeriod } from "./PeriodContext";
 import { useRequiredContext } from "./useRequiredContext";
@@ -66,21 +66,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
   );
 
   const formattedTransactions: DisplayTransaction[] = useMemo(
-    () =>
-      transactions.map((item) => ({
-        id: String(item.id),
-        description: item.description || "Sem título",
-        amount: item.amount,
-        type: item.type,
-        date: item.date,
-        category: item.category_id,
-        color: item.color || CATEGORY_COLORS.categoryNeutral,
-        icon: item.type === "income" ? "cash-outline" : "cart-outline",
-        recurrenceType: item.recurrence_type,
-        recurrenceGroupId: item.recurrence_group_id,
-        installmentNumber: item.installment_number,
-        installmentTotal: item.installment_total,
-      })),
+    () => transactions.map(toDisplayTransaction),
     [transactions],
   );
 

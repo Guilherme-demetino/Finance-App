@@ -3,6 +3,7 @@ import type { TransactionRow, TransactionType } from "../types";
 import { addMonthsToDateString, getMonthlyDates } from "../utils/dates";
 import { splitAmountIntoInstallments } from "../utils/currency";
 import { planRemainingInstallments } from "../utils/installments";
+import { isDateInRange, yearsInRange, type DateRange } from "../utils/historyFilters";
 
 // Menor número de meses aceito para uma recorrência — abaixo disso não
 // faz sentido chamar de "recorrente".
@@ -42,6 +43,18 @@ export async function getTransactionsByYear(
     "SELECT * FROM transactions WHERE date LIKE ? ORDER BY id DESC",
     `%/${year}`,
   );
+}
+
+/**
+ * Transações de um período qualquer (datas DD/MM/AAAA, as duas pontas inclusas), mesmo atravessando
+ * meses e anos. As datas ficam como texto, então o banco traz cada ano tocado e o corte fino é feito aqui.
+ */
+export async function getTransactionsInRange(
+  range: DateRange,
+): Promise<TransactionRow[]> {
+  const years = yearsInRange(range);
+  const perYear = await Promise.all(years.map((year) => getTransactionsByYear(year)));
+  return perYear.flat().filter((row) => isDateInRange(row.date, range));
 }
 
 /** Transações de um mês/ano específico (formato DD/MM/AAAA). */

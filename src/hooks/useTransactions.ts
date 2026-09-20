@@ -13,7 +13,12 @@ import {
   TransactionInput,
   updateTransaction,
 } from "../database/transactions";
-import type { EnrichedTransaction, TransactionRepeatMode } from "../types";
+import type {
+  CategoryRow,
+  EnrichedTransaction,
+  TransactionRepeatMode,
+  TransactionRow,
+} from "../types";
 import { getMonthNumber } from "../utils/dates";
 import { logError } from "../utils/logger";
 
@@ -78,15 +83,11 @@ interface PeriodData {
   monthsData: MonthDatum[];
 }
 
-async function loadPeriodData(
-  selectedMonth: string,
-  selectedYear: string,
-): Promise<PeriodData> {
-  const [rawTransactions, rawCategories] = await Promise.all([
-    getTransactionsByYear(selectedYear),
-    getAllCategories(),
-  ]);
-
+/** Junta a cor da categoria (a do usuário ou a padrão) a cada transação. */
+export function enrichTransactions(
+  rawTransactions: TransactionRow[],
+  rawCategories: CategoryRow[],
+): EnrichedTransaction[] {
   const categoryColorMap: Record<string, string> = {
     ...DEFAULT_CATEGORY_COLORS,
   };
@@ -96,7 +97,7 @@ async function loadPeriodData(
     }
   });
 
-  const enriched: EnrichedTransaction[] = rawTransactions.map((item) => {
+  return rawTransactions.map((item) => {
     const catKey = item.category_id
       ? item.category_id.trim().toLowerCase()
       : "";
@@ -106,6 +107,18 @@ async function loadPeriodData(
       color: categoryColorMap[catKey] || CATEGORY_COLORS.categoryNeutral,
     };
   });
+}
+
+async function loadPeriodData(
+  selectedMonth: string,
+  selectedYear: string,
+): Promise<PeriodData> {
+  const [rawTransactions, rawCategories] = await Promise.all([
+    getTransactionsByYear(selectedYear),
+    getAllCategories(),
+  ]);
+
+  const enriched = enrichTransactions(rawTransactions, rawCategories);
 
   // A consulta já traz só o ano selecionado.
   const yearTransactions = enriched;

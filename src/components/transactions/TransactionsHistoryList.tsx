@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState, type ComponentProps } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { SortModal, type SortOption } from "./FilterModals";
@@ -47,6 +47,10 @@ interface TransactionsHistoryListProps {
   isLoading?: boolean;
   searchText: string;
   setSearchText: (text: string) => void;
+  /** Sob a busca: filtros avançados (botão, etiquetas e resumo). */
+  filtersBar?: ReactNode;
+  /** Esconde o "apagar tudo": com filtros ele apagaria o mês inteiro, não o que aparece na lista. */
+  hideDeleteAll?: boolean;
   onEditTransaction: (item: DisplayTransaction) => void;
   onDeleteTransaction: (id: string) => void;
   onDeleteAll: () => void;
@@ -60,6 +64,8 @@ export function TransactionsHistoryList({
   isLoading = false,
   searchText,
   setSearchText,
+  filtersBar = null,
+  hideDeleteAll = false,
   onEditTransaction,
   onDeleteTransaction,
   onDeleteAll,
@@ -111,9 +117,11 @@ export function TransactionsHistoryList({
         <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "bold" }}>
           Histórico de Transações
         </Text>
-        {transactions.length > 0 && (
+        {transactions.length > 0 && !hideDeleteAll && (
           <TouchableOpacity
             onPress={onDeleteAll}
+            accessibilityRole="button"
+            accessibilityLabel="Apagar todas as transações do período"
             style={{
               backgroundColor: colors.surfaceAlt,
               borderWidth: 1,
@@ -146,6 +154,8 @@ export function TransactionsHistoryList({
         value={searchText}
         onChangeText={setSearchText}
       />
+
+      {filtersBar}
 
       <View
         style={{

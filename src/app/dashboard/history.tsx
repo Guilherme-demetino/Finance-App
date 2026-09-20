@@ -3,12 +3,25 @@ import Animated, {
   useAnimatedScrollHandler,
 } from "react-native-reanimated";
 
+import { AdvancedFiltersModal } from "../../components/transactions/AdvancedFiltersModal";
+import { HistoryFiltersBar } from "../../components/transactions/HistoryFiltersBar";
 import { TransactionsHistoryList } from "../../components/transactions/TransactionsHistoryList";
 
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../../constants/categories";
 import { useScrollY } from "../../context/DashboardUiContext";
 import { useTransactionsData } from "../../context/TransactionsContext";
 import { useTransactionActions } from "../../context/TransactionFormContext";
+import { useCategoryNames } from "../../hooks/useCategoryNames";
+import { useHistoryRange } from "../../hooks/useHistoryRange";
 import { useDashboardStyles } from "../../styles/dashboardStyles";
+import {
+  applyHistoryFilters,
+  clearFilter,
+  EMPTY_HISTORY_FILTERS,
+  hasActiveFilters,
+  summarizeTransactions,
+  type HistoryFilters,
+} from "../../utils/historyFilters";
 
 export default function DashboardHistoryScreen() {
   const styles = useDashboardStyles();
@@ -24,14 +37,40 @@ export default function DashboardHistoryScreen() {
   const scrollY = useScrollY();
   const { handleOpenEditTransaction } = useTransactionActions();
 
-  // A busca só afeta esta tela; guardar o texto aqui evita re-renderizar o resto do dashboard a cada tecla.
+  // A busca e os filtros só afetam esta tela; guardar o estado aqui evita re-renderizar o resto do dashboard a cada tecla.
   const [searchText, setSearchText] = useState("");
+  const [filters, setFilters] = useState<HistoryFilters>(EMPTY_HISTORY_FILTERS);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+
+  // Com período personalizado a lista vem do banco (pode atravessar meses e anos); sem ele, é o mês do painel.
+  const range = useHistoryRange(filters.period, transactions);
+  const registeredCategories = useCategoryNames(transactions);
+  const source = filters.period ? range.items : formattedTransactions;
+
   const searchLower = searchText.toLowerCase();
-  const visibleTransactions = formattedTransactions.filter(
-    (item) =>
-      item.description.toLowerCase().includes(searchLower) ||
-      (item.category && item.category.toLowerCase().includes(searchLower)),
+  const visibleTransactions = applyHistoryFilters(
+    source.filter(
+      (item) =>
+        item.description.toLowerCase().includes(searchLower) ||
+        (item.category && item.category.toLowerCase().includes(searchLower)),
+    ),
+    filters,
   );
+
+  // As categorias para marcar: as cadastradas, as padrão do app e as que aparecem nas transações listadas
+  // (sem as padrão, não daria para marcar uma categoria que só existe em meses fora do período mostrado).
+  const categoryOptions = [
+    ...new Map(
+      [
+        ...registeredCategories,
+        ...source.map((item) => item.category ?? ""),
+        ...DEFAULT_EXPENSE_CATEGORIES,
+        ...DEFAULT_INCOME_CATEGORIES,
+      ]
+        .filter((name) => name.trim() !== "")
+        .map((name) => [name.trim().toLowerCase(), name.trim()] as const),
+    ).values(),
+  ].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollY.set(event.contentOffset.y);
@@ -45,15 +84,37 @@ export default function DashboardHistoryScreen() {
     >
       <TransactionsHistoryList
         transactions={visibleTransactions}
-        hasAnyTransactions={transactions.length > 0}
-        isLoading={isLoadingTransactions}
+        hasAnyTransactions={transactions.length > 0 || hasActiveFilters(filters)}
+        isLoading={filters.period ? range.isLoading : isLoadingTransactions}
         searchText={searchText}
         setSearchText={setSearchText}
+        hideDeleteAll={hasActiveFilters(filters)}
+        filtersBar={
+          <HistoryFiltersBar
+            filters={filters}
+            summary={summarizeTransactions(visibleTransactions)}
+            hasError={range.hasError}
+            onOpen={() => setIsFiltersOpen(true)}
+            onClear={(kind) => setFilters(clearFilter(filters, kind))}
+            onClearAll={() => setFilters(EMPTY_HISTORY_FILTERS)}
+          />
+        }
         onEditTransaction={handleOpenEditTransaction}
         onDeleteTransaction={handleDeleteTransaction}
         onDeleteAll={handleDeleteAllTransactions}
         onDeleteSeriesFromHere={handleDeleteSeriesFromId}
         onDeleteSeries={handleDeleteSeries}
+      />
+
+      <AdvancedFiltersModal
+        visible={isFiltersOpen}
+        value={filters}
+        categories={categoryOptions}
+        onApply={(next) => {
+          setFilters(next);
+          setIsFiltersOpen(false);
+        }}
+        onClose={() => setIsFiltersOpen(false)}
       />
     </Animated.ScrollView>
   );

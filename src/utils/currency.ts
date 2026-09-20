@@ -62,3 +62,14 @@ export function formatCurrencyInput(value: string): string {
   parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return parts.join(",");
 }
+
+/**
+ * O número de um campo de valor como o app o mostra ("1.250,50" → 1250.5). Vazio ou ilegível
+ * devolve null (campo sem valor), nunca 0: 0 seria um limite de verdade.
+ */
+export function parseCurrencyInput(text: string): number | null {
+  const cleaned = text.trim().replace(/\./g, "").replace(",", ".");
+  if (cleaned === "") return null;
+  const value = Number(cleaned);
+  return Number.isFinite(value) ? value : null;
+}

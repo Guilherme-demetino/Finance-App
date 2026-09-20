@@ -220,5 +220,16 @@
       "O mesmo vale para o menu do perfil, o backup automático, a proteção por senha, o calendário e os formulários: o cartão ganha borda grossa e a tela de trás aparece atrás dele.",
       "No PIN, as teclas ganham um anel no alto contraste. Nos outros temas o visual é o mesmo de antes."
     ]
+  },
+  {
+    "id": 24,
+    "date": "20/09/2026",
+    "title": "Filtros avançados na busca",
+    "items": [
+      "No Histórico, o novo botão “Filtros”, sob a busca, abre os filtros avançados: faixa de valor (mínimo e máximo), várias categorias ao mesmo tempo e período personalizado.",
+      "O período personalizado vale para qualquer data, mesmo atravessando meses e anos (por exemplo, dezembro a fevereiro), com atalhos para os últimos 30 dias, 90 dias e este ano.",
+      "Os filtros aparecem como etiquetas que você remove com um toque, e um resumo mostra quantas transações apareceram e quanto entrou e saiu nelas.",
+      "Com um filtro ativo, o botão de apagar tudo some da lista: ele apagaria o mês inteiro, não só o que aparece."
+    ]
   }
 ]
