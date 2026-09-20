@@ -7,7 +7,7 @@ import { ApkUpdateCard } from "../components/ApkUpdateCard";
 import { CHANGELOG, type Release } from "../constants/changelog";
 import { useOtaUpdates } from "../hooks/useOtaUpdates";
 import { formatDateTime } from "../utils/dates";
-import { formatProgress } from "../utils/otaUpdates";
+import { formatProgress } from "../utils/updates/otaUpdates";
 import { Text, makeStyles, useTheme } from "../theme";
 
 function InfoRow({ label, value, selectable = false }: { label: string; value: string; selectable?: boolean }) {

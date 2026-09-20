@@ -4,9 +4,9 @@ import { TouchableOpacity, View } from "react-native";
 import { DEFAULT_EXPENSE_CATEGORIES } from "../constants/categories";
 import type { InstallmentDraft } from "../types";
 import { formatDateToString, parseDateString } from "../utils/dates";
-import { CalendarPicker } from "./CalendarPicker";
-import { CategoryChips } from "./CategoryChips";
-import { TopFormSheet } from "./TopFormSheet";
+import { CalendarPicker } from "./forms/CalendarPicker";
+import { CategoryChips } from "./forms/CategoryChips";
+import { TopFormSheet } from "./forms/TopFormSheet";
 import { Text, TextInput, makeStyles, useTheme } from "../theme";
 
 interface OnboardingInstallmentModalProps {

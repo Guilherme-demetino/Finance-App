@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet } from "react-native";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
-import { AutoBackupModal } from "../components/AutoBackupModal";
+import { AutoBackupModal } from "../components/profile/AutoBackupModal";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { CustomAlert } from "../components/CustomAlert";
 import {

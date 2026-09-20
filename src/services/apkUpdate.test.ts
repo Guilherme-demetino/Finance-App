@@ -1,5 +1,5 @@
 import { createFakeApkDeps, FAKE_APK_SIZE, githubRelease } from "../test/fakeApkUpdateDeps";
-import { ApkUpdateError, parseLatestRelease } from "../utils/apkUpdates";
+import { ApkUpdateError, parseLatestRelease } from "../utils/updates/apkUpdates";
 import { checkApkUpdate, downloadApkUpdate } from "./apkUpdate";
 
 describe("checkApkUpdate", () => {

@@ -1,5 +1,5 @@
 import { createSqlJsDatabase } from "../test/sqliteFake";
-import type { BackupData } from "../utils/backup";
+import type { BackupData } from "../utils/backup/backup";
 
 // Banco de verdade em memória no lugar do expo-sqlite.
 const mockState: { db: unknown } = { db: null };

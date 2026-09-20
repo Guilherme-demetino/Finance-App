@@ -1,7 +1,7 @@
 import { useBudgetActions } from "../../context/BudgetContext";
 import { useTransactionForm } from "../../context/TransactionFormContext";
 import { formatCurrencyInput } from "../../utils/currency";
-import { TransactionModal } from "../TransactionModal";
+import { TransactionModal } from "../transactions/TransactionModal";
 
 /** Modal de nova/edição de transação, ligado ao contexto do formulário. */
 export function TransactionModalContainer() {

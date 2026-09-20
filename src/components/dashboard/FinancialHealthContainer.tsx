@@ -4,7 +4,7 @@ import { usePeriod } from "../../context/PeriodContext";
 import { useTransactionsData } from "../../context/TransactionsContext";
 import { computeFinancialHealth } from "../../utils/financialHealth";
 import { MONTH_NAMES } from "../../utils/dates";
-import { FinancialHealthCard } from "../FinancialHealthCard";
+import { FinancialHealthCard } from "../overview/FinancialHealthCard";
 
 /**
  * Liga a saúde financeira aos dados do painel: receita e despesa do mês mostrado,

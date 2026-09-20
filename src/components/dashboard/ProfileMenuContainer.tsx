@@ -5,11 +5,11 @@ import { ActivityIndicator, View } from "react-native";
 import { useProfile } from "../../context/ProfileContext";
 import { useAutoBackup } from "../../hooks/useAutoBackup";
 import { useDataTransfer } from "../../hooks/useDataTransfer";
-import { describeRestore } from "../../utils/backup";
-import { describeImportPlan } from "../../utils/importSummary";
-import { AutoBackupModal } from "../AutoBackupModal";
+import { describeRestore } from "../../utils/backup/backup";
+import { describeImportPlan } from "../../utils/statements/importSummary";
+import { AutoBackupModal } from "../profile/AutoBackupModal";
 import { ConfirmModal } from "../ConfirmModal";
-import { EditNameModal, ProfileMenuModal } from "../ProfileMenuModals";
+import { EditNameModal, ProfileMenuModal } from "../profile/ProfileMenuModals";
 import { Text, useTheme } from "../../theme";
 
 interface ProfileMenuContainerProps {

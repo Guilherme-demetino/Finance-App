@@ -5,7 +5,7 @@ import Animated, {
 
 import { CategoryBudgetsCard } from "../../components/CategoryBudgetsCard";
 import { MonthlyBudgetCard } from "../../components/MonthlyBudgetCard";
-import { SavingsGoalsCard } from "../../components/SavingsGoalsCard";
+import { SavingsGoalsCard } from "../../components/savings/SavingsGoalsCard";
 
 import { useBudgetActions, useBudgetData } from "../../context/BudgetContext";
 import { useScrollY } from "../../context/DashboardUiContext";

@@ -2,13 +2,13 @@ import Animated, {
   useAnimatedScrollHandler,
 } from "react-native-reanimated";
 
-import { AlertsCard } from "../../components/AlertsCard";
-import { AnnualPanoramaCard } from "../../components/AnnualPanoramaCard";
-import { BalanceCard } from "../../components/BalanceCard";
-import { GeneralBalanceCard } from "../../components/GeneralBalanceCard";
-import { MonthComparisonCard } from "../../components/MonthComparisonCard";
-import { MonthProjectionCard } from "../../components/MonthProjectionCard";
-import { SummaryCards } from "../../components/SummaryCards";
+import { AlertsCard } from "../../components/overview/AlertsCard";
+import { AnnualPanoramaCard } from "../../components/overview/AnnualPanoramaCard";
+import { BalanceCard } from "../../components/overview/BalanceCard";
+import { GeneralBalanceCard } from "../../components/overview/GeneralBalanceCard";
+import { MonthComparisonCard } from "../../components/overview/MonthComparisonCard";
+import { MonthProjectionCard } from "../../components/overview/MonthProjectionCard";
+import { SummaryCards } from "../../components/overview/SummaryCards";
 import { FinancialHealthContainer } from "../../components/dashboard/FinancialHealthContainer";
 
 import { useBudgetData } from "../../context/BudgetContext";

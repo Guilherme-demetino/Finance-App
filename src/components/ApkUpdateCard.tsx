@@ -2,7 +2,7 @@ import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 
 import { useApkUpdate } from "../hooks/useApkUpdate";
 import { makeStyles, Text, useTheme } from "../theme";
-import { formatBytes } from "../utils/apkUpdates";
+import { formatBytes } from "../utils/updates/apkUpdates";
 import { formatDateTime } from "../utils/dates";
 
 /**

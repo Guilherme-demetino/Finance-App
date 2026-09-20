@@ -4,7 +4,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { AutoBackupRunner } from "../components/dashboard/AutoBackupRunner";
 import { AlertProvider, useAlertState } from "../context/AlertContext";
 import { BACKUP_META, type AutoBackupDeps } from "../services/autoBackup";
-import type { BackupData } from "../utils/backup";
+import type { BackupData } from "../utils/backup/backup";
 import { useAutoBackup } from "./useAutoBackup";
 
 const WITH_DATA: BackupData = {

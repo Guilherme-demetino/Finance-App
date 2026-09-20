@@ -5,7 +5,7 @@ import {
   parseLatestRelease,
   type ApkCheck,
   type ApkRelease,
-} from "../utils/apkUpdates";
+} from "../utils/updates/apkUpdates";
 
 /** Tudo que a atualização por APK precisa do aparelho e da rede; nos testes vira um faz-de-conta. */
 export interface ApkUpdateDeps {

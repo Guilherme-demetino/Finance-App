@@ -31,16 +31,16 @@ import {
   serializeBackup,
   type BackupCounts,
   type BackupFile,
-} from "../utils/backup";
+} from "../utils/backup/backup";
 import {
   buildTransactionsCsv,
   buildTransactionsHtmlReport,
 } from "../utils/export";
-import { decodeText } from "../utils/fileText";
-import type { CsvImportPlan } from "../utils/importCsv";
+import { decodeText } from "../utils/statements/fileText";
+import type { CsvImportPlan } from "../utils/statements/importCsv";
 import { logError } from "../utils/logger";
 import { clearPin } from "../utils/security";
-import { planImportFromBytes } from "../utils/statementImport";
+import { planImportFromBytes } from "../utils/statements/statementImport";
 
 /**
  * Exportar (PDF/CSV), importar, trocar o PIN e zerar o app: tudo que o menu do

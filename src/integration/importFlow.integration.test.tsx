@@ -9,8 +9,8 @@ import { resetDatabase } from "../database/sqlite";
 import { createTransaction, getAllTransactions, importTransactions } from "../database/transactions";
 import { useDataTransfer } from "../hooks/useDataTransfer";
 import { createSqlJsDatabase } from "../test/sqliteFake";
-import { buildBackupFile, serializeBackup } from "../utils/backup";
-import { planPdfImport } from "../utils/bankPdf";
+import { buildBackupFile, serializeBackup } from "../utils/backup/backup";
+import { planPdfImport } from "../utils/statements/bankPdf";
 
 /**
  * Integração: importar extrato e restaurar backup pelos mesmos handlers do menu

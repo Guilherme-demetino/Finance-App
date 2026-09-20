@@ -5,13 +5,13 @@ import {
   isBackupEmpty,
   latestIso,
   shouldRemindBackup,
-} from "../utils/autoBackup";
+} from "../utils/backup/autoBackup";
 import {
   buildBackupFile,
   countBackup,
   serializeBackup,
   type BackupData,
-} from "../utils/backup";
+} from "../utils/backup/backup";
 import { logError } from "../utils/logger";
 
 /** Chaves da tabela app_meta usadas pelo backup. Texto vazio = sem valor. */

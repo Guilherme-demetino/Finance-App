@@ -3,7 +3,7 @@ import Animated, {
   useAnimatedScrollHandler,
 } from "react-native-reanimated";
 
-import { TransactionsHistoryList } from "../../components/TransactionsHistoryList";
+import { TransactionsHistoryList } from "../../components/transactions/TransactionsHistoryList";
 
 import { useScrollY } from "../../context/DashboardUiContext";
 import { useTransactionsData } from "../../context/TransactionsContext";

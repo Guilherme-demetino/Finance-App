@@ -1,4 +1,4 @@
-import type { BackupData } from "../utils/backup";
+import type { BackupData } from "../utils/backup/backup";
 import {
   BACKUP_META,
   checkBackupReminder,

@@ -5,8 +5,8 @@ import {
   DEFAULT_INCOME_CATEGORIES,
 } from "../constants/categories";
 import type { RecurringDraft, TransactionType } from "../types";
-import { CategoryChips } from "./CategoryChips";
-import { TopFormSheet } from "./TopFormSheet";
+import { CategoryChips } from "./forms/CategoryChips";
+import { TopFormSheet } from "./forms/TopFormSheet";
 import { Text, TextInput, makeStyles, useTheme } from "../theme";
 
 interface OnboardingRecurringModalProps {

@@ -11,7 +11,7 @@ import {
   newerReleases,
   releaseNotesFromManifest,
   type RunningUpdateInfo,
-} from "../utils/otaUpdates";
+} from "../utils/updates/otaUpdates";
 import { logError } from "../utils/logger";
 
 export type UpdatePhase =

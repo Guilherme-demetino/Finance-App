@@ -4,8 +4,8 @@ import { useScrollY } from "../../context/DashboardUiContext";
 import { usePeriod, YEARS_LIST } from "../../context/PeriodContext";
 import { useProfile } from "../../context/ProfileContext";
 import { MONTH_NAMES } from "../../utils/dates";
-import { MonthModal, YearModal } from "../FilterModals";
-import { UserProfileHeader } from "../UserProfileHeader";
+import { MonthModal, YearModal } from "../transactions/FilterModals";
+import { UserProfileHeader } from "../profile/UserProfileHeader";
 
 /** Cabeçalho fixo com o seletor de mês e ano. O estado dos dois modais é só daqui. */
 export function DashboardHeader({ onOpenMenu }: { onOpenMenu: () => void }) {

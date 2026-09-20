@@ -6,10 +6,10 @@ import type {
   SavingsGoalRow,
   TransactionRow,
 } from "../types";
-import type { BackupData } from "../utils/backup";
+import type { BackupData } from "../utils/backup/backup";
 import { getDatabase } from "./sqlite";
 
-/** Lê tudo que entra no backup (ver utils/backup.ts para o que fica de fora). */
+/** Lê tudo que entra no backup (ver utils/backup/backup.ts para o que fica de fora). */
 export async function readBackupData(): Promise<BackupData> {
   const db = await getDatabase();
 

@@ -4,7 +4,7 @@ import { TouchableOpacity, View } from "react-native";
 import type { CategoryBudgetItem } from "../hooks/useCategoryBudgets";
 import { useDashboardStyles } from "../styles/dashboardStyles";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
-import { CategoryModal } from "./CategoryModal";
+import { CategoryModal } from "./forms/CategoryModal";
 import { ConfirmModal } from "./ConfirmModal";
 import { Text, TextInput, useTheme } from "../theme";
 

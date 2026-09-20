@@ -3,8 +3,8 @@ import { useState } from "react";
 import { TouchableOpacity, View } from "react-native";
 import type { DebtType } from "../types";
 import { formatDateToString, parseDateString } from "../utils/dates";
-import { CalendarPicker } from "./CalendarPicker";
-import { TopFormSheet } from "./TopFormSheet";
+import { CalendarPicker } from "./forms/CalendarPicker";
+import { TopFormSheet } from "./forms/TopFormSheet";
 import { Text, TextInput, useTheme } from "../theme";
 
 interface DebtModalProps {

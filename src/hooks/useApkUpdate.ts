@@ -8,7 +8,7 @@ import {
   downloadFraction,
   type ApkRelease,
   type ApkStage,
-} from "../utils/apkUpdates";
+} from "../utils/updates/apkUpdates";
 import { logError } from "../utils/logger";
 
 export type ApkPhase =

@@ -1,7 +1,7 @@
 import { useSavingsContext } from "../../context/SavingsContext";
 import { formatCurrencyInput } from "../../utils/currency";
-import { SavingsDepositModal } from "../SavingsDepositModal";
-import { SavingsGoalModal } from "../SavingsGoalModal";
+import { SavingsDepositModal } from "../savings/SavingsDepositModal";
+import { SavingsGoalModal } from "../savings/SavingsGoalModal";
 
 /** Modais de criar meta e de guardar/retirar dinheiro de uma meta. */
 export function SavingsModalsContainer() {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CHANGELOG, type Release } from "../constants/changelog";
 import { getMeta, setMeta } from "../database/appMeta";
-import { getUnseenReleases, parseLastSeenId } from "../utils/releaseNotes";
+import { getUnseenReleases, parseLastSeenId } from "../utils/updates/releaseNotes";
 import { logError } from "../utils/logger";
 
 const LAST_SEEN_KEY = "last_seen_release";
