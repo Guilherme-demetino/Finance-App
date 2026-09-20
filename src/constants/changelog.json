@@ -160,5 +160,15 @@
       "“Baixar e instalar” baixa o arquivo com barra de progresso (dá para cancelar) e abre o instalador do Android; a instalação é por cima e mantém seus dados.",
       "O Android pede a sua confirmação para instalar e, na primeira vez, para permitir que o app instale atualizações. Prefira uma rede Wi-Fi."
     ]
+  },
+  {
+    "id": 18,
+    "date": "20/09/2026",
+    "title": "Saúde financeira no Início",
+    "items": [
+      "Novo cartão “Saúde Financeira” no Início: uma nota de 0 a 100 que junta o saldo do mês, o orçamento e as dívidas a pagar, com o estado Saudável, Atenção ou Em risco e uma frase dizendo o que mais pesa.",
+      "Toque em “Ver detalhes” para ver a nota de cada área e o porquê (por exemplo, quanto da receita sobrou ou quanto do orçamento já foi usado).",
+      "Uma área em situação ruim impede o selo de Saudável, mesmo que as outras estejam bem. As dívidas em aberto só entram na nota do mês atual."
+    ]
   }
 ]
