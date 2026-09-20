@@ -5,8 +5,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ApkUpdateCard } from "../components/ApkUpdateCard";
 import { CHANGELOG, type Release } from "../constants/changelog";
-import { useAppUpdates } from "../hooks/useAppUpdates";
-import { formatDateTime, formatProgress } from "../utils/appUpdates";
+import { useOtaUpdates } from "../hooks/useOtaUpdates";
+import { formatDateTime } from "../utils/dates";
+import { formatProgress } from "../utils/otaUpdates";
 import { Text, makeStyles, useTheme } from "../theme";
 
 function InfoRow({ label, value, selectable = false }: { label: string; value: string; selectable?: boolean }) {
@@ -57,7 +58,7 @@ export default function UpdatesScreen() {
     check,
     apply,
     retry,
-  } = useAppUpdates();
+  } = useOtaUpdates();
 
   const goBack = () => {
     if (router.canGoBack()) router.back();

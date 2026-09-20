@@ -2,7 +2,7 @@ import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
 import { CHANGELOG } from "../constants/changelog";
-import { useAppUpdates } from "./useAppUpdates";
+import { useOtaUpdates } from "./useOtaUpdates";
 
 // Estado do "expo-updates" de mentira. O módulo é um objeto com getters
 // (__esModule) para os testes poderem mudar os valores entre um caso e outro.
@@ -52,12 +52,12 @@ jest.mock("expo-constants", () => ({
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
 
-type Hook = ReturnType<typeof useAppUpdates>;
+type Hook = ReturnType<typeof useOtaUpdates>;
 
 function createProbe() {
   const seen = {} as { hook: Hook };
   function Probe() {
-    seen.hook = useAppUpdates();
+    seen.hook = useOtaUpdates();
     return null;
   }
   return { seen, Probe };
@@ -104,7 +104,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe("useAppUpdates: o que está rodando", () => {
+describe("useOtaUpdates: o que está rodando", () => {
   it("mostra versão, tipo, canal, id e data da atualização em execução", async () => {
     await mount();
 
@@ -138,7 +138,7 @@ describe("useAppUpdates: o que está rodando", () => {
   });
 });
 
-describe("useAppUpdates: verificar", () => {
+describe("useOtaUpdates: verificar", () => {
   it("já está na mais recente", async () => {
     mockUpdates.check.mockResolvedValue({ isAvailable: false, isRollBackToEmbedded: false, reason: "noUpdateAvailableOnServer" });
     await mount();
@@ -236,7 +236,7 @@ describe("useAppUpdates: verificar", () => {
   });
 });
 
-describe("useAppUpdates: baixar e aplicar", () => {
+describe("useOtaUpdates: baixar e aplicar", () => {
   async function withAvailableUpdate() {
     mockUpdates.check.mockResolvedValue({
       isAvailable: true,

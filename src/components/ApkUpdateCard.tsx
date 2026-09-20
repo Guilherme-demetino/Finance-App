@@ -3,7 +3,7 @@ import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import { useApkUpdate } from "../hooks/useApkUpdate";
 import { makeStyles, Text, useTheme } from "../theme";
 import { formatBytes } from "../utils/apkUpdates";
-import { formatDateTime } from "../utils/appUpdates";
+import { formatDateTime } from "../utils/dates";
 
 /**
  * "Nova versão do aplicativo": para versões que mudam a parte nativa do app (e por

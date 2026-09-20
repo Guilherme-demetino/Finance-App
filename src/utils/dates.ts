@@ -112,3 +112,13 @@ export function formatDateToString(date: Date): string {
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
 }
+
+function pad(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+/** "19/09/2026 às 20:30" (hora local do aparelho). */
+export function formatDateTime(date: Date | null): string {
+  if (!date || Number.isNaN(date.getTime())) return "não informada";
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} às ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}

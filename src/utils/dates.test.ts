@@ -1,5 +1,6 @@
 import {
   addMonthsToDateString,
+  formatDateTime,
   getMonthlyDates,
   getMonthNumber,
   getPreviousMonth,
@@ -125,5 +126,13 @@ describe("getPreviousMonth", () => {
       month: "mes-invalido",
       year: "2026",
     });
+  });
+});
+
+describe("formatDateTime", () => {
+  it("usa a hora local e trata vazio ou inválido", () => {
+    expect(formatDateTime(new Date(2026, 8, 5, 7, 4))).toBe("05/09/2026 às 07:04");
+    expect(formatDateTime(null)).toBe("não informada");
+    expect(formatDateTime(new Date("lixo"))).toBe("não informada");
   });
 });

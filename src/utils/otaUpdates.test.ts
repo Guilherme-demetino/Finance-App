@@ -2,7 +2,6 @@ import type { Release } from "../constants/changelog";
 import {
   describeRunningUpdate,
   describeUpdateError,
-  formatDateTime,
   formatProgress,
   latestReleaseId,
   manifestCreatedAt,
@@ -10,7 +9,7 @@ import {
   parseReleaseNotes,
   releaseNotesFromManifest,
   shortenId,
-} from "./appUpdates";
+} from "./otaUpdates";
 
 const release = (id: number, items = ["algo mudou"]): Release => ({
   id,
@@ -56,12 +55,6 @@ describe("describeRunningUpdate", () => {
 });
 
 describe("formatação", () => {
-  it("formatDateTime usa a hora local e trata vazio ou inválido", () => {
-    expect(formatDateTime(new Date(2026, 8, 5, 7, 4))).toBe("05/09/2026 às 07:04");
-    expect(formatDateTime(null)).toBe("não informada");
-    expect(formatDateTime(new Date("lixo"))).toBe("não informada");
-  });
-
   it("shortenId corta o identificador longo", () => {
     expect(shortenId("4b1f7d9e-0a0c-4f57-9a3e-8e2f6b1c7a10")).toBe("4b1f7d9e…");
     expect(shortenId("curto")).toBe("curto");

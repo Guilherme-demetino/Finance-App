@@ -11,7 +11,7 @@ import {
   newerReleases,
   releaseNotesFromManifest,
   type RunningUpdateInfo,
-} from "../utils/appUpdates";
+} from "../utils/otaUpdates";
 import { logError } from "../utils/logger";
 
 export type UpdatePhase =
@@ -41,7 +41,7 @@ const RESTART_FAILED =
  * Tela "Atualizações": o que está rodando agora, verificar se há atualização
  * nova (expo-updates), baixar com progresso e reiniciar para aplicar.
  */
-export function useAppUpdates() {
+export function useOtaUpdates() {
   // Só o progresso vem do hook do expo-updates; o resto do fluxo é controlado aqui.
   const { downloadProgress } = Updates.useUpdates();
 

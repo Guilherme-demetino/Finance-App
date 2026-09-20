@@ -1,5 +1,5 @@
 import { CHANGELOG } from "../constants/changelog";
-import { releaseNotesFromManifest } from "./appUpdates";
+import { releaseNotesFromManifest } from "./otaUpdates";
 
 // O app.config.js embute as últimas novidades no manifesto de cada atualização
 // publicada; a tela "Atualizações" lê de lá. Este teste garante que os dois lados combinam.

@@ -53,16 +53,6 @@ export function describeRunningUpdate(input: RunningUpdateInput): RunningUpdateI
   };
 }
 
-function pad(value: number): string {
-  return String(value).padStart(2, "0");
-}
-
-/** "19/09/2026 às 20:30" (hora local do aparelho). */
-export function formatDateTime(date: Date | null): string {
-  if (!date || Number.isNaN(date.getTime())) return "não informada";
-  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} às ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
 /** Só o começo do identificador (ele tem 36 caracteres); a tela mostra o completo em texto selecionável. */
 export function shortenId(id: string | null): string {
   if (!id) return "nenhum";
