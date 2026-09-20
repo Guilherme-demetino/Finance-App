@@ -48,13 +48,24 @@ export function ProfileMenuModal({
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    // onRequestClose: sem ele o botão "voltar" do Android não fecha o menu.
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity
         style={styles.overlay}
         activeOpacity={1}
         onPress={onClose}
       >
         <TouchableOpacity activeOpacity={1} style={styles.menuContainer}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Voltar"
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+            <Text style={styles.backText}>Voltar</Text>
+          </TouchableOpacity>
+
           <View style={styles.header}>
             <TouchableOpacity onPress={onPickImage}>
               {userImage ? (
@@ -215,6 +226,20 @@ const useStyles = makeStyles(({ colors }) => ({
     backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    minHeight: 44,
+    marginBottom: 4,
+    paddingRight: 12,
+  },
+  backText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
   },
   header: {
     flexDirection: "row",

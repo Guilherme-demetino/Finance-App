@@ -192,5 +192,14 @@
       "Só avisa o que acontecer depois de ligar: o que já estava perto do limite não vira aviso. Mudar a meta não dispara alerta, só gastar.",
       "O menu “Lembretes de Vencimento” agora se chama “Lembretes e Alertas”."
     ]
+  },
+  {
+    "id": 21,
+    "date": "20/09/2026",
+    "title": "Botão Voltar no menu do perfil",
+    "items": [
+      "O menu do perfil ganhou um botão “Voltar” no topo para fechá-lo.",
+      "O botão voltar do Android também fecha o menu (antes ele não fazia nada)."
+    ]
   }
 ]
