@@ -65,13 +65,22 @@ function item(tree: ReactTestRenderer, label: string) {
 }
 
 describe("menu do perfil", () => {
-  it("tem um botão Voltar no topo, antes do nome e das opções", () => {
+  it("o botão Voltar fica na linha do topo, no canto direito, oposto ao da foto", () => {
     const { tree } = mountMenu();
     const back = tree.root.findAllByType(TouchableOpacity).find((node) => node.props.accessibilityLabel === "Voltar");
 
     expect(back).toBeDefined();
     expect(back?.props.accessibilityRole).toBe("button");
-    expect(textOf(tree).indexOf("Voltar")).toBeLessThan(textOf(tree).indexOf("Ana"));
+
+    // Mesma linha da foto: a foto é a primeira coisa dela e o Voltar, a última.
+    const row = back!.parent!;
+    const children = row.children;
+    expect(children).toHaveLength(3);
+    expect(children[0]).toBe(row.findAllByType(TouchableOpacity)[0]); // a foto
+    expect(children[children.length - 1]).toBe(back);
+    expect(row.findAllByType(RNText).map((node) => flat(node.props.children))).toEqual(["Ana", "Editar Nome", "Voltar"]);
+
+    // Continua acima das opções.
     expect(textOf(tree).indexOf("Voltar")).toBeLessThan(textOf(tree).indexOf("Exportar Relatório PDF"));
   });
 

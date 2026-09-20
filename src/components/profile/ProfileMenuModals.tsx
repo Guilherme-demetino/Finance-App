@@ -56,16 +56,6 @@ export function ProfileMenuModal({
         onPress={onClose}
       >
         <TouchableOpacity activeOpacity={1} style={styles.menuContainer}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Voltar"
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-            <Text style={styles.backText}>Voltar</Text>
-          </TouchableOpacity>
-
           <View style={styles.header}>
             <TouchableOpacity onPress={onPickImage}>
               {userImage ? (
@@ -82,6 +72,16 @@ export function ProfileMenuModal({
                 <Text style={styles.editNameText}>Editar Nome</Text>
               </TouchableOpacity>
             </View>
+            {/* No canto oposto ao da foto, alinhado ao topo. */}
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Voltar"
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+              <Text style={styles.backText}>Voltar</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.divider} />
@@ -232,8 +232,7 @@ const useStyles = makeStyles(({ colors }) => ({
     alignItems: "center",
     alignSelf: "flex-start",
     minHeight: 44,
-    marginBottom: 4,
-    paddingRight: 12,
+    paddingLeft: 12,
   },
   backText: {
     color: colors.textPrimary,
