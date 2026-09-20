@@ -7,6 +7,7 @@ import { AlertContainer } from "../../components/dashboard/AlertContainer";
 import { AutoBackupRunner } from "../../components/dashboard/AutoBackupRunner";
 import { DashboardHeader } from "../../components/dashboard/DashboardHeader";
 import { DebtModalContainer } from "../../components/dashboard/DebtModalContainer";
+import { DueRemindersRunner } from "../../components/dashboard/DueRemindersRunner";
 import { NewTransactionFab } from "../../components/dashboard/NewTransactionFab";
 import { PanoramaContainer } from "../../components/dashboard/PanoramaContainer";
 import { ProfileMenuContainer } from "../../components/dashboard/ProfileMenuContainer";
@@ -137,6 +138,7 @@ function DashboardChrome() {
 
       <AlertContainer />
       <AutoBackupRunner />
+      <DueRemindersRunner />
     </SafeAreaView>
   );
 }

@@ -40,6 +40,7 @@ function ThemedNavigation() {
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="updates" options={{ headerShown: false }} />
         <Stack.Screen name="appearance" options={{ headerShown: false }} />
+        <Stack.Screen name="reminders" options={{ headerShown: false }} />
       </Stack>
     </>
   );

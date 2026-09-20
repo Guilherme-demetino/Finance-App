@@ -20,6 +20,17 @@ export async function getAllTransactions(): Promise<TransactionRow[]> {
 }
 
 /**
+ * Despesas parceladas ou recorrentes (as que têm um vencimento pela frente).
+ * A data fica em DD/MM/AAAA, então o filtro por "de hoje em diante" é de quem chama.
+ */
+export async function getRecurringExpenses(): Promise<TransactionRow[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<TransactionRow>(
+    "SELECT * FROM transactions WHERE type = 'expense' AND recurrence_type IS NOT NULL",
+  );
+}
+
+/**
  * Transações de um ano inteiro (datas no formato DD/MM/AAAA). Traz só o que o
  * painel precisa em vez da tabela toda; o mês é filtrado em cima desse recorte.
  */

@@ -17,6 +17,7 @@ interface ProfileMenuModalProps {
   onOpenAutoBackup: () => void;
   onOpenUpdates: () => void;
   onOpenAppearance: () => void;
+  onOpenReminders: () => void;
   onChangePIN: () => void;
   onWipeData: () => void;
 }
@@ -36,6 +37,7 @@ export function ProfileMenuModal({
   onOpenAutoBackup,
   onOpenUpdates,
   onOpenAppearance,
+  onOpenReminders,
   onChangePIN,
   onWipeData,
 }: ProfileMenuModalProps) {
@@ -105,6 +107,11 @@ export function ProfileMenuModal({
           <TouchableOpacity style={styles.menuItem} onPress={onOpenAppearance}>
             <Ionicons name="color-palette-outline" size={24} color={colors.textPrimary} />
             <Text style={styles.menuItemText}>Aparência e Acessibilidade</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={onOpenReminders}>
+            <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
+            <Text style={styles.menuItemText}>Lembretes de Vencimento</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={onOpenUpdates}>

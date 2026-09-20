@@ -15,6 +15,8 @@ import {
 import { resetDatabase } from "../database/sqlite";
 import { recordManualBackup } from "../services/autoBackup";
 import { realAutoBackupDeps } from "../services/autoBackupDeps";
+import { syncDueReminders } from "../services/dueReminders";
+import { realDueReminderDeps } from "../services/dueRemindersDeps";
 import { readBackupData, replaceAllData } from "../database/backup";
 import {
   getAllTransactions,
@@ -274,6 +276,10 @@ export function useDataTransfer() {
     try {
       await resetDatabase();
       await clearPin();
+      // Sem dívidas nem parcelas, os lembretes agendados não fazem mais sentido.
+      syncDueReminders(realDueReminderDeps).catch((error) =>
+        logError("Erro ao cancelar os lembretes de vencimento:", error),
+      );
       router.replace("/"); // Volta para a tela de boas-vindas
     } catch (error) {
       logError("Erro ao zerar dados:", error);
