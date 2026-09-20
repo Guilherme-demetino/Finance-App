@@ -1,5 +1,5 @@
 import { Modal, TouchableOpacity, View } from "react-native";
-import { Text, makeStyles } from "../theme";
+import { Text, makeStyles, modalCard } from "../theme";
 
 interface CustomAlertProps {
   visible: boolean;
@@ -36,51 +36,52 @@ export function CustomAlert({
   );
 }
 
-const useStyles = makeStyles(({ colors }) => ({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  alertContainer: {
-    width: "100%",
-    maxWidth: 320,
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: colors.textPrimary,
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  message: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 24,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  button: {
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.textPrimary,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    width: "100%",
-    alignItems: "center",
-  },
-  buttonText: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-}));
+const useStyles = makeStyles((theme) => {
+  const { colors } = theme;
+  return {
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.scrim,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    alertContainer: {
+      width: "100%",
+      maxWidth: 320,
+      ...modalCard(theme),
+      borderRadius: 16,
+      padding: 24,
+      alignItems: "center",
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: colors.textPrimary,
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    message: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginBottom: 24,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    button: {
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.textPrimary,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 12,
+      width: "100%",
+      alignItems: "center",
+    },
+    buttonText: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: "bold",
+    },
+  };
+});

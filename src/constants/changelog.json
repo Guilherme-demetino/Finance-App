@@ -201,5 +201,14 @@
       "O menu do perfil ganhou um botão “Voltar” no canto superior direito para fechá-lo.",
       "O botão voltar do Android também fecha o menu (antes ele não fazia nada)."
     ]
+  },
+  {
+    "id": 22,
+    "date": "20/09/2026",
+    "title": "Pop-ups no alto contraste",
+    "items": [
+      "Corrigido: no alto contraste escuro, os pop-ups (como esta lista de novidades, os avisos e as confirmações) se misturavam ao fundo preto e pareciam fazer parte da tela.",
+      "Agora a tela de trás aparece atrás do pop-up e o cartão ganha uma borda grossa que o destaca. Nos outros temas nada muda."
+    ]
   }
 ]

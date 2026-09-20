@@ -64,10 +64,53 @@ describe.each(PALETTES)("paleta %s: legibilidade", (_name, colors) => {
     expect(contrastRatio(colors.border, colors.background)).toBeGreaterThan(1);
   });
 
-  it("todas as cores são hex de 6 dígitos", () => {
-    for (const value of Object.values(colors)) {
+  it("todas as cores são hex de 6 dígitos (o véu de pop-up é a única com transparência)", () => {
+    const { scrim, ...solid } = colors;
+    for (const value of Object.values(solid)) {
       expect(value).toMatch(/^#[0-9A-Fa-f]{6}$/);
     }
+    expect(scrim).toMatch(/^rgba\(\d{1,3},\s*\d{1,3},\s*\d{1,3},\s*0?\.\d+\)$/);
+  });
+});
+
+/** Cor final de um véu rgba(r,g,b,a) sobre um fundo hex. */
+function blend(scrim: string, groundHex: string): string {
+  const match = /^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/.exec(scrim);
+  if (!match) throw new Error(`véu inválido: ${scrim}`);
+  const alpha = Number(match[4]);
+  const ground = [1, 3, 5].map((i) => parseInt(groundHex.slice(i, i + 2), 16));
+  const mixed = [1, 2, 3].map((i, k) => Math.round(Number(match[i]) * alpha + ground[k] * (1 - alpha)));
+  return `#${mixed.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+describe("pop-up sobre a tela (alto contraste)", () => {
+  it("por que existe um véu próprio: preto sobre o fundo preto do alto contraste escuro não muda nada", () => {
+    const blackVeil = blend("rgba(0,0,0,0.8)", HIGH_CONTRAST_DARK_COLORS.background);
+
+    expect(contrastRatio(HIGH_CONTRAST_DARK_COLORS.background, blackVeil)).toBeCloseTo(1, 5);
+  });
+
+  it.each([
+    ["escuro com alto contraste", HIGH_CONTRAST_DARK_COLORS],
+    ["claro com alto contraste", HIGH_CONTRAST_LIGHT_COLORS],
+  ])("%s: a tela de trás continua aparecendo e o cartão do pop-up se destaca dela", (_name, colors) => {
+    const backdrop = blend(colors.scrim, colors.background);
+
+    // O véu muda de verdade a tela de trás (dá para perceber que há um pop-up por cima).
+    expect(contrastRatio(colors.background, backdrop)).toBeGreaterThanOrEqual(1.5);
+    // O conteúdo da tela de trás e a borda do cartão (as duas na cor do texto) se distinguem do véu:
+    // a tela "aparece" atrás e o cartão tem contorno claro (3:1, WCAG 1.4.11 para elementos gráficos).
+    expect(contrastRatio(colors.textPrimary, backdrop)).toBeGreaterThanOrEqual(3);
+  });
+
+  it("no alto contraste escuro o véu é claro (escurecer o preto não mostraria nada)", () => {
+    expect(HIGH_CONTRAST_DARK_COLORS.scrim).toMatch(/^rgba\(255,\s*255,\s*255,/);
+    expect(HIGH_CONTRAST_LIGHT_COLORS.scrim).toMatch(/^rgba\(0,\s*0,\s*0,/);
+  });
+
+  it("os temas normais mantêm o véu preto de sempre", () => {
+    expect(DARK_COLORS.scrim).toBe("rgba(0,0,0,0.8)");
+    expect(LIGHT_COLORS.scrim).toBe("rgba(0,0,0,0.8)");
   });
 });
 

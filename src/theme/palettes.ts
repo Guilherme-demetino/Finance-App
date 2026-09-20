@@ -38,6 +38,12 @@ export interface ThemeColors {
   categoryNeutral: string;
 
   shadow: string;
+
+  /**
+   * Véu que escurece (ou clareia) a tela atrás de um pop-up. No alto contraste escuro o véu
+   * preto sumiria no fundo preto: lá ele é claro, para a tela de trás e o cartão aparecerem.
+   */
+  scrim: string;
 }
 
 /** Cores de categoria: fixas, iguais em todos os temas (ficam salvas nas categorias criadas pelo usuário). */
@@ -76,6 +82,7 @@ export const DARK_COLORS: ThemeColors = {
   ...ACCENT_COLORS,
   ...CATEGORY_COLORS,
   shadow: "#000000",
+  scrim: "rgba(0,0,0,0.8)",
 };
 
 export const LIGHT_COLORS: ThemeColors = {
@@ -98,6 +105,7 @@ export const LIGHT_COLORS: ThemeColors = {
   accent: "#2563EB",
   ...CATEGORY_COLORS,
   shadow: "#000000",
+  scrim: "rgba(0,0,0,0.8)",
 };
 
 export const HIGH_CONTRAST_DARK_COLORS: ThemeColors = {
@@ -120,6 +128,7 @@ export const HIGH_CONTRAST_DARK_COLORS: ThemeColors = {
   accent: "#7DB3FF",
   ...CATEGORY_COLORS,
   shadow: "#000000",
+  scrim: "rgba(255,255,255,0.22)",
 };
 
 export const HIGH_CONTRAST_LIGHT_COLORS: ThemeColors = {
@@ -142,6 +151,7 @@ export const HIGH_CONTRAST_LIGHT_COLORS: ThemeColors = {
   accent: "#1D4ED8",
   ...CATEGORY_COLORS,
   shadow: "#000000",
+  scrim: "rgba(0,0,0,0.6)",
 };
 
 export function resolvePalette(options: {
