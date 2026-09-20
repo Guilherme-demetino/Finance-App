@@ -210,5 +210,15 @@
       "Corrigido: no alto contraste escuro, os pop-ups (como esta lista de novidades, os avisos e as confirmações) se misturavam ao fundo preto e pareciam fazer parte da tela.",
       "Agora a tela de trás aparece atrás do pop-up e o cartão ganha uma borda grossa que o destaca. Nos outros temas nada muda."
     ]
+  },
+  {
+    "id": 23,
+    "date": "20/09/2026",
+    "title": "Cartões no alto contraste",
+    "items": [
+      "Corrigido: no alto contraste escuro, o “Histórico de novidades” e o cartão “Versão instalada” (tela Atualizações) se misturavam ao fundo preto. Agora cada cartão tem contorno.",
+      "O mesmo vale para o menu do perfil, o backup automático, a proteção por senha, o calendário e os formulários: o cartão ganha borda grossa e a tela de trás aparece atrás dele.",
+      "No PIN, as teclas ganham um anel no alto contraste. Nos outros temas o visual é o mesmo de antes."
+    ]
   }
 ]

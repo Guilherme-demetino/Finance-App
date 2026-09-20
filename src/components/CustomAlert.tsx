@@ -1,5 +1,5 @@
 import { Modal, TouchableOpacity, View } from "react-native";
-import { Text, makeStyles, modalCard } from "../theme";
+import { Text, makeStyles, modalCard, modalScrim } from "../theme";
 
 interface CustomAlertProps {
   visible: boolean;
@@ -41,7 +41,7 @@ const useStyles = makeStyles((theme) => {
   return {
     overlay: {
       flex: 1,
-      backgroundColor: colors.scrim,
+      backgroundColor: modalScrim(theme, 0.7),
       justifyContent: "center",
       alignItems: "center",
       padding: 24,

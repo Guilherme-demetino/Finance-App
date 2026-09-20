@@ -151,6 +151,8 @@ const useStyles = makeStyles(({ colors }) => ({
     borderRadius: 16,
     padding: 16,
     marginTop: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   title: { color: colors.textPrimary, fontSize: 18, fontWeight: "700", marginBottom: 4 },
   text: { color: colors.textMuted, fontSize: 14, lineHeight: 20, marginTop: 4, marginBottom: 8 },

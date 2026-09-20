@@ -1,7 +1,10 @@
 import React from "react";
-import { Text, TouchableOpacity } from "react-native";
+import { StyleSheet, Text, TouchableOpacity } from "react-native";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
+import { ThemeProvider } from "../theme";
+import { contrastRatio } from "../theme/contrast";
+import { HIGH_CONTRAST_DARK_COLORS, HIGH_CONTRAST_LIGHT_COLORS, DARK_COLORS, LIGHT_COLORS } from "../theme/palettes";
 import UpdatesScreen from "./updates";
 import { CHANGELOG } from "../constants/changelog";
 
@@ -277,5 +280,40 @@ describe("tela Atualizações", () => {
     mockRouter.canGoBack.mockReturnValue(false);
     act(() => backButton.props.onPress());
     expect(mockRouter.replace).toHaveBeenCalledWith("/dashboard");
+  });
+});
+
+describe("cartões da tela Atualizações se destacam do fundo", () => {
+  const themes = [
+    ["escuro", "dark", false, DARK_COLORS],
+    ["claro", "light", false, LIGHT_COLORS],
+    ["escuro com alto contraste", "dark", true, HIGH_CONTRAST_DARK_COLORS],
+    ["claro com alto contraste", "light", true, HIGH_CONTRAST_LIGHT_COLORS],
+  ] as const;
+
+  it.each(themes)("no tema %s, cada novidade do histórico e a versão instalada têm contorno", async (_name, mode, highContrast, palette) => {
+    await act(async () => {
+      tree = create(
+        <ThemeProvider initial={{ mode, highContrast, fontScale: 1 }}>
+          <UpdatesScreen />
+        </ThemeProvider>,
+      );
+    });
+    mounted.push(tree);
+
+    const hostStyles = tree.root
+      .findAll((n) => typeof n.type === "string")
+      .map((n) => StyleSheet.flatten(n.props.style) as Record<string, unknown> | undefined)
+      .filter((style): style is Record<string, unknown> => !!style);
+    // Cartão de cada novidade do histórico (raio 12, margem interna 14) e o cartão "Versão instalada" (raio 16, margem 16).
+    const releaseCards = hostStyles.filter((style) => style.borderRadius === 12 && style.padding === 14);
+    const installedCard = hostStyles.find((style) => style.borderRadius === 16 && style.padding === 16 && style.marginBottom === 16);
+
+    expect(releaseCards).toHaveLength(CHANGELOG.length);
+    for (const card of [...releaseCards, installedCard]) {
+      expect(card).toMatchObject({ backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.border });
+    }
+    // No alto contraste o contorno se distingue do fundo da tela (3:1, WCAG 1.4.11).
+    if (highContrast) expect(contrastRatio(palette.border, palette.background)).toBeGreaterThanOrEqual(3);
   });
 });

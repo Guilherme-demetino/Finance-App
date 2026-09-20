@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image, Modal, ScrollView, TouchableOpacity, View } from "react-native";
-import { Text, TextInput, makeStyles, useTheme } from "../../theme";
+import { Text, TextInput, makeStyles, modalCard, modalScrim, useTheme } from "../../theme";
 
 interface ProfileMenuModalProps {
   visible: boolean;
@@ -204,133 +204,136 @@ export function EditNameModal({
   );
 }
 
-const useStyles = makeStyles(({ colors }) => ({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  // Fica no topo pra o teclado (que abre na hora, por causa do autoFocus)
-  // não cobrir o campo nem os botões.
-  topOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "flex-start",
-    alignItems: "center",
-    paddingTop: 100,
-  },
-  menuContainer: {
-    width: "85%",
-    maxHeight: "90%",
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 20,
-  },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    minHeight: 44,
-    paddingLeft: 12,
-  },
-  backText: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 16,
-  },
-  avatarPlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.border,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  editNameText: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    marginTop: 4,
-    textDecorationLine: "underline",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: 16,
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  menuItemText: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    marginLeft: 16,
-  },
-  modalContainer: {
-    width: "85%",
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 24,
-  },
-  modalTitle: {
-    color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
-  input: {
-    backgroundColor: colors.surfaceAlt,
-    color: colors.textPrimary,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 24,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 16,
-  },
-  cancelButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  cancelButtonText: {
-    color: colors.textSecondary,
-    fontSize: 16,
-  },
-  saveButton: {
-    backgroundColor: colors.income,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  saveButtonText: {
-    color: colors.textOnColor,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-}));
+const useStyles = makeStyles((theme) => {
+  const { colors } = theme;
+  return {
+    overlay: {
+      flex: 1,
+      backgroundColor: modalScrim(theme, 0.6),
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    // Fica no topo pra o teclado (que abre na hora, por causa do autoFocus)
+    // não cobrir o campo nem os botões.
+    topOverlay: {
+      flex: 1,
+      backgroundColor: modalScrim(theme, 0.6),
+      justifyContent: "flex-start",
+      alignItems: "center",
+      paddingTop: 100,
+    },
+    menuContainer: {
+      width: "85%",
+      maxHeight: "90%",
+      ...modalCard(theme),
+      borderRadius: 16,
+      padding: 20,
+    },
+    backButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      alignSelf: "flex-start",
+      minHeight: 44,
+      paddingLeft: 12,
+    },
+    backText: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+      marginLeft: 8,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    avatar: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      marginRight: 16,
+    },
+    avatarPlaceholder: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: colors.border,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 16,
+    },
+    userInfo: {
+      flex: 1,
+    },
+    userName: {
+      color: colors.textPrimary,
+      fontSize: 18,
+      fontWeight: "bold",
+    },
+    editNameText: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      marginTop: 4,
+      textDecorationLine: "underline",
+    },
+    divider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 16,
+    },
+    menuItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 12,
+    },
+    menuItemText: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      marginLeft: 16,
+    },
+    modalContainer: {
+      width: "85%",
+      ...modalCard(theme),
+      borderRadius: 16,
+      padding: 24,
+    },
+    modalTitle: {
+      color: colors.textPrimary,
+      fontSize: 18,
+      fontWeight: "bold",
+      marginBottom: 16,
+    },
+    input: {
+      backgroundColor: colors.surfaceAlt,
+      color: colors.textPrimary,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      marginBottom: 24,
+    },
+    buttonRow: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 16,
+    },
+    cancelButton: {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+    },
+    cancelButtonText: {
+      color: colors.textSecondary,
+      fontSize: 16,
+    },
+    saveButton: {
+      backgroundColor: colors.income,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+    },
+    saveButtonText: {
+      color: colors.textOnColor,
+      fontSize: 16,
+      fontWeight: "bold",
+    },
+  };
+});

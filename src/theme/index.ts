@@ -1,5 +1,5 @@
 export { makeStyles } from "./makeStyles";
-export { modalCard } from "./modalCard";
+export { modalCard, modalScrim } from "./modalCard";
 export {
   ACCENT_COLORS,
   CATEGORY_COLORS,

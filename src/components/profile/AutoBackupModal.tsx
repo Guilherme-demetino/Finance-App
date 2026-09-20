@@ -3,7 +3,7 @@ import { ActivityIndicator, Modal, TouchableOpacity, View } from "react-native";
 import type { AutoBackupSettings } from "../../services/autoBackup";
 import type { ProtectionStatus } from "../../services/backupProtection";
 import { describeLastBackup, KEEP_BACKUPS } from "../../utils/backup/autoBackup";
-import { Text, makeStyles, useTheme } from "../../theme";
+import { Text, makeStyles, modalCard, modalScrim, useTheme } from "../../theme";
 
 interface AutoBackupModalProps {
   visible: boolean;
@@ -91,84 +91,87 @@ export function AutoBackupModal({
   );
 }
 
-const useStyles = makeStyles(({ colors }) => ({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  card: {
-    width: "100%",
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 20,
-  },
-  title: {
-    color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  description: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  statusBox: {
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-  },
-  statusLabel: {
-    color: colors.textMuted,
-    fontSize: 12,
-    marginTop: 6,
-  },
-  statusValue: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  errorText: {
-    color: colors.expense,
-    fontSize: 13,
-    marginTop: 10,
-  },
-  primaryButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  primaryButtonText: {
-    color: colors.textOnColor,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  secondaryButton: {
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 10,
-  },
-  secondaryButtonText: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  closeButton: {
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  closeButtonText: {
-    color: colors.textMuted,
-    fontSize: 15,
-  },
-}));
+const useStyles = makeStyles((theme) => {
+  const { colors } = theme;
+  return {
+    overlay: {
+      flex: 1,
+      backgroundColor: modalScrim(theme, 0.6),
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    card: {
+      width: "100%",
+      ...modalCard(theme),
+      borderRadius: 16,
+      padding: 20,
+    },
+    title: {
+      color: colors.textPrimary,
+      fontSize: 20,
+      fontWeight: "700",
+      marginBottom: 8,
+    },
+    description: {
+      color: colors.textMuted,
+      fontSize: 14,
+      lineHeight: 20,
+      marginBottom: 16,
+    },
+    statusBox: {
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 16,
+    },
+    statusLabel: {
+      color: colors.textMuted,
+      fontSize: 12,
+      marginTop: 6,
+    },
+    statusValue: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    errorText: {
+      color: colors.expense,
+      fontSize: 13,
+      marginTop: 10,
+    },
+    primaryButton: {
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: "center",
+      marginBottom: 10,
+    },
+    primaryButtonText: {
+      color: colors.textOnColor,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    secondaryButton: {
+      borderRadius: 12,
+      paddingVertical: 12,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 10,
+    },
+    secondaryButtonText: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    closeButton: {
+      paddingVertical: 10,
+      alignItems: "center",
+    },
+    closeButtonText: {
+      color: colors.textMuted,
+      fontSize: 15,
+    },
+  };
+});

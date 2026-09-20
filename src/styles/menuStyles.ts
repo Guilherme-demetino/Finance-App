@@ -1,4 +1,4 @@
-import { makeStyles, modalCard } from "../theme";
+import { makeStyles, modalCard, modalScrim } from "../theme";
 
 export const useMenuStyles = makeStyles((theme) => {
   const { colors } = theme;
@@ -17,7 +17,7 @@ export const useMenuStyles = makeStyles((theme) => {
     // Estilos do Modal de Alterar Nome
     modalContainer: {
       flex: 1,
-      backgroundColor: colors.scrim,
+      backgroundColor: modalScrim(theme, 0.8),
       justifyContent: "center",
       padding: 24,
     },

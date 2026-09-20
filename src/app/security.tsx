@@ -316,7 +316,7 @@ export default function SecurityScreen() {
   );
 }
 
-const useStyles = makeStyles(({ colors }) => ({
+const useStyles = makeStyles(({ colors, highContrast }) => ({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -332,6 +332,9 @@ const useStyles = makeStyles(({ colors }) => ({
     height: 40,
     borderRadius: 20,
     backgroundColor: colors.surface,
+    // No alto contraste escuro o círculo (quase preto) some no fundo preto: ganha um anel.
+    borderWidth: highContrast ? 1 : 0,
+    borderColor: colors.border,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -381,6 +384,8 @@ const useStyles = makeStyles(({ colors }) => ({
     height: 70,
     borderRadius: 35,
     backgroundColor: colors.surface,
+    borderWidth: highContrast ? 1 : 0,
+    borderColor: colors.border,
     justifyContent: "center",
     alignItems: "center",
   },

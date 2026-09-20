@@ -14,7 +14,7 @@ import { CalendarPicker } from "../forms/CalendarPicker";
 import { CategoryModal } from "../forms/CategoryModal";
 import { ConfirmModal } from "../ConfirmModal";
 import { logError } from "../../utils/logger";
-import { Text, TextInput, useTheme } from "../../theme";
+import { Text, TextInput, modalCard, modalScrim, useTheme } from "../../theme";
 
 const INSTALLMENT_OPTIONS = [2, 3, 4, 6, 10, 12];
 const RECURRING_MONTHS_OPTIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -69,7 +69,8 @@ export function TransactionModal({
   onSave,
   onDeleteCategory,
 }: TransactionModalProps) {
-  const { colors } = useTheme();
+  const theme = useTheme();
+  const { colors } = theme;
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<CategoryRow | null>(
     null,
@@ -175,7 +176,7 @@ export function TransactionModal({
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: "rgba(0,0,0,0.6)",
+          backgroundColor: modalScrim(theme, 0.6),
           justifyContent: "flex-start",
           paddingTop: 60,
           zIndex: 999,
@@ -191,7 +192,7 @@ export function TransactionModal({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
-              backgroundColor: colors.surface,
+              ...modalCard(theme),
               borderRadius: 24,
               marginHorizontal: 16,
               padding: 24,

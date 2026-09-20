@@ -54,18 +54,20 @@ function styles(tree: ReactTestRenderer): Record<string, unknown>[] {
     .filter((style): style is Record<string, unknown> => !!style);
 }
 
-const popups: [string, () => React.ReactNode][] = [
-  ["novidades da atualização", () => <ReleaseNotesModal releases={RELEASES} onClose={() => {}} />],
-  ["alerta", () => <CustomAlert visible title="Aviso" message="Texto" onClose={() => {}} />],
-  ["confirmação", () => <ConfirmModal visible title="Título" message="Mensagem" onConfirm={() => {}} onCancel={() => {}} />],
+// O quanto cada pop-up escurece a tela de trás nos temas normais (não muda com este ajuste).
+const popups: [string, () => React.ReactNode, number][] = [
+  ["novidades da atualização", () => <ReleaseNotesModal releases={RELEASES} onClose={() => {}} />, 0.8],
+  ["alerta", () => <CustomAlert visible title="Aviso" message="Texto" onClose={() => {}} />, 0.7],
+  ["confirmação", () => <ConfirmModal visible title="Título" message="Mensagem" onConfirm={() => {}} onCancel={() => {}} />, 0.8],
 ];
 
-describe.each(popups)("pop-up de %s", (_popup, render) => {
+describe.each(popups)("pop-up de %s", (_popup, render, normalAlpha) => {
   it.each(CASES)("no tema %s: véu atrás e cartão com o visual do tema", (_name, preferences, palette, highContrast) => {
     const all = styles(mount(preferences, render()));
 
-    // O véu que cobre a tela de trás usa a cor do tema (não um preto fixo).
-    expect(all.some((style) => style.backgroundColor === palette.scrim && style.flex === 1)).toBe(true);
+    // No alto contraste o véu é o do tema; nos normais, o preto de sempre.
+    const veil = highContrast ? palette.scrim : `rgba(0,0,0,${normalAlpha})`;
+    expect(all.some((style) => style.backgroundColor === veil && style.flex === 1)).toBe(true);
 
     const card = all.find((style) => style.borderRadius === 16 && style.borderColor !== undefined);
     expect(card).toBeDefined();

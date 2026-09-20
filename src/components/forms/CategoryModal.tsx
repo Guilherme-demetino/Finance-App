@@ -4,7 +4,7 @@ import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { ACCENT_COLORS, CATEGORY_COLORS } from "../../constants/colors";
 import { createCategory } from "../../database/categories";
 import { logError } from "../../utils/logger";
-import { Text, TextInput, useTheme } from "../../theme";
+import { Text, TextInput, modalCard, modalScrim, useTheme } from "../../theme";
 
 // Cores disponíveis para as categorias
 // Cores fixas (ficam salvas na categoria): iguais em todos os temas.
@@ -36,7 +36,8 @@ export function CategoryModal({
   onSave,
   lockType = false,
 }: CategoryModalProps) {
-  const { colors } = useTheme();
+  const theme = useTheme();
+  const { colors } = theme;
   const [categoryName, setCategoryName] = useState("");
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [selectedType, setSelectedType] = useState<"income" | "expense">(
@@ -84,7 +85,7 @@ export function CategoryModal({
       <View
         style={{
           flex: 1,
-          backgroundColor: "rgba(0,0,0,0.6)",
+          backgroundColor: modalScrim(theme, 0.6),
           justifyContent: "flex-start",
           paddingTop: 60,
         }}
@@ -94,7 +95,7 @@ export function CategoryModal({
           showsVerticalScrollIndicator={false}
           style={{ flexGrow: 0 }}
           contentContainerStyle={{
-            backgroundColor: colors.surface,
+            ...modalCard(theme),
             borderRadius: 24,
             marginHorizontal: 16,
             padding: 24,

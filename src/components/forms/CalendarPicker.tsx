@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Modal, TouchableOpacity, View } from "react-native";
-import { Text, useTheme } from "../../theme";
+import { Text, modalCard, modalScrim, useTheme } from "../../theme";
 
 const WEEKDAYS = ["D", "S", "T", "Q", "Q", "S", "S"];
 const MONTHS = [
@@ -55,7 +55,8 @@ export function CalendarPicker({
   onSelect,
   accentColor,
 }: CalendarPickerProps) {
-  const { colors } = useTheme();
+  const theme = useTheme();
+  const { colors } = theme;
   const accent = accentColor ?? colors.income;
   const [viewDate, setViewDate] = useState(
     new Date(value.getFullYear(), value.getMonth(), 1),
@@ -82,14 +83,14 @@ export function CalendarPicker({
       <View
         style={{
           flex: 1,
-          backgroundColor: "rgba(0,0,0,0.6)",
+          backgroundColor: modalScrim(theme, 0.6),
           justifyContent: "center",
           alignItems: "center",
         }}
       >
         <View
           style={{
-            backgroundColor: colors.surface,
+            ...modalCard(theme),
             borderRadius: 24,
             padding: 20,
             width: "88%",

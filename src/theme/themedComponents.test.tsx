@@ -72,7 +72,8 @@ describe.each(CASES)("componentes no tema %s", (_name, preferences, palette) => 
   it("o cartão, o texto e a borda usam as cores da paleta", () => {
     const used = colorsIn(mount(preferences, <AutoBackupModal {...autoBackupProps} />));
 
-    expect(used).toContain(palette.surface.toUpperCase());
+    // No alto contraste o cartão do pop-up usa o fundo um tom acima (surfaceAlt) e borda na cor do texto.
+    expect(used).toContain((preferences.highContrast ? palette.surfaceAlt : palette.surface).toUpperCase());
     expect(used).toContain(palette.textPrimary.toUpperCase());
     expect(used).toContain(palette.textMuted.toUpperCase());
     expect(used).toContain(palette.accent.toUpperCase());

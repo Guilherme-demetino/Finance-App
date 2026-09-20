@@ -75,6 +75,33 @@ describe("código-fonte do app", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("todo cartão com fundo 'surface' tem contorno (senão some no fundo preto do alto contraste escuro)", () => {
+    // O fundo da tela (#000) e o do cartão (#0A0A0A) quase não se distinguem: só o contorno separa os dois.
+    // Vale para cartões de página e de pop-up (esses usam modalCard, que já traz o contorno).
+    const outline = /border(Top|Bottom|Left|Right)?(Width|Color)|modalCard/;
+    const offenders: string[] = [];
+
+    for (const file of sourceFiles()) {
+      const lines = fs.readFileSync(file, "utf8").split("\n");
+      lines.forEach((line, index) => {
+        if (!/backgroundColor:\s*colors\.surface\b(?!Alt)/.test(line)) return;
+        if (/^\s*(\*|\/\/)/.test(line)) return; // comentário
+
+        // O objeto de estilo: da linha que abre a chave até a que fecha.
+        let start = index;
+        while (start > 0 && !lines[start].trimEnd().endsWith("{")) start--;
+        let end = index;
+        while (end < lines.length - 1 && !/^\s*\},?\s*$/.test(lines[end])) end++;
+
+        if (!outline.test(lines.slice(start, end + 1).join("\n"))) {
+          offenders.push(`${relative(file)}:${index + 1}: ${lines[start].trim()}`);
+        }
+      });
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
   it("nenhum arquivo lê 'colors' do módulo antigo (as cores vêm do useTheme)", () => {
     const offenders = sourceFiles()
       .filter((file) => /import\s*\{[^}]*\bcolors\b[^}]*\}\s*from\s*"[^"]*constants\/colors"/.test(fs.readFileSync(file, "utf8")))
