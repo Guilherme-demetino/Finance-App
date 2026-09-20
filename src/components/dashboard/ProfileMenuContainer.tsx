@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 
@@ -44,6 +45,7 @@ export function ProfileMenuContainer({
     setIsWipeConfirmOpen,
     confirmWipeData,
   } = useDataTransfer();
+  const router = useRouter();
   const autoBackup = useAutoBackup();
   const [isAutoBackupOpen, setIsAutoBackupOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -75,6 +77,10 @@ export function ProfileMenuContainer({
         onOpenAutoBackup={() => {
           onCloseMenu();
           setIsAutoBackupOpen(true);
+        }}
+        onOpenUpdates={() => {
+          onCloseMenu();
+          router.push("/updates");
         }}
         onChangePIN={() => {
           onCloseMenu();

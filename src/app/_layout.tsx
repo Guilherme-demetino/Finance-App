@@ -89,6 +89,7 @@ export default function RootLayout() {
       <Stack.Screen name="dashboard" options={{ headerShown: false }} />
       <Stack.Screen name="security" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+      <Stack.Screen name="updates" options={{ headerShown: false }} />
     </Stack>
   );
 }

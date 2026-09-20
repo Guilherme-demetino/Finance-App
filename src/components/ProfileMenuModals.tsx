@@ -24,6 +24,7 @@ interface ProfileMenuModalProps {
   onExportBackup: () => void;
   onRestoreBackup: () => void;
   onOpenAutoBackup: () => void;
+  onOpenUpdates: () => void;
   onChangePIN: () => void;
   onWipeData: () => void;
 }
@@ -41,6 +42,7 @@ export function ProfileMenuModal({
   onExportBackup,
   onRestoreBackup,
   onOpenAutoBackup,
+  onOpenUpdates,
   onChangePIN,
   onWipeData,
 }: ProfileMenuModalProps) {
@@ -103,6 +105,11 @@ export function ProfileMenuModal({
           <TouchableOpacity style={styles.menuItem} onPress={onOpenAutoBackup}>
             <Ionicons name="cloud-done-outline" size={24} color={colors.textPrimary} />
             <Text style={styles.menuItemText}>Backup Automático</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={onOpenUpdates}>
+            <Ionicons name="sync-outline" size={24} color={colors.textPrimary} />
+            <Text style={styles.menuItemText}>Atualizações do App</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={onChangePIN}>
