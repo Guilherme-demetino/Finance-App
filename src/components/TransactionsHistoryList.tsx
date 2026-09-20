@@ -1,19 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState, type ComponentProps } from "react";
-import {
-  ActivityIndicator,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { colors } from "../constants/colors";
 import { SortModal, type SortOption } from "./FilterModals";
 import { SeriesManagerModal } from "./SeriesManagerModal";
 import type { DisplayTransaction } from "../types";
 import { formatCurrency } from "../utils/currency";
 import { parseDateString } from "../utils/dates";
+import { Text, TextInput, useTheme } from "../theme";
 
 type TypeFilter = "all" | "income" | "expense";
 type SortKey = "recent" | "oldest" | "highest" | "lowest";
@@ -22,20 +16,21 @@ const TYPE_FILTERS: {
   key: TypeFilter;
   label: string;
   icon: ComponentProps<typeof Ionicons>["name"];
-  activeColor: string;
+  /** Qual cor do tema o filtro usa quando está ativo. */
+  activeColor: "accent" | "income" | "expense";
 }[] = [
-  { key: "all", label: "Todas", icon: "apps-outline", activeColor: colors.accent },
+  { key: "all", label: "Todas", icon: "apps-outline", activeColor: "accent" },
   {
     key: "income",
     label: "Receitas",
     icon: "arrow-down-circle-outline",
-    activeColor: colors.income,
+    activeColor: "income",
   },
   {
     key: "expense",
     label: "Despesas",
     icon: "arrow-up-circle-outline",
-    activeColor: colors.expense,
+    activeColor: "expense",
   },
 ];
 
@@ -71,6 +66,7 @@ export function TransactionsHistoryList({
   onDeleteSeriesFromHere,
   onDeleteSeries,
 }: TransactionsHistoryListProps) {
+  const { colors } = useTheme();
   const [filter, setFilter] = useState<TypeFilter>("all");
   const [sortBy, setSortBy] = useState<SortKey>("recent");
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
@@ -178,18 +174,18 @@ export function TransactionsHistoryList({
                 paddingVertical: 10,
                 borderRadius: 10,
                 backgroundColor: isActive
-                  ? `${option.activeColor}26`
+                  ? `${colors[option.activeColor]}26`
                   : "transparent",
               }}
             >
               <Ionicons
                 name={option.icon}
                 size={16}
-                color={isActive ? option.activeColor : colors.textMuted}
+                color={isActive ? colors[option.activeColor] : colors.textMuted}
               />
               <Text
                 style={{
-                  color: isActive ? option.activeColor : colors.textMuted,
+                  color: isActive ? colors[option.activeColor] : colors.textMuted,
                   fontSize: 13,
                   fontWeight: "700",
                 }}

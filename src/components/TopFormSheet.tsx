@@ -1,15 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, type ReactNode } from "react";
-import {
-  BackHandler,
-  KeyboardAvoidingView,
-  Platform,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { BackHandler, KeyboardAvoidingView, Platform, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-import { colors } from "../constants/colors";
+import { Text, useTheme } from "../theme";
 
 interface TopFormSheetProps {
   visible: boolean;
@@ -30,6 +23,7 @@ export function TopFormSheet({
   title,
   children,
 }: TopFormSheetProps) {
+  const { colors } = useTheme();
   // O botão voltar do Android fecha o formulário em vez de sair da tela.
   useEffect(() => {
     if (!visible) return;

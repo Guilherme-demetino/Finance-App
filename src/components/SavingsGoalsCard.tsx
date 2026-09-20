@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
-import { colors } from "../constants/colors";
-import { styles } from "../styles/dashboardStyles";
+import { TouchableOpacity, View } from "react-native";
+import { useDashboardStyles } from "../styles/dashboardStyles";
 import type { SavingsGoalRow } from "../types";
 import { formatCurrency } from "../utils/currency";
 import {
@@ -11,6 +10,7 @@ import {
   savingsProgress,
 } from "../utils/savings";
 import { ConfirmModal } from "./ConfirmModal";
+import { Text, makeStyles, useTheme } from "../theme";
 
 interface SavingsGoalsCardProps {
   goals: SavingsGoalRow[];
@@ -20,16 +20,18 @@ interface SavingsGoalsCardProps {
   onDelete: (id: number) => void;
 }
 
-const iconButtonStyle = {
-  backgroundColor: colors.surfaceAlt,
-  borderWidth: 1,
-  borderColor: colors.textPrimary,
-  borderRadius: 8,
-  width: 30,
-  height: 30,
-  alignItems: "center" as const,
-  justifyContent: "center" as const,
-};
+const useIconButtonStyles = makeStyles(({ colors }) => ({
+  button: {
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.textPrimary,
+    borderRadius: 8,
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+}));
 
 export function SavingsGoalsCard({
   goals,
@@ -38,6 +40,9 @@ export function SavingsGoalsCard({
   onOpenDeposit,
   onDelete,
 }: SavingsGoalsCardProps) {
+  const { colors } = useTheme();
+  const { button: iconButtonStyle } = useIconButtonStyles();
+  const styles = useDashboardStyles();
   const [goalToDelete, setGoalToDelete] = useState<SavingsGoalRow | null>(null);
 
   return (

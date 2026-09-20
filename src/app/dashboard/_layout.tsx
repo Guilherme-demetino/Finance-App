@@ -14,10 +14,10 @@ import { SavingsModalsContainer } from "../../components/dashboard/SavingsModals
 import { TransactionModalContainer } from "../../components/dashboard/TransactionModalContainer";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 
-import { colors } from "../../constants/colors";
 import { DashboardProviders } from "../../context/DashboardProviders";
 import { useReleaseNotes } from "../../hooks/useReleaseNotes";
-import { styles } from "../../styles/dashboardStyles";
+import { useDashboardStyles } from "../../styles/dashboardStyles";
+import { useTheme } from "../../theme";
 
 /**
  * Moldura do dashboard. Não lê nenhum contexto de dados: cada parte abaixo
@@ -25,6 +25,8 @@ import { styles } from "../../styles/dashboardStyles";
  * uma mudança num domínio não redesenha o resto.
  */
 function DashboardChrome() {
+  const { colors, fontScale } = useTheme();
+  const styles = useDashboardStyles();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { releases, dismiss: dismissReleaseNotes } = useReleaseNotes();
 
@@ -39,8 +41,10 @@ function DashboardChrome() {
           tabBarActiveTintColor: colors.accent,
           tabBarInactiveTintColor: colors.textMuted,
           tabBarShowLabel: true,
+          // O rótulo é desenhado pelo react-navigation (não passa pelo Text do app):
+          // acompanha o tamanho da letra, e a barra cresce junto para não cortar.
           tabBarLabelStyle: {
-            fontSize: 11,
+            fontSize: 11 * fontScale,
             fontWeight: "700",
           },
           tabBarStyle: {
@@ -48,7 +52,7 @@ function DashboardChrome() {
             left: 16,
             right: 16,
             bottom: 16,
-            height: 64,
+            height: 64 + Math.round((fontScale - 1) * 20),
             borderRadius: 20,
             backgroundColor: colors.surface,
             borderWidth: 1,

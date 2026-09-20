@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { colors } from "../constants/colors";
+import { ACCENT_COLORS, CATEGORY_COLORS } from "../constants/colors";
 import { getAllCategories } from "../database/categories";
 import {
   createInstallmentTransactions,
@@ -56,15 +56,15 @@ const MONTH_INDEX_BY_NUMBER: Record<string, number> = {
 // Cores padrão para as categorias do sistema (usadas até o usuário criar
 // uma categoria customizada com cor própria, que sobrescreve estas).
 export const DEFAULT_CATEGORY_COLORS: Record<string, string> = {
-  salário: colors.income,
-  investimentos: colors.accent,
-  pix: colors.categoryCyan,
-  alimentação: colors.categoryOrange,
-  transporte: colors.categoryPurple,
-  lazer: colors.categoryPink,
-  moradia: colors.categoryAmber,
-  saúde: colors.expense,
-  outros: colors.categoryNeutral,
+  salário: ACCENT_COLORS.income,
+  investimentos: ACCENT_COLORS.accent,
+  pix: CATEGORY_COLORS.categoryCyan,
+  alimentação: CATEGORY_COLORS.categoryOrange,
+  transporte: CATEGORY_COLORS.categoryPurple,
+  lazer: CATEGORY_COLORS.categoryPink,
+  moradia: CATEGORY_COLORS.categoryAmber,
+  saúde: ACCENT_COLORS.expense,
+  outros: CATEGORY_COLORS.categoryNeutral,
 };
 
 function emptyMonthsData(): MonthDatum[] {
@@ -103,7 +103,7 @@ async function loadPeriodData(
     return {
       ...item,
       category: item.category_id,
-      color: categoryColorMap[catKey] || colors.textSecondary,
+      color: categoryColorMap[catKey] || CATEGORY_COLORS.categoryNeutral,
     };
   });
 

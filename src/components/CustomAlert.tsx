@@ -1,5 +1,5 @@
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { colors } from "../constants/colors";
+import { Modal, TouchableOpacity, View } from "react-native";
+import { Text, makeStyles } from "../theme";
 
 interface CustomAlertProps {
   visible: boolean;
@@ -14,6 +14,7 @@ export function CustomAlert({
   message,
   onClose,
 }: CustomAlertProps) {
+  const styles = useStyles();
   return (
     <Modal
       visible={visible}
@@ -35,7 +36,7 @@ export function CustomAlert({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(({ colors }) => ({
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.7)",
@@ -82,4 +83,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-});
+}));

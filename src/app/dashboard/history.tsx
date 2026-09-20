@@ -8,9 +8,10 @@ import { TransactionsHistoryList } from "../../components/TransactionsHistoryLis
 import { useScrollY } from "../../context/DashboardUiContext";
 import { useTransactionsData } from "../../context/TransactionsContext";
 import { useTransactionActions } from "../../context/TransactionFormContext";
-import { styles } from "../../styles/dashboardStyles";
+import { useDashboardStyles } from "../../styles/dashboardStyles";
 
 export default function DashboardHistoryScreen() {
+  const styles = useDashboardStyles();
   const {
     formattedTransactions,
     transactions,

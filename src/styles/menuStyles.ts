@@ -1,7 +1,6 @@
-import { StyleSheet } from "react-native";
-import { colors } from "../constants/colors";
+import { makeStyles } from "../theme";
 
-export const styles = StyleSheet.create({
+export const useMenuStyles = makeStyles(({ colors }) => ({
   closeButton: {
     backgroundColor: colors.border,
     padding: 16,
@@ -58,4 +57,4 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-});
+}));

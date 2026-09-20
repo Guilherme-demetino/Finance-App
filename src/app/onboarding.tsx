@@ -2,20 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState, type ComponentProps } from "react";
-import {
-  BackHandler,
-  Image,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { BackHandler, Image, ScrollView, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CustomAlert } from "../components/CustomAlert";
 import { DebtModal } from "../components/DebtModal";
 import { OnboardingInstallmentModal } from "../components/OnboardingInstallmentModal";
 import { OnboardingRecurringModal } from "../components/OnboardingRecurringModal";
-import { colors } from "../constants/colors";
 import { createDebt } from "../database/debts";
 import {
   createRecurringOnDay,
@@ -23,11 +15,12 @@ import {
 } from "../database/transactions";
 import { getUser, updateUserAvatar } from "../database/users";
 import { markReleaseNotesSeen } from "../hooks/useReleaseNotes";
-import { styles as indexStyles } from "../styles/indexStyles";
+import { useIndexStyles } from "../styles/indexStyles";
 import type { DebtDraft, InstallmentDraft, RecurringDraft } from "../types";
 import { formatCurrency, formatCurrencyInput } from "../utils/currency";
 import { formatDateToString } from "../utils/dates";
 import { logError } from "../utils/logger";
+import { Text, useTheme } from "../theme";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -94,6 +87,7 @@ function EntryRow({
   amountText,
   onRemove,
 }: EntryRowProps) {
+  const { colors } = useTheme();
   return (
     <View
       style={{
@@ -148,6 +142,8 @@ const newId = () =>
   `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
 export default function OnboardingScreen() {
+  const { colors } = useTheme();
+  const indexStyles = useIndexStyles();
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [userName, setUserName] = useState("");

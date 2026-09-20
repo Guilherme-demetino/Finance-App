@@ -1,9 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Text, View } from "react-native";
-import { colors } from "../constants/colors";
+import { View } from "react-native";
 import type { MonthComparisonResult } from "../hooks/useMonthComparison";
-import { styles } from "../styles/dashboardStyles";
+import { useDashboardStyles } from "../styles/dashboardStyles";
 import { formatCurrency } from "../utils/currency";
+import { Text, useTheme } from "../theme";
 
 interface MonthComparisonCardProps {
   comparison: MonthComparisonResult | null;
@@ -18,6 +18,8 @@ export function MonthComparisonCard({
   isLoading,
   selectedMonth,
 }: MonthComparisonCardProps) {
+  const { colors } = useTheme();
+  const styles = useDashboardStyles();
   if (isLoading || !comparison) return null;
 
   const { currentTotal, previousTotal, changePercent, previousMonthLabel, categories, hasPreviousData } =

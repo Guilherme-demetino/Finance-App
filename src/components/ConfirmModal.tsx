@@ -1,6 +1,6 @@
-import { Modal, Text, TouchableOpacity, View } from "react-native";
-import { colors } from "../constants/colors";
-import { styles as menuStyles } from "../styles/menuStyles";
+import { Modal, TouchableOpacity, View } from "react-native";
+import { useMenuStyles } from "../styles/menuStyles";
+import { Text, useTheme } from "../theme";
 
 interface ConfirmModalProps {
   visible: boolean;
@@ -24,6 +24,8 @@ export function ConfirmModal({
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
+  const { colors } = useTheme();
+  const menuStyles = useMenuStyles();
   return (
     <Modal
       visible={visible}
@@ -58,7 +60,9 @@ export function ConfirmModal({
               ]}
               onPress={onConfirm}
             >
-              <Text style={menuStyles.modalButtonText}>{confirmLabel}</Text>
+              <Text style={[menuStyles.modalButtonText, { color: colors.textOnColor }]}>
+                {confirmLabel}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

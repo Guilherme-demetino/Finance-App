@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { colors } from "../constants/colors";
+import { TouchableOpacity, View } from "react-native";
 import type { CategoryBudgetItem } from "../hooks/useCategoryBudgets";
-import { styles } from "../styles/dashboardStyles";
+import { useDashboardStyles } from "../styles/dashboardStyles";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
 import { CategoryModal } from "./CategoryModal";
 import { ConfirmModal } from "./ConfirmModal";
+import { Text, TextInput, useTheme } from "../theme";
 
 interface CategoryBudgetsCardProps {
   items: CategoryBudgetItem[];
@@ -25,6 +25,8 @@ export function CategoryBudgetsCard({
   onDeleteCategory,
   formatCurrency,
 }: CategoryBudgetsCardProps) {
+  const { colors } = useTheme();
+  const styles = useDashboardStyles();
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [draftAmount, setDraftAmount] = useState("");
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);

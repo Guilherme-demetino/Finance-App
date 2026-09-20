@@ -1,8 +1,7 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 
-import { colors } from "../../constants/colors";
 import { useProfile } from "../../context/ProfileContext";
 import { useAutoBackup } from "../../hooks/useAutoBackup";
 import { useDataTransfer } from "../../hooks/useDataTransfer";
@@ -11,6 +10,7 @@ import { describeImportPlan } from "../../utils/importSummary";
 import { AutoBackupModal } from "../AutoBackupModal";
 import { ConfirmModal } from "../ConfirmModal";
 import { EditNameModal, ProfileMenuModal } from "../ProfileMenuModals";
+import { Text, useTheme } from "../../theme";
 
 interface ProfileMenuContainerProps {
   isMenuOpen: boolean;
@@ -26,6 +26,7 @@ export function ProfileMenuContainer({
   isMenuOpen,
   onCloseMenu,
 }: ProfileMenuContainerProps) {
+  const { colors } = useTheme();
   const { userName, userImage, pickImage, handleUpdateName } = useProfile();
   const {
     handleExportPDF,
@@ -81,6 +82,10 @@ export function ProfileMenuContainer({
         onOpenUpdates={() => {
           onCloseMenu();
           router.push("/updates");
+        }}
+        onOpenAppearance={() => {
+          onCloseMenu();
+          router.push("/appearance");
         }}
         onChangePIN={() => {
           onCloseMenu();

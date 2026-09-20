@@ -1,15 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRef, type ComponentProps } from "react";
-import {
-  DimensionValue,
-  Modal,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { styles as menuStyles } from "../styles/menuStyles";
-import { colors } from "../constants/colors";
+import { DimensionValue, Modal, ScrollView, TouchableOpacity, View } from "react-native";
+import { useMenuStyles } from "../styles/menuStyles";
+import { Text, useTheme } from "../theme";
 
 interface SelectionModalProps {
   visible: boolean;
@@ -30,6 +23,8 @@ function SelectionModal({
   selectedItem,
   onSelectItem,
 }: SelectionModalProps) {
+  const { colors } = useTheme();
+  const menuStyles = useMenuStyles();
   const scrollRef = useRef<ScrollView>(null);
 
   return (
@@ -170,6 +165,8 @@ export function SortModal<T extends string>({
   selectedKey,
   onSelect,
 }: SortModalProps<T>) {
+  const { colors } = useTheme();
+  const menuStyles = useMenuStyles();
   return (
     <Modal
       visible={visible}

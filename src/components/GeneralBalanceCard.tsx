@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
-import { colors } from "../constants/colors";
 import { formatCurrency } from "../utils/currency";
+import { Text, makeStyles, useTheme } from "../theme";
 
 interface Transaction {
   id: string;
@@ -20,18 +20,21 @@ interface GeneralBalanceCardProps {
 
 // "Saldo Livre" não é uma categoria de transação — é o saldo restante
 // depois das despesas, sempre na cor de receita.
-const SALDO_LIVRE_COLOR = colors.income;
 
 type ViewMode = "expense" | "income";
 
-function groupByCategory(transactions: Transaction[], totalIncome: number) {
+function groupByCategory(
+  transactions: Transaction[],
+  totalIncome: number,
+  fallbackColor: string,
+) {
   const grouped = transactions.reduce(
     (acc: Record<string, { amount: number; color: string }>, t) => {
       const cat = t.category || "Outros";
       if (!acc[cat]) {
         acc[cat] = {
           amount: 0,
-          color: t.color || colors.textSecondary,
+          color: t.color || fallbackColor,
         };
       }
       acc[cat].amount += t.amount;
@@ -56,6 +59,8 @@ export function GeneralBalanceCard({
   totalExpense,
   transactions,
 }: GeneralBalanceCardProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const [viewMode, setViewMode] = useState<ViewMode>("expense");
 
   const saldoLivre = Math.max(0, totalIncome - totalExpense);
@@ -65,10 +70,12 @@ export function GeneralBalanceCard({
   const expenseData = groupByCategory(
     transactions.filter((t) => t.type === "expense"),
     totalIncome,
+    colors.textSecondary,
   );
   const incomeData = groupByCategory(
     transactions.filter((t) => t.type === "income"),
     totalIncome,
+    colors.textSecondary,
   );
 
   const isExpenseView = viewMode === "expense";
@@ -78,7 +85,7 @@ export function GeneralBalanceCard({
   // Na visão de receitas, as categorias já somam 100% da receita.
   const pieData = isExpenseView
     ? [
-        { value: saldoLivre, color: SALDO_LIVRE_COLOR },
+        { value: saldoLivre, color: colors.income },
         ...expenseData.map((item) => ({ value: item.amount, color: item.color })),
       ].filter((item) => item.value > 0)
     : incomeData
@@ -203,10 +210,10 @@ export function GeneralBalanceCard({
           {isExpenseView && (
             <View style={styles.legendItem}>
               <View
-                style={[styles.legendDot, { backgroundColor: SALDO_LIVRE_COLOR }]}
+                style={[styles.legendDot, { backgroundColor: colors.income }]}
               />
               <View>
-                <Text style={[styles.legendName, { color: SALDO_LIVRE_COLOR }]}>
+                <Text style={[styles.legendName, { color: colors.income }]}>
                   SALDO LIVRE
                 </Text>
               </View>
@@ -257,14 +264,14 @@ export function GeneralBalanceCard({
                 <View
                   style={[
                     styles.legendDot,
-                    { backgroundColor: SALDO_LIVRE_COLOR },
+                    { backgroundColor: colors.income },
                   ]}
                 />
-                <Text style={[styles.barTitle, { color: SALDO_LIVRE_COLOR }]}>
+                <Text style={[styles.barTitle, { color: colors.income }]}>
                   SALDO LIVRE RESTANTE
                 </Text>
               </View>
-              <Text style={[styles.barAmount, { color: SALDO_LIVRE_COLOR }]}>
+              <Text style={[styles.barAmount, { color: colors.income }]}>
                 {formatCurrency(saldoLivre)}{" "}
                 <Text style={styles.barPercent}>
                   (
@@ -281,7 +288,7 @@ export function GeneralBalanceCard({
                 style={[
                   styles.barFill,
                   {
-                    backgroundColor: SALDO_LIVRE_COLOR,
+                    backgroundColor: colors.income,
                     width: `${totalIncome > 0 ? (saldoLivre / totalIncome) * 100 : 0}%`,
                   },
                 ]}
@@ -324,7 +331,7 @@ export function GeneralBalanceCard({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(({ colors }) => ({
   card: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -494,4 +501,4 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: 3,
   },
-});
+}));

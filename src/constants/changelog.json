@@ -129,5 +129,16 @@
       "O botão “Verificar atualização” diz se você já está na mais recente ou mostra o que muda, com botão para baixar e aplicar (com barra de progresso e aviso se a internet falhar).",
       "A tela também guarda o histórico de novidades de todas as atualizações."
     ]
+  },
+  {
+    "id": 15,
+    "date": "19/09/2026",
+    "title": "Aparência e acessibilidade",
+    "items": [
+      "Novo “Aparência e Acessibilidade” no menu do perfil: escolha o tema Escuro, Claro ou Automático (segue o tema do Android).",
+      "Alto contraste: cores mais fortes, texto mais nítido e bordas mais visíveis, tanto no tema escuro quanto no claro.",
+      "Tamanho da letra: Padrão, Grande ou Maior, valendo em todo o app (soma-se ao tamanho definido nas configurações do Android).",
+      "O app continua no tema escuro até você escolher outro. As escolhas ficam salvas e não se perdem ao zerar os dados."
+    ]
   }
 ]

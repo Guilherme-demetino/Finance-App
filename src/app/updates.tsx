@@ -1,21 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, ScrollView, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CHANGELOG, type Release } from "../constants/changelog";
-import { colors } from "../constants/colors";
 import { useAppUpdates } from "../hooks/useAppUpdates";
 import { formatDateTime, formatProgress } from "../utils/appUpdates";
+import { Text, makeStyles, useTheme } from "../theme";
 
 function InfoRow({ label, value, selectable = false }: { label: string; value: string; selectable?: boolean }) {
+  const styles = useStyles();
   return (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
@@ -27,6 +21,7 @@ function InfoRow({ label, value, selectable = false }: { label: string; value: s
 }
 
 function ReleaseList({ releases }: { releases: Release[] }) {
+  const styles = useStyles();
   return (
     <>
       {releases.map((release) => (
@@ -46,6 +41,8 @@ function ReleaseList({ releases }: { releases: Release[] }) {
 
 /** Versão em execução, verificar atualização (OTA) e o histórico de novidades. */
 export default function UpdatesScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const router = useRouter();
   const {
     info,
@@ -100,7 +97,7 @@ export default function UpdatesScreen() {
           disabled={!canCheck}
         >
           {phase === "checking" ? (
-            <ActivityIndicator color={colors.textPrimary} />
+            <ActivityIndicator color={colors.textOnColor} />
           ) : (
             <Text style={styles.primaryButtonText}>Verificar atualização</Text>
           )}
@@ -195,7 +192,7 @@ export default function UpdatesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(({ colors }) => ({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
@@ -222,7 +219,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
   },
-  primaryButtonText: { color: colors.textPrimary, fontSize: 16, fontWeight: "700" },
+  primaryButtonText: { color: colors.textOnColor, fontSize: 16, fontWeight: "700" },
   secondaryButton: {
     borderRadius: 12,
     paddingVertical: 12,
@@ -271,4 +268,4 @@ const styles = StyleSheet.create({
   releaseTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: "700" },
   releaseDate: { color: colors.textMuted, fontSize: 12, marginBottom: 6 },
   releaseItem: { color: colors.textMuted, fontSize: 14, lineHeight: 20, marginTop: 2 },
-});
+}));

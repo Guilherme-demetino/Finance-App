@@ -1,7 +1,6 @@
-import { StyleSheet } from "react-native";
-import { colors } from "../constants/colors";
+import { makeStyles } from "../theme";
 
-export const styles = StyleSheet.create({
+export const useDashboardStyles = makeStyles(({ colors }) => ({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -104,4 +103,4 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
-});
+}));

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { colors } from "../constants/colors";
+import { CATEGORY_COLORS } from "../constants/colors";
 import { deleteCategory, getAllCategories } from "../database/categories";
 import { getCategoryBudgets, setCategoryBudget } from "../database/categoryBudgets";
 import type { EnrichedTransaction } from "../types";
@@ -51,7 +51,7 @@ async function buildCategoryBudgets(
     return {
       id: cat.id,
       category: cat.name,
-      color: cat.color || DEFAULT_CATEGORY_COLORS[key] || colors.categoryNeutral,
+      color: cat.color || DEFAULT_CATEGORY_COLORS[key] || CATEGORY_COLORS.categoryNeutral,
       spent: spentByCategory[key] || 0,
       goal: goalsByCategory[key] ?? null,
     };
@@ -67,7 +67,7 @@ async function buildCategoryBudgets(
       merged.push({
         id: null,
         category: displayNameByKey[key],
-        color: DEFAULT_CATEGORY_COLORS[key] || colors.categoryNeutral,
+        color: DEFAULT_CATEGORY_COLORS[key] || CATEGORY_COLORS.categoryNeutral,
         spent: spentByCategory[key],
         goal: goalsByCategory[key] ?? null,
       });

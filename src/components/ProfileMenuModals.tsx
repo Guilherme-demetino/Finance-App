@@ -1,15 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import {
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { colors } from "../constants/colors";
+import { Image, Modal, ScrollView, TouchableOpacity, View } from "react-native";
+import { Text, TextInput, makeStyles, useTheme } from "../theme";
 
 interface ProfileMenuModalProps {
   visible: boolean;
@@ -25,6 +16,7 @@ interface ProfileMenuModalProps {
   onRestoreBackup: () => void;
   onOpenAutoBackup: () => void;
   onOpenUpdates: () => void;
+  onOpenAppearance: () => void;
   onChangePIN: () => void;
   onWipeData: () => void;
 }
@@ -43,9 +35,12 @@ export function ProfileMenuModal({
   onRestoreBackup,
   onOpenAutoBackup,
   onOpenUpdates,
+  onOpenAppearance,
   onChangePIN,
   onWipeData,
 }: ProfileMenuModalProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   if (!visible) return null;
 
   return (
@@ -107,6 +102,11 @@ export function ProfileMenuModal({
             <Text style={styles.menuItemText}>Backup Automático</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity style={styles.menuItem} onPress={onOpenAppearance}>
+            <Ionicons name="color-palette-outline" size={24} color={colors.textPrimary} />
+            <Text style={styles.menuItemText}>Aparência e Acessibilidade</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.menuItem} onPress={onOpenUpdates}>
             <Ionicons name="sync-outline" size={24} color={colors.textPrimary} />
             <Text style={styles.menuItemText}>Atualizações do App</Text>
@@ -147,6 +147,8 @@ export function EditNameModal({
   setNewName,
   onSave,
 }: EditNameModalProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   if (!visible) return null;
 
   return (
@@ -177,7 +179,7 @@ export function EditNameModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(({ colors }) => ({
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
@@ -289,8 +291,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   saveButtonText: {
-    color: colors.textPrimary,
+    color: colors.textOnColor,
     fontSize: 16,
     fontWeight: "bold",
   },
-});
+}));

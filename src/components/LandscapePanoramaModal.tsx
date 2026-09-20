@@ -1,15 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import {
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { formatCurrency } from "../utils/currency";
-import { colors } from "../constants/colors";
+import { Text, makeStyles, useTheme } from "../theme";
 
 interface MonthData {
   label: string;
@@ -30,6 +23,8 @@ export function LandscapePanoramaModal({
   monthsData,
   onClose,
 }: LandscapePanoramaModalProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   // Estado para armazenar qual valor e tipo (receita ou despesa) foi tocado no momento
   const [selectedTooltip, setSelectedTooltip] = useState<{
     month: string;
@@ -168,7 +163,7 @@ export function LandscapePanoramaModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(({ colors }) => ({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -201,7 +196,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   tooltipContainer: {
-    height: 48,
+    minHeight: 48,
     justifyContent: "center",
     alignItems: "center",
     marginVertical: 4,
@@ -287,4 +282,4 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 12,
   },
-});
+}));

@@ -7,9 +7,10 @@ import { DebtsList } from "../../components/DebtsList";
 import { useScrollY } from "../../context/DashboardUiContext";
 import { useDebtsContext } from "../../context/DebtsContext";
 import { useToday } from "../../context/PeriodContext";
-import { styles } from "../../styles/dashboardStyles";
+import { useDashboardStyles } from "../../styles/dashboardStyles";
 
 export default function DashboardDebtsScreen() {
+  const styles = useDashboardStyles();
   const {
     pendingDebts,
     settledDebts,

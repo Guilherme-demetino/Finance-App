@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { colors } from "../constants/colors";
+import { TouchableOpacity, View } from "react-native";
 import type { SavingsGoalRow } from "../types";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
 import { TopFormSheet } from "./TopFormSheet";
+import { Text, TextInput, useTheme } from "../theme";
 
 interface SavingsDepositModalProps {
   goal: SavingsGoalRow | null;
@@ -20,6 +20,7 @@ export function SavingsDepositModal({
   onConfirm,
   formatCurrency,
 }: SavingsDepositModalProps) {
+  const { colors } = useTheme();
   const [mode, setMode] = useState<Mode>("deposit");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +82,7 @@ export function SavingsDepositModal({
             borderRadius: 12,
             alignItems: "center",
             backgroundColor:
-              mode === "deposit" ? "rgba(16, 185, 129, 0.15)" : colors.surfaceAlt,
+              mode === "deposit" ? `${colors.income}26` : colors.surfaceAlt,
             borderWidth: 1,
             borderColor: mode === "deposit" ? colors.income : colors.surfaceAlt,
           }}
@@ -107,7 +108,7 @@ export function SavingsDepositModal({
             borderRadius: 12,
             alignItems: "center",
             backgroundColor:
-              mode === "withdraw" ? "rgba(239, 68, 68, 0.15)" : colors.surfaceAlt,
+              mode === "withdraw" ? `${colors.expense}26` : colors.surfaceAlt,
             borderWidth: 1,
             borderColor: mode === "withdraw" ? colors.expense : colors.surfaceAlt,
           }}

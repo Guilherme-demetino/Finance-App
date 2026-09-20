@@ -1,8 +1,8 @@
-import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Modal, TouchableOpacity, View } from "react-native";
 
-import { colors } from "../constants/colors";
 import type { AutoBackupSettings } from "../services/autoBackup";
 import { describeLastBackup, KEEP_BACKUPS } from "../utils/autoBackup";
+import { Text, makeStyles, useTheme } from "../theme";
 
 interface AutoBackupModalProps {
   visible: boolean;
@@ -24,6 +24,8 @@ export function AutoBackupModal({
   onBackupNow,
   onDisable,
 }: AutoBackupModalProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const hasFolder = settings?.folderUri != null;
   const lastBackup = describeLastBackup(settings?.lastAt ?? null);
 
@@ -81,7 +83,7 @@ export function AutoBackupModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(({ colors }) => ({
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
@@ -136,7 +138,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   primaryButtonText: {
-    color: colors.textPrimary,
+    color: colors.textOnColor,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -161,4 +163,4 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 15,
   },
-});
+}));

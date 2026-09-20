@@ -1,9 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { colors } from "../constants/colors";
-import { styles } from "../styles/dashboardStyles";
+import { TouchableOpacity, View } from "react-native";
+import { useDashboardStyles } from "../styles/dashboardStyles";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
+import { Text, TextInput, useTheme } from "../theme";
 
 interface MonthlyBudgetCardProps {
   budget: number | null;
@@ -22,6 +22,8 @@ export function MonthlyBudgetCard({
   onSaveBudget,
   formatCurrency,
 }: MonthlyBudgetCardProps) {
+  const { colors } = useTheme();
+  const styles = useDashboardStyles();
   const [draftAmount, setDraftAmount] = useState("");
 
   // Ao entrar no modo de edição, o rascunho parte do orçamento atual (durante a renderização, sem setState no effect).

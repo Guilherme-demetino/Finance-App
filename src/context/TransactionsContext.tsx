@@ -1,6 +1,6 @@
 import { createContext, useMemo, type ReactNode } from "react";
 
-import { colors } from "../constants/colors";
+import { CATEGORY_COLORS } from "../constants/colors";
 import { useStableCallback } from "../hooks/useStableCallback";
 import { useTransactions } from "../hooks/useTransactions";
 import type { DisplayTransaction } from "../types";
@@ -74,7 +74,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         type: item.type,
         date: item.date,
         category: item.category_id,
-        color: item.color || colors.textSecondary,
+        color: item.color || CATEGORY_COLORS.categoryNeutral,
         icon: item.type === "income" ? "cash-outline" : "cart-outline",
         recurrenceType: item.recurrence_type,
         recurrenceGroupId: item.recurrence_group_id,

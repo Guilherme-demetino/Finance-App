@@ -1,6 +1,6 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { formatCurrency } from "../utils/currency";
-import { colors } from "../constants/colors";
+import { Text, useTheme } from "../theme";
 
 interface BalanceCardProps {
   totalBalance: number;
@@ -13,6 +13,7 @@ export function BalanceCard({
   selectedMonth,
   selectedYear,
 }: BalanceCardProps) {
+  const { colors } = useTheme();
   const balanceColor = totalBalance >= 0 ? colors.income : colors.expense;
 
   return (

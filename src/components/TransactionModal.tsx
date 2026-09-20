@@ -1,21 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import {
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
 } from "../constants/categories";
-import { colors } from "../constants/colors";
 import { getAllCategories } from "../database/categories";
 import type { CategoryRow } from "../types";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
@@ -24,6 +14,7 @@ import { CalendarPicker } from "./CalendarPicker";
 import { CategoryModal } from "./CategoryModal";
 import { ConfirmModal } from "./ConfirmModal";
 import { logError } from "../utils/logger";
+import { Text, TextInput, useTheme } from "../theme";
 
 const INSTALLMENT_OPTIONS = [2, 3, 4, 6, 10, 12];
 const RECURRING_MONTHS_OPTIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -78,6 +69,7 @@ export function TransactionModal({
   onSave,
   onDeleteCategory,
 }: TransactionModalProps) {
+  const { colors } = useTheme();
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<CategoryRow | null>(
     null,
@@ -233,7 +225,7 @@ export function TransactionModal({
                   alignItems: "center",
                   backgroundColor:
                     transactionType === "income"
-                      ? "rgba(16, 185, 129, 0.15)"
+                      ? `${colors.income}26`
                       : colors.surfaceAlt,
                   borderWidth: 1,
                   borderColor:
@@ -269,7 +261,7 @@ export function TransactionModal({
                   alignItems: "center",
                   backgroundColor:
                     transactionType === "expense"
-                      ? "rgba(239, 68, 68, 0.15)"
+                      ? `${colors.expense}26`
                       : colors.surfaceAlt,
                   borderWidth: 1,
                   borderColor:
@@ -483,7 +475,7 @@ export function TransactionModal({
                       justifyContent: "center",
                       gap: 6,
                       backgroundColor: isRecurring
-                        ? "rgba(16, 185, 129, 0.15)"
+                        ? `${colors.income}26`
                         : colors.surfaceAlt,
                       borderWidth: 1,
                       borderColor: isRecurring
@@ -526,7 +518,7 @@ export function TransactionModal({
                       gap: 6,
                       backgroundColor:
                         installmentCount > 1
-                          ? "rgba(16, 185, 129, 0.15)"
+                          ? `${colors.income}26`
                           : colors.surfaceAlt,
                       borderWidth: 1,
                       borderColor:

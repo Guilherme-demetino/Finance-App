@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import { Image, TouchableOpacity, View } from "react-native";
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
   type SharedValue,
 } from "react-native-reanimated";
-import { colors } from "../constants/colors";
-import { styles } from "../styles/dashboardStyles";
+import { useDashboardStyles } from "../styles/dashboardStyles";
+import { Text, makeStyles, useTheme } from "../theme";
 
 interface UserProfileHeaderProps {
   userName: string;
@@ -30,22 +30,23 @@ const HEADER_RADIUS = 20;
 const PROFILE_COLUMN_WIDTH = 96;
 const SPACER_WIDTH = 32;
 
-const selectorButtonStyle = {
-  backgroundColor: colors.surfaceAlt,
-  borderWidth: 1,
-  borderColor: colors.textPrimary,
-  borderRadius: 12,
-  paddingVertical: 10,
-  paddingHorizontal: 14,
-  alignItems: "center",
-  justifyContent: "center",
-} as const;
-
-const selectorTextStyle = {
-  color: colors.textPrimary,
-  fontSize: 15,
-  fontWeight: "bold",
-} as const;
+const useSelectorStyles = makeStyles(({ colors }) => ({
+  button: {
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.textPrimary,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  text: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+}));
 
 export function UserProfileHeader({
   userName,
@@ -57,6 +58,9 @@ export function UserProfileHeader({
   onOpenMenu,
   scrollY,
 }: UserProfileHeaderProps) {
+  const { colors } = useTheme();
+  const { button: selectorButtonStyle, text: selectorTextStyle } = useSelectorStyles();
+  const styles = useDashboardStyles();
   const animatedHeaderStyle = useAnimatedStyle(() => {
     const borderBottomColor = scrollY
       ? interpolateColor(

@@ -1,12 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { TouchableOpacity } from "react-native";
 
-import { colors } from "../../constants/colors";
 import { useTransactionActions } from "../../context/TransactionFormContext";
-import { styles } from "../../styles/dashboardStyles";
+import { useDashboardStyles } from "../../styles/dashboardStyles";
+import { useTheme } from "../../theme";
 
 /** Botão "+" flutuante. Só usa as ações (estáveis), então nunca re-renderiza por dados. */
 export function NewTransactionFab() {
+  const { colors } = useTheme();
+  const styles = useDashboardStyles();
   const { openNewTransactionModal } = useTransactionActions();
 
   return (

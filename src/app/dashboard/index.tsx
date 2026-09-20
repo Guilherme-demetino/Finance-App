@@ -15,12 +15,13 @@ import { useDebtsContext } from "../../context/DebtsContext";
 import { usePanorama, useScrollY } from "../../context/DashboardUiContext";
 import { usePeriod } from "../../context/PeriodContext";
 import { useTransactionsData } from "../../context/TransactionsContext";
-import { styles } from "../../styles/dashboardStyles";
+import { useDashboardStyles } from "../../styles/dashboardStyles";
 import { buildAlerts } from "../../utils/alerts";
 import { MONTH_NAMES } from "../../utils/dates";
 import { computeMonthProjection } from "../../utils/monthProjection";
 
 export default function DashboardHomeScreen() {
+  const styles = useDashboardStyles();
   const { selectedMonth, selectedYear } = usePeriod();
   const {
     totalBalance,

@@ -1,13 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Text, View } from "react-native";
-import { colors } from "../constants/colors";
+import { View } from "react-native";
 import type { AppAlert } from "../utils/alerts";
+import { Text, useTheme } from "../theme";
 
 interface AlertsCardProps {
   alerts: AppAlert[];
 }
 
 export function AlertsCard({ alerts }: AlertsCardProps) {
+  const { colors } = useTheme();
   if (alerts.length === 0) return null;
 
   return (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { colors } from "../constants/colors";
+import { CATEGORY_COLORS } from "../constants/colors";
 import { getAllCategories } from "../database/categories";
 import { getTransactionsByMonth } from "../database/transactions";
 import type { EnrichedTransaction, TransactionRow } from "../types";
@@ -100,7 +100,7 @@ async function buildComparison(
       const previous = previousByCategory[key] || 0;
       return {
         category: displayNameByKey[key] || key,
-        color: categoryColorMap[key] || colors.categoryNeutral,
+        color: categoryColorMap[key] || CATEGORY_COLORS.categoryNeutral,
         current,
         previous,
         changePercent: previous > 0 ? ((current - previous) / previous) * 100 : null,

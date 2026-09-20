@@ -2,9 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { CustomAlert } from "../components/CustomAlert";
-import { colors } from "../constants/colors";
 import { clearLegacyPin, getLegacyPin } from "../database/security";
 import { logError } from "../utils/logger";
 import {
@@ -24,6 +23,7 @@ import {
   savePin,
   saveLockoutState,
 } from "../utils/security";
+import { Text, makeStyles, useTheme } from "../theme";
 
 // Fora do componente: o lint do React Compiler não aceita chamar Date.now() direto dentro dos handlers.
 const nowMs = () => Date.now();
@@ -63,6 +63,8 @@ async function resolvePinState(isChangeFlow: boolean): Promise<PinState> {
 }
 
 export default function SecurityScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const router = useRouter();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const isChangeFlow = mode === "change";
@@ -314,7 +316,7 @@ export default function SecurityScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(({ colors }) => ({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -393,4 +395,4 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
   },
-});
+}));

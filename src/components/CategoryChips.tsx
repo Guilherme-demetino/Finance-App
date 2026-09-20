@@ -1,5 +1,5 @@
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { colors } from "../constants/colors";
+import { ScrollView, TouchableOpacity, View } from "react-native";
+import { Text, useTheme } from "../theme";
 
 interface CategoryChipsProps {
   options: string[];
@@ -14,6 +14,7 @@ export function CategoryChips({
   onSelect,
   accentColor,
 }: CategoryChipsProps) {
+  const { colors } = useTheme();
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       <View style={{ flexDirection: "row", gap: 8 }}>

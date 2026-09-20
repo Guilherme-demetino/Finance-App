@@ -1,28 +1,23 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import {
-  Modal,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { colors } from "../constants/colors";
+import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
+import { ACCENT_COLORS, CATEGORY_COLORS } from "../constants/colors";
 import { createCategory } from "../database/categories";
 import { logError } from "../utils/logger";
+import { Text, TextInput, useTheme } from "../theme";
 
 // Cores disponíveis para as categorias
+// Cores fixas (ficam salvas na categoria): iguais em todos os temas.
 const COLORS = [
-  colors.expense,
-  colors.categoryOrange,
-  colors.categoryAmber,
-  colors.income,
-  colors.accent,
-  colors.categoryIndigo,
-  colors.categoryPurple,
-  colors.categoryPink,
-  colors.categoryNeutral,
+  ACCENT_COLORS.expense,
+  CATEGORY_COLORS.categoryOrange,
+  CATEGORY_COLORS.categoryAmber,
+  ACCENT_COLORS.income,
+  ACCENT_COLORS.accent,
+  CATEGORY_COLORS.categoryIndigo,
+  CATEGORY_COLORS.categoryPurple,
+  CATEGORY_COLORS.categoryPink,
+  CATEGORY_COLORS.categoryNeutral,
 ];
 
 interface CategoryModalProps {
@@ -41,6 +36,7 @@ export function CategoryModal({
   onSave,
   lockType = false,
 }: CategoryModalProps) {
+  const { colors } = useTheme();
   const [categoryName, setCategoryName] = useState("");
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [selectedType, setSelectedType] = useState<"income" | "expense">(
@@ -133,7 +129,7 @@ export function CategoryModal({
                     alignItems: "center",
                     backgroundColor:
                       selectedType === "income"
-                        ? "rgba(16, 185, 129, 0.15)"
+                        ? `${colors.income}26`
                         : colors.surfaceAlt,
                     borderWidth: 1,
                     borderColor:
@@ -159,7 +155,7 @@ export function CategoryModal({
                     alignItems: "center",
                     backgroundColor:
                       selectedType === "expense"
-                        ? "rgba(239, 68, 68, 0.15)"
+                        ? `${colors.expense}26`
                         : colors.surfaceAlt,
                     borderWidth: 1,
                     borderColor:

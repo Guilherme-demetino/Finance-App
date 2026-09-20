@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import {
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
 } from "../constants/categories";
-import { colors } from "../constants/colors";
 import type { RecurringDraft, TransactionType } from "../types";
 import { CategoryChips } from "./CategoryChips";
 import { TopFormSheet } from "./TopFormSheet";
+import { Text, TextInput, makeStyles, useTheme } from "../theme";
 
 interface OnboardingRecurringModalProps {
   visible: boolean;
@@ -17,14 +17,15 @@ interface OnboardingRecurringModalProps {
   months: number;
 }
 
-const inputStyle = {
-  backgroundColor: colors.surfaceAlt,
-  color: colors.textPrimary,
-  padding: 16,
-  borderRadius: 12,
-};
-
-const labelStyle = { color: colors.textMuted, fontSize: 13, marginBottom: 8 };
+const useFieldStyles = makeStyles(({ colors }) => ({
+  input: {
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textPrimary,
+    padding: 16,
+    borderRadius: 12,
+  },
+  label: { color: colors.textMuted, fontSize: 13, marginBottom: 8 },
+}));
 
 export function OnboardingRecurringModal({
   visible,
@@ -33,6 +34,8 @@ export function OnboardingRecurringModal({
   formatCurrency,
   months,
 }: OnboardingRecurringModalProps) {
+  const { colors } = useTheme();
+  const { input: inputStyle, label: labelStyle } = useFieldStyles();
   const [type, setType] = useState<TransactionType>("income");
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
@@ -101,7 +104,7 @@ export function OnboardingRecurringModal({
             borderRadius: 12,
             alignItems: "center",
             backgroundColor:
-              type === "income" ? "rgba(16, 185, 129, 0.15)" : colors.surfaceAlt,
+              type === "income" ? `${colors.income}26` : colors.surfaceAlt,
             borderWidth: 1,
             borderColor: type === "income" ? colors.income : colors.surfaceAlt,
           }}
@@ -124,7 +127,7 @@ export function OnboardingRecurringModal({
             borderRadius: 12,
             alignItems: "center",
             backgroundColor:
-              type === "expense" ? "rgba(239, 68, 68, 0.15)" : colors.surfaceAlt,
+              type === "expense" ? `${colors.expense}26` : colors.surfaceAlt,
             borderWidth: 1,
             borderColor: type === "expense" ? colors.expense : colors.surfaceAlt,
           }}

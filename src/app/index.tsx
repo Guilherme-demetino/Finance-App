@@ -1,15 +1,17 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { CustomAlert } from "../components/CustomAlert";
-import { colors } from "../constants/colors";
 import { getLegacyPin } from "../database/security";
 import { getUser, upsertUserName } from "../database/users";
-import { styles } from "../styles/indexStyles";
+import { useIndexStyles } from "../styles/indexStyles";
 import { hasPinConfigured } from "../utils/security";
 import { logError } from "../utils/logger";
+import { Text, TextInput, useTheme } from "../theme";
 
 export default function WelcomeScreen() {
+  const { colors } = useTheme();
+  const styles = useIndexStyles();
   const [name, setName] = useState("");
   const router = useRouter();
 

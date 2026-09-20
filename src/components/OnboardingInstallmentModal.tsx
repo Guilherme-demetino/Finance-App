@@ -1,13 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { DEFAULT_EXPENSE_CATEGORIES } from "../constants/categories";
-import { colors } from "../constants/colors";
 import type { InstallmentDraft } from "../types";
 import { formatDateToString, parseDateString } from "../utils/dates";
 import { CalendarPicker } from "./CalendarPicker";
 import { CategoryChips } from "./CategoryChips";
 import { TopFormSheet } from "./TopFormSheet";
+import { Text, TextInput, makeStyles, useTheme } from "../theme";
 
 interface OnboardingInstallmentModalProps {
   visible: boolean;
@@ -18,14 +18,15 @@ interface OnboardingInstallmentModalProps {
 
 const MAX_INSTALLMENTS = 60;
 
-const inputStyle = {
-  backgroundColor: colors.surfaceAlt,
-  color: colors.textPrimary,
-  padding: 16,
-  borderRadius: 12,
-};
-
-const labelStyle = { color: colors.textMuted, fontSize: 13, marginBottom: 8 };
+const useFieldStyles = makeStyles(({ colors }) => ({
+  input: {
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textPrimary,
+    padding: 16,
+    borderRadius: 12,
+  },
+  label: { color: colors.textMuted, fontSize: 13, marginBottom: 8 },
+}));
 
 export function OnboardingInstallmentModal({
   visible,
@@ -33,6 +34,8 @@ export function OnboardingInstallmentModal({
   onSave,
   formatCurrency,
 }: OnboardingInstallmentModalProps) {
+  const { colors } = useTheme();
+  const { input: inputStyle, label: labelStyle } = useFieldStyles();
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [current, setCurrent] = useState("");

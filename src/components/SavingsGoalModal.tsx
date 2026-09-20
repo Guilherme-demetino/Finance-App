@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { colors } from "../constants/colors";
+import { TouchableOpacity, View } from "react-native";
 import { formatDateToString, parseDateString } from "../utils/dates";
 import { CalendarPicker } from "./CalendarPicker";
 import { TopFormSheet } from "./TopFormSheet";
+import { Text, TextInput, makeStyles, useTheme } from "../theme";
 
 interface SavingsGoalModalProps {
   visible: boolean;
@@ -18,14 +18,15 @@ interface SavingsGoalModalProps {
   formatCurrency: (val: string) => string;
 }
 
-const inputStyle = {
-  backgroundColor: colors.surfaceAlt,
-  color: colors.textPrimary,
-  padding: 16,
-  borderRadius: 12,
-};
-
-const labelStyle = { color: colors.textMuted, fontSize: 13, marginBottom: 8 };
+const useFieldStyles = makeStyles(({ colors }) => ({
+  input: {
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textPrimary,
+    padding: 16,
+    borderRadius: 12,
+  },
+  label: { color: colors.textMuted, fontSize: 13, marginBottom: 8 },
+}));
 
 const toNumber = (value: string) =>
   Number(value.replace(/\./g, "").replace(",", "."));
@@ -36,6 +37,8 @@ export function SavingsGoalModal({
   onSave,
   formatCurrency,
 }: SavingsGoalModalProps) {
+  const { colors } = useTheme();
+  const { input: inputStyle, label: labelStyle } = useFieldStyles();
   const [name, setName] = useState("");
   const [target, setTarget] = useState("");
   const [saved, setSaved] = useState("");

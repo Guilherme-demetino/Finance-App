@@ -1,7 +1,6 @@
-import { StyleSheet } from "react-native";
-import { colors } from "../constants/colors";
+import { makeStyles } from "../theme";
 
-export const styles = StyleSheet.create({
+export const useIndexStyles = makeStyles(({ colors }) => ({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -47,4 +46,4 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-});
+}));

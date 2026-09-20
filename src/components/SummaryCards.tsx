@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Text, View } from "react-native";
-import { styles } from "../styles/dashboardStyles";
+import { View } from "react-native";
+import { useDashboardStyles } from "../styles/dashboardStyles";
 import { formatCurrency } from "../utils/currency";
-import { colors } from "../constants/colors";
+import { Text, useTheme } from "../theme";
 
 interface SummaryCardsProps {
   totalIncome: number;
@@ -10,6 +10,8 @@ interface SummaryCardsProps {
 }
 
 export function SummaryCards({ totalIncome, totalExpense }: SummaryCardsProps) {
+  const { colors } = useTheme();
+  const styles = useDashboardStyles();
   return (
     <View style={styles.summaryContainer}>
       <View style={[styles.summaryCard, { marginRight: 8 }]}>

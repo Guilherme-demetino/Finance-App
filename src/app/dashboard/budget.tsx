@@ -11,10 +11,11 @@ import { useBudgetActions, useBudgetData } from "../../context/BudgetContext";
 import { useScrollY } from "../../context/DashboardUiContext";
 import { useSavingsContext } from "../../context/SavingsContext";
 import { useTransactionsData } from "../../context/TransactionsContext";
-import { styles } from "../../styles/dashboardStyles";
+import { useDashboardStyles } from "../../styles/dashboardStyles";
 import { formatCurrencyInput } from "../../utils/currency";
 
 export default function DashboardBudgetScreen() {
+  const styles = useDashboardStyles();
   const { totalExpense } = useTransactionsData();
   const {
     budget,

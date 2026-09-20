@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { colors } from "../constants/colors";
+import { TouchableOpacity, View } from "react-native";
 import type { DebtType } from "../types";
 import { formatDateToString, parseDateString } from "../utils/dates";
 import { CalendarPicker } from "./CalendarPicker";
 import { TopFormSheet } from "./TopFormSheet";
+import { Text, TextInput, useTheme } from "../theme";
 
 interface DebtModalProps {
   visible: boolean;
@@ -26,6 +26,7 @@ export function DebtModal({
   onSave,
   formatCurrency,
 }: DebtModalProps) {
+  const { colors } = useTheme();
   const [type, setType] = useState<DebtType>("lent");
   const [person, setPerson] = useState("");
   const [amount, setAmount] = useState("");
@@ -70,7 +71,7 @@ export function DebtModal({
             borderRadius: 12,
             alignItems: "center",
             backgroundColor:
-              type === "lent" ? "rgba(16, 185, 129, 0.15)" : colors.surfaceAlt,
+              type === "lent" ? `${colors.income}26` : colors.surfaceAlt,
             borderWidth: 1,
             borderColor: type === "lent" ? colors.income : colors.surfaceAlt,
           }}
@@ -94,7 +95,7 @@ export function DebtModal({
             borderRadius: 12,
             alignItems: "center",
             backgroundColor:
-              type === "borrowed" ? "rgba(239, 68, 68, 0.15)" : colors.surfaceAlt,
+              type === "borrowed" ? `${colors.expense}26` : colors.surfaceAlt,
             borderWidth: 1,
             borderColor: type === "borrowed" ? colors.expense : colors.surfaceAlt,
           }}

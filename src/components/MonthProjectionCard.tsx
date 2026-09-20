@@ -1,8 +1,8 @@
-import { Text, View } from "react-native";
-import { colors } from "../constants/colors";
-import { styles } from "../styles/dashboardStyles";
+import { View } from "react-native";
+import { useDashboardStyles } from "../styles/dashboardStyles";
 import { formatCurrency } from "../utils/currency";
 import type { MonthProjection } from "../utils/monthProjection";
+import { Text, useTheme } from "../theme";
 
 interface MonthProjectionCardProps {
   projection: MonthProjection;
@@ -17,6 +17,7 @@ function Stat({
   value: string;
   color: string;
 }) {
+  const { colors } = useTheme();
   return (
     <View style={{ flex: 1, alignItems: "center" }}>
       <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 4 }}>
@@ -28,6 +29,8 @@ function Stat({
 }
 
 export function MonthProjectionCard({ projection }: MonthProjectionCardProps) {
+  const { colors } = useTheme();
+  const styles = useDashboardStyles();
   const {
     currentBalance,
     upcomingIncome,

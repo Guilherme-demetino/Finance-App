@@ -1,19 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import {
-  Modal,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { colors } from "../constants/colors";
+import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import { getTransactionsByGroupId } from "../database/transactions";
-import { styles as menuStyles } from "../styles/menuStyles";
+import { useMenuStyles } from "../styles/menuStyles";
 import type { DisplayTransaction, TransactionRow } from "../types";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
 import { ConfirmModal } from "./ConfirmModal";
 import { logError } from "../utils/logger";
+import { Text, useTheme } from "../theme";
 
 interface SeriesManagerModalProps {
   visible: boolean;
@@ -32,6 +26,8 @@ export function SeriesManagerModal({
   onDeleteFromHere,
   onDeleteSeries,
 }: SeriesManagerModalProps) {
+  const { colors } = useTheme();
+  const menuStyles = useMenuStyles();
   const [occurrences, setOccurrences] = useState<TransactionRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [confirmAction, setConfirmAction] = useState<
@@ -211,7 +207,7 @@ export function SeriesManagerModal({
               }}
               onPress={() => setConfirmAction("series")}
             >
-              <Text style={menuStyles.modalButtonText}>
+              <Text style={[menuStyles.modalButtonText, { color: colors.textOnColor }]}>
                 Excluir série inteira
               </Text>
             </TouchableOpacity>

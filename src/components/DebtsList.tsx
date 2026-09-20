@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
-import { colors } from "../constants/colors";
+import { TouchableOpacity, View } from "react-native";
 import type { DebtRow } from "../types";
-import { styles } from "../styles/dashboardStyles";
+import { useDashboardStyles } from "../styles/dashboardStyles";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
 import { parseDateString } from "../utils/dates";
 import { ConfirmModal } from "./ConfirmModal";
+import { Text, useTheme } from "../theme";
 
 function isOverdue(dueDate: string, today: string): boolean {
   return parseDateString(dueDate).getTime() < parseDateString(today).getTime();
@@ -35,6 +35,8 @@ export function DebtsList({
   onDeleteDebt,
   today,
 }: DebtsListProps) {
+  const { colors } = useTheme();
+  const styles = useDashboardStyles();
   const [debtToDelete, setDebtToDelete] = useState<DebtRow | null>(null);
 
   return (

@@ -1,7 +1,7 @@
-import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import type { Release } from "../constants/changelog";
-import { colors } from "../constants/colors";
-import { styles as menuStyles } from "../styles/menuStyles";
+import { useMenuStyles } from "../styles/menuStyles";
+import { Text, useTheme } from "../theme";
 
 interface ReleaseNotesModalProps {
   /** Novidades ainda não vistas; o pop-up só aparece se houver alguma. */
@@ -10,6 +10,8 @@ interface ReleaseNotesModalProps {
 }
 
 export function ReleaseNotesModal({ releases, onClose }: ReleaseNotesModalProps) {
+  const { colors } = useTheme();
+  const menuStyles = useMenuStyles();
   return (
     <Modal
       visible={releases.length > 0}

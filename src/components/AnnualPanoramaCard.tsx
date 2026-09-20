@@ -1,13 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Text, TouchableOpacity, View } from "react-native";
-import { styles } from "../styles/dashboardStyles";
-import { colors } from "../constants/colors";
+import { TouchableOpacity, View } from "react-native";
+import { useDashboardStyles } from "../styles/dashboardStyles";
+import { Text, useTheme } from "../theme";
 
 interface AnnualPanoramaCardProps {
   onPress: () => void;
 }
 
 export function AnnualPanoramaCard({ onPress }: AnnualPanoramaCardProps) {
+  const { colors } = useTheme();
+  const styles = useDashboardStyles();
   return (
     <TouchableOpacity
       style={[
