@@ -1,5 +1,6 @@
 import type { DebtRow } from "../types";
 import { buildAlerts } from "./alerts";
+import type { InvoiceDue } from "./creditCards";
 
 const TODAY = new Date(2026, 8, 18); // 18/09/2026
 
@@ -101,5 +102,49 @@ describe("buildAlerts - dívidas", () => {
       pendingDebts: [makeDebt({ due_date: "01/09/2026" })],
     });
     expect(alerts.map((a) => a.level)).toEqual(["danger", "warning"]);
+  });
+});
+
+describe("buildAlerts - faturas de cartão", () => {
+  const invoice = (over: Partial<InvoiceDue> = {}): InvoiceDue => ({
+    id: "invoice-1-2026-09",
+    cardId: 1,
+    cardName: "Nubank",
+    ref: "2026-09",
+    amount: 800,
+    dueDate: "20/09/2026",
+    status: "closed",
+    ...over,
+  });
+
+  it("fatura vencida é grave; perto de vencer é aviso; longe não avisa", () => {
+    const alerts = buildAlerts({
+      ...base,
+      invoices: [
+        invoice({ id: "a", dueDate: "10/09/2026" }),
+        invoice({ id: "b", dueDate: "18/09/2026" }),
+        invoice({ id: "c", dueDate: "21/09/2026" }),
+        invoice({ id: "d", dueDate: "22/09/2026" }),
+      ],
+    });
+
+    expect(alerts.map((a) => [a.id, a.level])).toEqual([
+      ["a", "danger"],
+      ["b", "warning"],
+      ["c", "warning"],
+    ]);
+    expect(alerts[0].message).toBe("Fatura Nubank: R$ 800,00 venceu em 10/09/2026.");
+    expect(alerts[1].message).toContain("vence hoje");
+    expect(alerts[2].message).toContain("vence em 3 dias");
+  });
+
+  it("aparece também ao olhar outro mês (como as dívidas)", () => {
+    const alerts = buildAlerts({ ...base, includeSpendingAlerts: false, invoices: [invoice()] });
+
+    expect(alerts).toHaveLength(1);
+  });
+
+  it("sem faturas nada muda", () => {
+    expect(buildAlerts(base)).toEqual([]);
   });
 });

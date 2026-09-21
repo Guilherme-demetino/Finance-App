@@ -42,6 +42,9 @@ const ALL_TABLES = [
   "category_budgets",
   "debts",
   "savings_goals",
+  "credit_cards",
+  "card_purchases",
+  "card_invoice_payments",
   "app_meta",
 ];
 

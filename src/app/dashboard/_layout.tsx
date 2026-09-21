@@ -121,6 +121,19 @@ function DashboardChrome() {
             ),
           }}
         />
+        <Tabs.Screen
+          name="cards"
+          options={{
+            title: "Cartões",
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name={focused ? "card" : "card-outline"}
+                size={22}
+                color={color}
+              />
+            ),
+          }}
+        />
       </Tabs>
 
       <NewTransactionFab />

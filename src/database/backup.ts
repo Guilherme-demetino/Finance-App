@@ -1,7 +1,10 @@
 import type {
   BudgetRow,
+  CardPaymentRow,
+  CardPurchaseRow,
   CategoryBudgetRow,
   CategoryRow,
+  CreditCardRow,
   DebtRow,
   SavingsGoalRow,
   TransactionRow,
@@ -35,6 +38,16 @@ export async function readBackupData(): Promise<BackupData> {
     "SELECT id, name, target_amount, saved_amount, deadline, created_date FROM savings_goals ORDER BY id",
   );
 
+  const creditCards = await db.getAllAsync<CreditCardRow>(
+    "SELECT id, name, closing_day, due_day, credit_limit FROM credit_cards ORDER BY id",
+  );
+  const cardPurchases = await db.getAllAsync<CardPurchaseRow>(
+    "SELECT id, card_id, description, amount, date, category, invoice_ref, installment_group_id, installment_number, installment_total FROM card_purchases ORDER BY id",
+  );
+  const cardPayments = await db.getAllAsync<CardPaymentRow>(
+    "SELECT id, card_id, invoice_ref, paid_date, amount, transaction_id FROM card_invoice_payments ORDER BY id",
+  );
+
   return {
     userName: user?.name ?? null,
     categories,
@@ -43,6 +56,9 @@ export async function readBackupData(): Promise<BackupData> {
     categoryBudgets,
     debts,
     savingsGoals,
+    creditCards,
+    cardPurchases,
+    cardPayments,
   };
 }
 
@@ -62,6 +78,9 @@ export async function replaceAllData(data: BackupData): Promise<void> {
     db.runSync("DELETE FROM category_budgets");
     db.runSync("DELETE FROM debts");
     db.runSync("DELETE FROM savings_goals");
+    db.runSync("DELETE FROM credit_cards");
+    db.runSync("DELETE FROM card_purchases");
+    db.runSync("DELETE FROM card_invoice_payments");
 
     for (const c of data.categories) {
       db.runSync(
@@ -129,6 +148,43 @@ export async function replaceAllData(data: BackupData): Promise<void> {
         g.saved_amount,
         g.deadline,
         g.created_date,
+      );
+    }
+
+    for (const c of data.creditCards ?? []) {
+      db.runSync(
+        "INSERT INTO credit_cards (id, name, closing_day, due_day, credit_limit) VALUES (?, ?, ?, ?, ?)",
+        c.id,
+        c.name,
+        c.closing_day,
+        c.due_day,
+        c.credit_limit ?? null,
+      );
+    }
+    for (const p of data.cardPurchases ?? []) {
+      db.runSync(
+        "INSERT INTO card_purchases (id, card_id, description, amount, date, category, invoice_ref, installment_group_id, installment_number, installment_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        p.id,
+        p.card_id,
+        p.description,
+        p.amount,
+        p.date,
+        p.category,
+        p.invoice_ref,
+        p.installment_group_id ?? null,
+        p.installment_number ?? null,
+        p.installment_total ?? null,
+      );
+    }
+    for (const p of data.cardPayments ?? []) {
+      db.runSync(
+        "INSERT INTO card_invoice_payments (id, card_id, invoice_ref, paid_date, amount, transaction_id) VALUES (?, ?, ?, ?, ?, ?)",
+        p.id,
+        p.card_id,
+        p.invoice_ref,
+        p.paid_date,
+        p.amount,
+        p.transaction_id ?? null,
       );
     }
 

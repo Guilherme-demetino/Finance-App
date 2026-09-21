@@ -66,6 +66,44 @@ export interface DebtRow {
   due_date: string | null; // DD/MM/AAAA — dia combinado pra receber/pagar
 }
 
+/** Linha crua da tabela `credit_cards`: um cartão, com os dias em que a fatura fecha e vence. */
+export interface CreditCardRow {
+  id: number;
+  name: string;
+  closing_day: number; // 1 a 31; em mês mais curto vale o último dia
+  due_day: number; // 1 a 31; em mês mais curto vale o último dia
+  credit_limit: number | null;
+}
+
+/**
+ * Linha crua da tabela `card_purchases`: uma compra no cartão (ou uma parcela dela). Fica fora do
+ * saldo até a fatura ser paga.
+ */
+export interface CardPurchaseRow {
+  id: number;
+  card_id: number;
+  description: string;
+  amount: number;
+  date: string; // DD/MM/AAAA — data da compra (as parcelas repetem a data original)
+  category: string;
+  /** Fatura em que a compra cai: AAAA-MM do mês de VENCIMENTO da fatura. Gravada na compra: mudar o dia de fechamento não mexe no que já foi lançado. */
+  invoice_ref: string;
+  installment_group_id: string | null;
+  installment_number: number | null;
+  installment_total: number | null;
+}
+
+/** Linha crua da tabela `card_invoice_payments`: a fatura foi paga (gera uma despesa no saldo). */
+export interface CardPaymentRow {
+  id: number;
+  card_id: number;
+  invoice_ref: string; // AAAA-MM do vencimento
+  paid_date: string; // DD/MM/AAAA
+  amount: number;
+  /** A despesa criada no saldo por este pagamento (null se foi apagada à mão). */
+  transaction_id: number | null;
+}
+
 /** Linha crua da tabela `savings_goals` — meta de economia, separada do saldo. */
 export interface SavingsGoalRow {
   id: number;

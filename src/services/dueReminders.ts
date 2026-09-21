@@ -1,4 +1,5 @@
 import type { DebtRow, TransactionRow } from "../types";
+import type { InvoiceDue } from "../utils/creditCards";
 import {
   collectDueItems,
   parseReminderSettings,
@@ -41,6 +42,8 @@ export interface DueReminderDeps {
   setMeta(key: string, value: string): Promise<void>;
   readDebts(): Promise<DebtRow[]>;
   readRecurringExpenses(): Promise<TransactionRow[]>;
+  /** Faturas de cartão por pagar. Opcional: quem não informa não recebe avisos de fatura. */
+  readInvoices?(): Promise<InvoiceDue[]>;
   scheduler: ReminderScheduler;
   now(): Date;
 }
@@ -69,10 +72,14 @@ async function saveSettings(deps: DueReminderDeps, settings: ReminderSettings): 
 }
 
 async function planFor(deps: DueReminderDeps, settings: ReminderSettings): Promise<PlannedReminder[]> {
-  const [debts, transactions] = await Promise.all([deps.readDebts(), deps.readRecurringExpenses()]);
+  const [debts, transactions, invoices] = await Promise.all([
+    deps.readDebts(),
+    deps.readRecurringExpenses(),
+    deps.readInvoices ? deps.readInvoices() : Promise.resolve([]),
+  ]);
   const now = deps.now();
   return planReminders({
-    items: collectDueItems({ debts, transactions, today: now }),
+    items: collectDueItems({ debts, transactions, invoices, today: now }),
     settings,
     now,
   });
