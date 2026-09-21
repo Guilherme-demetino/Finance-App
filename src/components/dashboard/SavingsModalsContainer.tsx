@@ -3,26 +3,37 @@ import { formatCurrencyInput } from "../../utils/currency";
 import { SavingsDepositModal } from "../savings/SavingsDepositModal";
 import { SavingsGoalModal } from "../savings/SavingsGoalModal";
 
-/** Modais de criar meta e de guardar/retirar dinheiro de uma meta. */
+/** Modais de criar/editar meta e de guardar/retirar dinheiro de uma meta. */
 export function SavingsModalsContainer() {
   const {
     isSavingsModalOpen,
     setIsSavingsModalOpen,
+    editingGoal,
+    setEditingGoal,
     depositGoal,
     setDepositGoal,
     handleAddSavingsGoal,
+    handleEditSavingsGoal,
     handleChangeSavings,
   } = useSavingsContext();
 
+  const closeGoalForm = () => {
+    setIsSavingsModalOpen(false);
+    setEditingGoal(null);
+  };
+
   return (
     <>
+      {/* Um formulário só: vazio para criar, preenchido (editingGoal) para editar. */}
       <SavingsGoalModal
-        visible={isSavingsModalOpen}
-        onClose={() => setIsSavingsModalOpen(false)}
+        visible={isSavingsModalOpen || editingGoal !== null}
+        goal={editingGoal}
+        onClose={closeGoalForm}
         formatCurrency={formatCurrencyInput}
         onSave={(data) => {
-          setIsSavingsModalOpen(false);
-          handleAddSavingsGoal(data);
+          closeGoalForm();
+          if (editingGoal) handleEditSavingsGoal(editingGoal.id, data);
+          else handleAddSavingsGoal(data);
         }}
       />
 

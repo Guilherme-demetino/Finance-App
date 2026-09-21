@@ -10,6 +10,7 @@ import {
   savingsProgress,
 } from "../../utils/savings";
 import { ConfirmModal } from "../ConfirmModal";
+import { GoalEditButton } from "../GoalEditButton";
 import { Text, makeStyles, useTheme } from "../../theme";
 
 interface SavingsGoalsCardProps {
@@ -17,6 +18,7 @@ interface SavingsGoalsCardProps {
   isLoading: boolean;
   onOpenCreate: () => void;
   onOpenDeposit: (goal: SavingsGoalRow) => void;
+  onEdit: (goal: SavingsGoalRow) => void;
   onDelete: (id: number) => void;
 }
 
@@ -38,6 +40,7 @@ export function SavingsGoalsCard({
   isLoading,
   onOpenCreate,
   onOpenDeposit,
+  onEdit,
   onDelete,
 }: SavingsGoalsCardProps) {
   const { colors } = useTheme();
@@ -140,15 +143,23 @@ export function SavingsGoalsCard({
                   </View>
 
                   <View style={{ flexDirection: "row", gap: 8 }}>
+                    <GoalEditButton
+                      label={`Editar meta ${goal.name}`}
+                      onPress={() => onEdit(goal)}
+                    />
                     <TouchableOpacity
                       onPress={() => setGoalToDelete(goal)}
                       style={iconButtonStyle}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Excluir meta ${goal.name}`}
                     >
                       <Ionicons name="trash-outline" size={15} color={colors.expense} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => onOpenDeposit(goal)}
                       style={iconButtonStyle}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Guardar ou retirar em ${goal.name}`}
                     >
                       <Ionicons name="add-circle-outline" size={16} color={colors.accent} />
                     </TouchableOpacity>

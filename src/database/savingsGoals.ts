@@ -24,6 +24,18 @@ export async function createSavingsGoal(data: SavingsGoalInput): Promise<void> {
   );
 }
 
+/** Muda os dados de uma meta (a data de criação fica como está). */
+export async function updateSavingsGoal(
+  id: number,
+  data: Omit<SavingsGoalInput, "createdDate">,
+): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    "UPDATE savings_goals SET name = ?, target_amount = ?, saved_amount = ?, deadline = ? WHERE id = ?",
+    [data.name, data.targetAmount, data.savedAmount, data.deadline, id],
+  );
+}
+
 export async function updateSavedAmount(
   id: number,
   savedAmount: number,

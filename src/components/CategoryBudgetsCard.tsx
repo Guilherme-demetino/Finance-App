@@ -6,12 +6,15 @@ import { useDashboardStyles } from "../styles/dashboardStyles";
 import { formatCurrency as formatCurrencyDisplay } from "../utils/currency";
 import { CategoryModal } from "./forms/CategoryModal";
 import { ConfirmModal } from "./ConfirmModal";
+import { GoalEditButton } from "./GoalEditButton";
 import { Text, TextInput, useTheme } from "../theme";
 
 interface CategoryBudgetsCardProps {
   items: CategoryBudgetItem[];
   isLoading: boolean;
   onSaveGoal: (category: string, amount: number) => void;
+  /** Tira a meta da categoria no mês mostrado (a categoria e os gastos continuam). */
+  onRemoveGoal: (category: string) => void;
   onCategoryCreated: () => Promise<void> | void;
   onDeleteCategory: (id: number) => void;
   formatCurrency: (val: string) => string;
@@ -21,6 +24,7 @@ export function CategoryBudgetsCard({
   items,
   isLoading,
   onSaveGoal,
+  onRemoveGoal,
   onCategoryCreated,
   onDeleteCategory,
   formatCurrency,
@@ -32,20 +36,31 @@ export function CategoryBudgetsCard({
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] =
     useState<CategoryBudgetItem | null>(null);
+  const [goalToRemove, setGoalToRemove] = useState<CategoryBudgetItem | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const startEditing = (item: CategoryBudgetItem) => {
+    setEditError(null);
     setEditingCategory(item.category);
     const cents = item.goal ? Math.round(item.goal * 100).toString() : "";
     setDraftAmount(cents ? formatCurrency(cents) : "");
   };
 
-  const handleSave = (category: string) => {
+  const handleSave = (item: CategoryBudgetItem) => {
     const numericValue = Number(
       draftAmount.replace(/\./g, "").replace(",", "."),
     );
-    if (!isNaN(numericValue) && numericValue > 0) {
-      onSaveGoal(category, numericValue);
+    if (isNaN(numericValue) || numericValue <= 0) {
+      // Antes um valor vazio fechava o editor em silêncio, sem salvar nem avisar.
+      setEditError(
+        item.goal !== null && item.goal > 0
+          ? 'Digite um valor maior que zero, ou use "Remover meta".'
+          : "Digite o valor da meta.",
+      );
+      return;
     }
+    onSaveGoal(item.category, numericValue);
+    setEditError(null);
     setEditingCategory(null);
     setDraftAmount("");
   };
@@ -53,6 +68,7 @@ export function CategoryBudgetsCard({
   const handleCategoryCreated = async (categoryName: string) => {
     setIsAddCategoryOpen(false);
     await onCategoryCreated();
+    setEditError(null);
     setEditingCategory(categoryName);
     setDraftAmount("");
   };
@@ -154,6 +170,8 @@ export function CategoryBudgetsCard({
                     {item.id !== null && (
                       <TouchableOpacity
                         onPress={() => setCategoryToDelete(item)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Excluir categoria ${item.category}`}
                         style={{
                           backgroundColor: colors.surfaceAlt,
                           borderWidth: 1,
@@ -173,73 +191,93 @@ export function CategoryBudgetsCard({
                       </TouchableOpacity>
                     )}
 
-                    <TouchableOpacity
+                    <GoalEditButton
+                      label={
+                        isEditing
+                          ? `Fechar a edição da meta de ${item.category}`
+                          : `Editar meta de ${item.category}`
+                      }
+                      isOpen={isEditing}
                       onPress={() =>
                         isEditing ? setEditingCategory(null) : startEditing(item)
                       }
-                      style={{
-                        backgroundColor: colors.surfaceAlt,
-                        borderWidth: 1,
-                        borderColor: colors.textPrimary,
-                        borderRadius: 8,
-                        width: 30,
-                        height: 30,
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Ionicons
-                        name={isEditing ? "close-outline" : "create-outline"}
-                        size={15}
-                        color={colors.textPrimary}
-                      />
-                    </TouchableOpacity>
+                    />
                   </View>
                 </View>
 
                 {isEditing ? (
-                  <View
-                    style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-                  >
-                    <TextInput
-                      style={{
-                        flex: 1,
-                        backgroundColor: colors.surface,
-                        borderWidth: 1,
-                        borderColor: colors.textPrimary,
-                        borderRadius: 10,
-                        padding: 10,
-                        color: colors.textPrimary,
-                        fontSize: 14,
-                      }}
-                      keyboardType="numeric"
-                      value={draftAmount}
-                      onChangeText={(text) => setDraftAmount(formatCurrency(text))}
-                      placeholder="R$ 0,00"
-                      placeholderTextColor={colors.textPlaceholder}
-                      autoFocus
-                    />
-                    <TouchableOpacity
-                      style={{
-                        backgroundColor: colors.surfaceAlt,
-                        borderWidth: 1,
-                        borderColor: colors.textPrimary,
-                        paddingVertical: 10,
-                        paddingHorizontal: 14,
-                        borderRadius: 10,
-                      }}
-                      onPress={() => handleSave(item.category)}
+                  <View>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
                     >
-                      <Text
+                      <TextInput
                         style={{
+                          flex: 1,
+                          backgroundColor: colors.surface,
+                          borderWidth: 1,
+                          borderColor: colors.textPrimary,
+                          borderRadius: 10,
+                          padding: 10,
                           color: colors.textPrimary,
-                          fontWeight: "bold",
-                          fontSize: 13,
+                          fontSize: 14,
                         }}
+                        keyboardType="numeric"
+                        value={draftAmount}
+                        onChangeText={(text) => {
+                          setEditError(null);
+                          setDraftAmount(formatCurrency(text));
+                        }}
+                        placeholder="R$ 0,00"
+                        placeholderTextColor={colors.textPlaceholder}
+                        accessibilityLabel={`Valor da meta de ${item.category}`}
+                        autoFocus
+                      />
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: colors.surfaceAlt,
+                          borderWidth: 1,
+                          borderColor: colors.textPrimary,
+                          paddingVertical: 10,
+                          paddingHorizontal: 14,
+                          borderRadius: 10,
+                        }}
+                        onPress={() => handleSave(item)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Salvar meta de ${item.category}`}
                       >
-                        Salvar
+                        <Text
+                          style={{
+                            color: colors.textPrimary,
+                            fontWeight: "bold",
+                            fontSize: 13,
+                          }}
+                        >
+                          Salvar
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {editError ? (
+                      <Text
+                        style={{ color: colors.expense, fontSize: 12, marginTop: 8, lineHeight: 17 }}
+                        accessibilityRole="alert"
+                      >
+                        {editError}
                       </Text>
-                    </TouchableOpacity>
+                    ) : null}
+
+                    {hasGoal ? (
+                      <TouchableOpacity
+                        onPress={() => setGoalToRemove(item)}
+                        style={{ alignSelf: "flex-start", paddingVertical: 10, marginTop: 4 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remover meta de ${item.category}`}
+                      >
+                        <Text style={{ color: colors.expense, fontSize: 13, fontWeight: "600" }}>
+                          Remover meta
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
                 ) : hasGoal ? (
                   <View>
@@ -316,6 +354,24 @@ export function CategoryBudgetsCard({
         lockType
         onSave={(categoryName) => {
           handleCategoryCreated(categoryName);
+        }}
+      />
+
+      <ConfirmModal
+        visible={!!goalToRemove}
+        title="Remover meta"
+        message={
+          goalToRemove
+            ? `Remover a meta de "${goalToRemove.category}" deste mês? A categoria e os gastos continuam; só a meta some.`
+            : ""
+        }
+        confirmLabel="Remover"
+        destructive
+        onCancel={() => setGoalToRemove(null)}
+        onConfirm={() => {
+          if (goalToRemove) onRemoveGoal(goalToRemove.category);
+          setEditingCategory(null);
+          setGoalToRemove(null);
         }}
       />
 

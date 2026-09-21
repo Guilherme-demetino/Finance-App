@@ -23,6 +23,7 @@ export default function DashboardBudgetScreen() {
     categoryBudgets,
     isLoadingCategoryBudgets,
     saveCategoryGoal,
+    removeCategoryGoal,
     refreshCategoryBudgets,
   } = useBudgetData();
   const { handleDeleteCategory } = useBudgetActions();
@@ -31,6 +32,7 @@ export default function DashboardBudgetScreen() {
     isLoadingSavings,
     setIsSavingsModalOpen,
     setDepositGoal,
+    setEditingGoal,
     handleDeleteSavingsGoal,
   } = useSavingsContext();
   const scrollY = useScrollY();
@@ -60,6 +62,7 @@ export default function DashboardBudgetScreen() {
         items={categoryBudgets}
         isLoading={isLoadingCategoryBudgets}
         onSaveGoal={saveCategoryGoal}
+        onRemoveGoal={removeCategoryGoal}
         onCategoryCreated={refreshCategoryBudgets}
         onDeleteCategory={handleDeleteCategory}
         formatCurrency={formatCurrencyInput}
@@ -70,6 +73,7 @@ export default function DashboardBudgetScreen() {
         isLoading={isLoadingSavings}
         onOpenCreate={() => setIsSavingsModalOpen(true)}
         onOpenDeposit={setDepositGoal}
+        onEdit={setEditingGoal}
         onDelete={handleDeleteSavingsGoal}
       />
     </Animated.ScrollView>

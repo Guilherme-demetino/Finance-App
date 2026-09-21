@@ -231,5 +231,15 @@
       "Os filtros aparecem como etiquetas que você remove com um toque, e um resumo mostra quantas transações apareceram e quanto entrou e saiu nelas.",
       "Com um filtro ativo, o botão de apagar tudo some da lista: ele apagaria o mês inteiro, não só o que aparece."
     ]
+  },
+  {
+    "id": 25,
+    "date": "20/09/2026",
+    "title": "Editar metas",
+    "items": [
+      "Metas de Economia: novo botão “Editar” em cada meta. O formulário abre já preenchido e você muda o nome, o valor da meta, quanto já está guardado e o prazo (ou tira o prazo).",
+      "Metas por Categoria: o botão de editar agora tem o texto “Editar” (antes era só um lápis pequeno). Salvar um valor vazio passou a avisar em vez de fechar em silêncio.",
+      "Metas por Categoria: novo “Remover meta”, dentro da edição, com confirmação. A categoria e os gastos continuam; só a meta daquele mês some."
+    ]
   }
 ]

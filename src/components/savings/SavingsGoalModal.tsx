@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { TouchableOpacity, View } from "react-native";
+import type { SavingsGoalRow } from "../../types";
 import { formatDateToString, parseDateString } from "../../utils/dates";
 import { CalendarPicker } from "../forms/CalendarPicker";
 import { TopFormSheet } from "../forms/TopFormSheet";
@@ -8,6 +9,8 @@ import { Text, TextInput, makeStyles, useTheme } from "../../theme";
 
 interface SavingsGoalModalProps {
   visible: boolean;
+  /** Meta a editar: o formulário abre preenchido com ela. Sem meta, é o formulário de criar. */
+  goal?: SavingsGoalRow | null;
   onClose: () => void;
   onSave: (data: {
     name: string;
@@ -33,6 +36,7 @@ const toNumber = (value: string) =>
 
 export function SavingsGoalModal({
   visible,
+  goal = null,
   onClose,
   onSave,
   formatCurrency,
@@ -46,15 +50,19 @@ export function SavingsGoalModal({
   const [showPicker, setShowPicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reseta o formulário quando o modal abre (durante a renderização, sem setState no effect).
+  const isEditing = goal !== null;
+  const toField = (amount: number) => formatCurrency(String(Math.round(amount * 100)));
+
+  // Prepara o formulário quando o modal abre (durante a renderização, sem setState no effect):
+  // vazio para criar, preenchido com a meta para editar.
   const [wasVisible, setWasVisible] = useState(false);
   if (visible !== wasVisible) {
     setWasVisible(visible);
     if (visible) {
-      setName("");
-      setTarget("");
-      setSaved("");
-      setDeadline("");
+      setName(goal?.name ?? "");
+      setTarget(goal ? toField(goal.target_amount) : "");
+      setSaved(goal && goal.saved_amount > 0 ? toField(goal.saved_amount) : "");
+      setDeadline(goal?.deadline ?? "");
       setError(null);
     }
   }
@@ -81,13 +89,18 @@ export function SavingsGoalModal({
   };
 
   return (
-    <TopFormSheet visible={visible} onClose={onClose} title="Nova meta de economia">
+    <TopFormSheet
+      visible={visible}
+      onClose={onClose}
+      title={isEditing ? "Editar meta de economia" : "Nova meta de economia"}
+    >
       <View style={{ marginBottom: 16 }}>
         <Text style={labelStyle}>Nome da meta</Text>
         <TextInput
           style={inputStyle}
           value={name}
           onChangeText={setName}
+          accessibilityLabel="Nome da meta"
           placeholder="Ex: Viagem, Reserva de emergência"
           placeholderTextColor={colors.textPlaceholder}
         />
@@ -100,18 +113,22 @@ export function SavingsGoalModal({
           keyboardType="numeric"
           value={target}
           onChangeText={(text) => setTarget(formatCurrency(text))}
+          accessibilityLabel="Valor da meta"
           placeholder="R$ 0,00"
           placeholderTextColor={colors.textPlaceholder}
         />
       </View>
 
       <View style={{ marginBottom: 16 }}>
-        <Text style={labelStyle}>Já tem guardado? (opcional)</Text>
+        <Text style={labelStyle}>
+          {isEditing ? "Quanto já está guardado (R$)" : "Já tem guardado? (opcional)"}
+        </Text>
         <TextInput
           style={inputStyle}
           keyboardType="numeric"
           value={saved}
           onChangeText={(text) => setSaved(formatCurrency(text))}
+          accessibilityLabel="Valor já guardado"
           placeholder="R$ 0,00"
           placeholderTextColor={colors.textPlaceholder}
         />
@@ -121,6 +138,8 @@ export function SavingsGoalModal({
         <Text style={labelStyle}>Até quando? (opcional)</Text>
         <TouchableOpacity
           onPress={() => setShowPicker(true)}
+          accessibilityRole="button"
+          accessibilityLabel={deadline ? `Prazo: ${deadline}` : "Escolher prazo"}
           style={{
             ...inputStyle,
             flexDirection: "row",
@@ -133,7 +152,11 @@ export function SavingsGoalModal({
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             {deadline ? (
-              <TouchableOpacity onPress={() => setDeadline("")}>
+              <TouchableOpacity
+                onPress={() => setDeadline("")}
+                accessibilityRole="button"
+                accessibilityLabel="Remover prazo"
+              >
                 <Ionicons name="close-circle" size={18} color={colors.textMuted} />
               </TouchableOpacity>
             ) : null}
@@ -170,7 +193,7 @@ export function SavingsGoalModal({
         }}
       >
         <Text style={{ color: colors.textPrimary, fontWeight: "bold", fontSize: 16 }}>
-          Criar meta
+          {isEditing ? "Salvar alterações" : "Criar meta"}
         </Text>
       </TouchableOpacity>
     </TopFormSheet>

@@ -14,14 +14,21 @@ interface SavingsContextValue {
   setIsSavingsModalOpen: (value: boolean) => void;
   depositGoal: SavingsGoalRow | null;
   setDepositGoal: (goal: SavingsGoalRow | null) => void;
-  handleAddSavingsGoal: (data: {
-    name: string;
-    targetAmount: number;
-    savedAmount: number;
-    deadline: string | null;
-  }) => Promise<void>;
+  /** A meta que está sendo editada (abre o formulário já preenchido); null = nenhuma. */
+  editingGoal: SavingsGoalRow | null;
+  setEditingGoal: (goal: SavingsGoalRow | null) => void;
+  handleAddSavingsGoal: (data: SavingsGoalFormData) => Promise<void>;
+  handleEditSavingsGoal: (id: number, data: SavingsGoalFormData) => Promise<void>;
   handleChangeSavings: (goal: SavingsGoalRow, delta: number) => Promise<void>;
   handleDeleteSavingsGoal: (id: number) => Promise<void>;
+}
+
+/** O que o formulário de meta entrega ao salvar (criar ou editar). */
+export interface SavingsGoalFormData {
+  name: string;
+  targetAmount: number;
+  savedAmount: number;
+  deadline: string | null;
 }
 
 const SavingsContext = createContext<SavingsContextValue | null>(null);
@@ -34,18 +41,15 @@ export function SavingsProvider({ children }: { children: ReactNode }) {
     savingsGoals,
     isLoadingSavings,
     addSavingsGoal,
+    editSavingsGoal,
     changeSavedAmount,
     removeSavingsGoal,
   } = useSavingsGoals();
   const [isSavingsModalOpen, setIsSavingsModalOpen] = useState(false);
   const [depositGoal, setDepositGoal] = useState<SavingsGoalRow | null>(null);
+  const [editingGoal, setEditingGoal] = useState<SavingsGoalRow | null>(null);
 
-  const handleAddSavingsGoal = async (data: {
-    name: string;
-    targetAmount: number;
-    savedAmount: number;
-    deadline: string | null;
-  }) => {
+  const handleAddSavingsGoal = async (data: SavingsGoalFormData) => {
     try {
       await addSavingsGoal({
         ...data,
@@ -55,6 +59,16 @@ export function SavingsProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       logError("Erro ao criar meta de economia:", error);
       showAlert("Erro", "Não foi possível criar a meta.");
+    }
+  };
+
+  const handleEditSavingsGoal = async (id: number, data: SavingsGoalFormData) => {
+    try {
+      await editSavingsGoal(id, data);
+      showAlert("Sucesso", "Meta de economia atualizada.");
+    } catch (error) {
+      logError("Erro ao editar meta de economia:", error);
+      showAlert("Erro", "Não foi possível atualizar a meta.");
     }
   };
 
@@ -84,7 +98,10 @@ export function SavingsProvider({ children }: { children: ReactNode }) {
     setIsSavingsModalOpen,
     depositGoal,
     setDepositGoal,
+    editingGoal,
+    setEditingGoal,
     handleAddSavingsGoal,
+    handleEditSavingsGoal,
     handleChangeSavings,
     handleDeleteSavingsGoal,
   };

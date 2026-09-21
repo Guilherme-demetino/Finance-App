@@ -4,6 +4,7 @@ import {
   deleteSavingsGoal,
   getAllSavingsGoals,
   updateSavedAmount,
+  updateSavingsGoal,
   type SavingsGoalInput,
 } from "../database/savingsGoals";
 import type { SavingsGoalRow } from "../types";
@@ -49,6 +50,15 @@ export function useSavingsGoals() {
     await refreshSavings();
   };
 
+  /** Edita os dados de uma meta (nome, valor, quanto já foi guardado e prazo). */
+  const editSavingsGoal = async (
+    id: number,
+    data: Omit<SavingsGoalInput, "createdDate">,
+  ) => {
+    await updateSavingsGoal(id, data);
+    await refreshSavings();
+  };
+
   /** Soma (ou subtrai, com delta negativo) um valor ao já guardado, sem ficar abaixo de zero. */
   const changeSavedAmount = async (goal: SavingsGoalRow, delta: number) => {
     const next = Math.max(0, Math.round((goal.saved_amount + delta) * 100) / 100);
@@ -65,6 +75,7 @@ export function useSavingsGoals() {
     savingsGoals,
     isLoadingSavings,
     addSavingsGoal,
+    editSavingsGoal,
     changeSavedAmount,
     removeSavingsGoal,
   };

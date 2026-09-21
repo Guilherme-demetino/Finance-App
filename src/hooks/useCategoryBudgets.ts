@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { CATEGORY_COLORS } from "../constants/colors";
 import { deleteCategory, getAllCategories } from "../database/categories";
-import { getCategoryBudgets, setCategoryBudget } from "../database/categoryBudgets";
+import {
+  getCategoryBudgets,
+  removeCategoryBudget,
+  setCategoryBudget,
+} from "../database/categoryBudgets";
 import type { EnrichedTransaction } from "../types";
 import { getMonthNumber } from "../utils/dates";
 import { DEFAULT_CATEGORY_COLORS } from "./useTransactions";
@@ -153,6 +157,16 @@ export function useCategoryBudgets(
     await refresh();
   };
 
+  /** Tira a meta da categoria no mês/ano selecionado (a categoria e os gastos continuam). */
+  const removeCategoryGoal = async (category: string) => {
+    await removeCategoryBudget(
+      category,
+      getMonthNumber(selectedMonth),
+      selectedYear,
+    );
+    await refresh();
+  };
+
   const removeCategory = async (id: number) => {
     await deleteCategory(id);
     await refresh();
@@ -162,6 +176,7 @@ export function useCategoryBudgets(
     categoryBudgets,
     isLoadingCategoryBudgets,
     saveCategoryGoal,
+    removeCategoryGoal,
     removeCategory,
     refreshCategoryBudgets: refresh,
   };

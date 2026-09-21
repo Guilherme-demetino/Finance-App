@@ -21,6 +21,7 @@ interface BudgetData {
   categoryBudgets: CategoryBudgetsHook["categoryBudgets"];
   isLoadingCategoryBudgets: boolean;
   saveCategoryGoal: CategoryBudgetsHook["saveCategoryGoal"];
+  removeCategoryGoal: CategoryBudgetsHook["removeCategoryGoal"];
   refreshCategoryBudgets: CategoryBudgetsHook["refreshCategoryBudgets"];
   comparison: ComparisonHook["comparison"];
   isLoadingComparison: boolean;
@@ -45,6 +46,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     categoryBudgets,
     isLoadingCategoryBudgets,
     saveCategoryGoal,
+    removeCategoryGoal,
     removeCategory,
     refreshCategoryBudgets,
   } = useCategoryBudgets(selectedMonth, selectedYear, transactions);
@@ -75,6 +77,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     categoryBudgets,
     isLoadingCategoryBudgets,
     saveCategoryGoal,
+    removeCategoryGoal,
     refreshCategoryBudgets,
     comparison,
     isLoadingComparison,

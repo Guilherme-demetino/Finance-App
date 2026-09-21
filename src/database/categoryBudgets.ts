@@ -30,3 +30,21 @@ export async function setCategoryBudget(
     amount,
   );
 }
+
+/**
+ * Tira a meta de uma categoria num mês/ano. Compara sem diferenciar maiúsculas nem espaços, como a
+ * leitura das metas faz: "alimentação" e "Alimentação" são a mesma categoria.
+ */
+export async function removeCategoryBudget(
+  category: string,
+  month: string,
+  year: string,
+): Promise<void> {
+  const db = await getDatabase();
+  db.runSync(
+    "DELETE FROM category_budgets WHERE LOWER(TRIM(category)) = ? AND month = ? AND year = ?",
+    category.trim().toLowerCase(),
+    month,
+    year,
+  );
+}
