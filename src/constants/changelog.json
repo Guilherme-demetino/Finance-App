@@ -305,5 +305,14 @@
       "Pagamentos recebidos, estornos e “Fatura anterior” ficam de fora e aparecem na conferência como créditos ignorados.",
       "Se você já tinha importado uma fatura com pagamento recebido, esses lançamentos negativos são removidos sozinhos ao abrir o app, e o total volta ao valor das compras."
     ]
+  },
+  {
+    "id": 36,
+    "date": "21/09/2026",
+    "title": "Extrato sempre sem pagamento de fatura",
+    "items": [
+      "Ao importar um extrato, as despesas de pagamento de fatura de cartão agora ficam sempre de fora, mesmo sem nenhum cartão cadastrado na aba Cartões. A conferência mostra quantas ficaram de fora.",
+      "O reconhecimento também pega “Pagamento cartão …”. Débito no cartão de débito, contas de consumo (energia, internet…) e entradas como “pagamento recebido” de um cliente continuam sendo importados normalmente."
+    ]
   }
 ]

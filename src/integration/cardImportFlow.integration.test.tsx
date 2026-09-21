@@ -344,12 +344,15 @@ describe("extrato: o pagamento da fatura só vira despesa ao pagar na aba Cartõ
     expect(await getAllTransactions()).toEqual([]);
   });
 
-  it("sem nenhum cartão cadastrado, o pagamento de fatura entra como uma despesa comum", async () => {
+  it("mesmo sem nenhum cartão cadastrado, o pagamento de fatura fica de fora", async () => {
     await mountApp();
 
     await pickStatement(statementCsv(formatDateToString(new Date()), "Pagamento de fatura Inter", "-100.00"));
 
-    expect(seen.transfer.pendingImport?.toImport).toHaveLength(1);
+    expect(seen.transfer.pendingImport).toBeNull();
+    expect(seen.alert.alertTitle).toBe("Nada para importar");
+    expect(seen.alert.alertMessage).toContain("aba Cartões");
+    expect(await getAllTransactions()).toEqual([]);
   });
 
   it("depois de pagar a fatura na aba, importar o extrato com o mesmo débito não conta o gasto duas vezes", async () => {

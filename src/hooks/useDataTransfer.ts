@@ -28,7 +28,6 @@ import { realBudgetAlertDeps } from "../services/budgetAlertsDeps";
 import { syncDueReminders } from "../services/dueReminders";
 import { realDueReminderDeps } from "../services/dueRemindersDeps";
 import { readBackupData, replaceAllData } from "../database/backup";
-import { getAllCreditCards } from "../database/creditCards";
 import {
   getAllTransactions,
   importTransactions,
@@ -326,7 +325,7 @@ export function useDataTransfer() {
       }
 
       // O pagamento da fatura do cartão só vira despesa quando é pago na aba Cartões: aqui fica de fora.
-      const plan = ignoreCardPayments(result.plan, (await getAllCreditCards()).length > 0);
+      const plan = ignoreCardPayments(result.plan);
       if (plan.toImport.length === 0) {
         showAlert(
           "Nada para importar",

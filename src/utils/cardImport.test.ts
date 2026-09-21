@@ -75,6 +75,7 @@ describe("linhas de pagamento", () => {
     "PAG FATURA CARTAO",
     "Pgto Cartão de Crédito",
     "Fatura cartão Inter",
+    "Pagamento cartão Nubank",
   ])("reconhece o pagamento de fatura no extrato: %s", (text) => {
     expect(isCardInvoicePayment(text)).toBe(true);
   });
@@ -85,6 +86,7 @@ describe("linhas de pagamento", () => {
     "Pagamento de fatura de energia",
     "Fatura Vivo internet",
     "Compra no débito - Padaria",
+    "Pagamento cartão de débito",
   ])("não confunde com outras despesas: %s", (text) => {
     expect(isCardInvoicePayment(text)).toBe(false);
   });
@@ -252,25 +254,19 @@ describe("ignoreCardPayments: o extrato não conta o pagamento da fatura", () =>
   const statement = (rows: ImportedTransaction[]): CsvImportPlan => ({ source: "pdf", toImport: rows, totalRows: rows.length, duplicates: 0, invalid: 0 });
   const debit = (over: Partial<ImportedTransaction> = {}) => line({ description: "Pagamento de fatura Nubank", amount: 100, date: "06/10/2026", category: "Geral", ...over });
 
-  it("com cartão cadastrado, a linha de pagamento de fatura fica de fora e é contada", () => {
+  it("a linha de pagamento de fatura fica de fora e é contada", () => {
     const pix = line({ description: "Pix Ana", amount: 10 });
 
-    const result = ignoreCardPayments(statement([debit(), pix, debit({ amount: 250, date: "07/10/2026" })]), true);
+    const result = ignoreCardPayments(statement([debit(), pix, debit({ amount: 250, date: "07/10/2026" })]));
 
     expect(result.toImport).toEqual([pix]);
     expect(result.cardPaymentsIgnored).toBe(2);
   });
 
-  it("sem cartão cadastrado, o pagamento entra como uma despesa comum", () => {
-    const plan = statement([debit()]);
-
-    expect(ignoreCardPayments(plan, false)).toBe(plan);
-  });
-
   it("receita e despesas comuns passam direto, sem marcar nada como ignorado", () => {
     const plan = statement([line({ description: "Pagamento de fatura estornado", type: "income" }), line({ description: "Mercado" })]);
 
-    const result = ignoreCardPayments(plan, true);
+    const result = ignoreCardPayments(plan);
 
     expect(result.toImport).toHaveLength(2);
     expect(result.cardPaymentsIgnored).toBeUndefined();
@@ -279,7 +275,7 @@ describe("ignoreCardPayments: o extrato não conta o pagamento da fatura", () =>
   it("conta de consumo com 'fatura' no nome continua sendo despesa", () => {
     const plan = statement([line({ description: "Pagamento de fatura energia" }), line({ description: "Pgto fatura internet" })]);
 
-    expect(ignoreCardPayments(plan, true).toImport).toHaveLength(2);
+    expect(ignoreCardPayments(plan).toImport).toHaveLength(2);
   });
 });
 

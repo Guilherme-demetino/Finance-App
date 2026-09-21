@@ -56,14 +56,14 @@ export function isInvoicePaymentLine(description: string): boolean {
 }
 
 // Contas de consumo também têm "fatura" ("pagamento de fatura de energia"): essas são despesas de verdade.
-const UTILITY_WORDS = /(energia|luz|agua|esgoto|gas|telefone|internet|celular|condominio|seguro|escola|plano de saude)/;
+const UTILITY_WORDS = /(energia|luz|agua|esgoto|gas|telefone|internet|celular|condominio|seguro|escola|plano de saude|debito)/;
 
 /** Descrição do extrato que parece o pagamento da fatura de um cartão de crédito. */
 export function isCardInvoicePayment(description: string): boolean {
   const text = normalizeText(description);
   if (UTILITY_WORDS.test(text)) return false;
   return (
-    /\b(pagamento|pagto|pgto|pag)\b\.?\s*(de\s+|da\s+|do\s+)?(fatura|cartao\s+(de\s+)?credito)/.test(text) ||
+    /\b(pagamento|pagto|pgto|pag)\b\.?\s*(de\s+|da\s+|do\s+)?(fatura|cartao)\b/.test(text) ||
     /\bfatura\s+(do\s+)?(cartao|nubank|inter|itau|santander|bradesco|c6|xp|picpay|mercado\s*pago|neon|next|original|caixa|banco\s+do\s+brasil|bb|will|pan)\b/.test(text)
   );
 }
@@ -210,13 +210,12 @@ export function planCardImport(input: {
 // ------------------------------------------------------------------ o extrato não conta o pagamento da fatura
 
 /**
- * Tira do extrato as linhas de pagamento de fatura de cartão: o gasto do cartão só entra no saldo quando a fatura é
- * paga na aba Cartões, então importá-las também contaria o mesmo dinheiro duas vezes. Só age quando há cartão
- * cadastrado (sem a aba em uso, o pagamento é uma despesa comum). As linhas descartadas são contadas para a
- * conferência mostrar o que ficou de fora.
+ * Tira do extrato as linhas de pagamento de fatura de cartão (sempre, com ou sem cartão cadastrado): o gasto do cartão
+ * só entra no saldo quando a fatura é paga na aba Cartões, então importá-las também contaria o mesmo dinheiro duas
+ * vezes. Só olha despesas: um "pagamento recebido" em conta é uma entrada de verdade. As linhas descartadas são
+ * contadas para a conferência mostrar o que ficou de fora.
  */
-export function ignoreCardPayments(plan: CsvImportPlan, hasCards: boolean): CsvImportPlan {
-  if (!hasCards) return plan;
+export function ignoreCardPayments(plan: CsvImportPlan): CsvImportPlan {
   const toImport: ImportedTransaction[] = [];
   let ignored = 0;
   for (const candidate of plan.toImport) {
