@@ -11,14 +11,18 @@ import {
   getAllCardPayments,
   getAllCardPurchases,
   getAllCreditCards,
+  importCardPurchases,
   payInvoice as payInvoiceInDb,
   undoInvoicePayment,
   updateCardPurchase,
   updateCreditCard,
   type CreditCardInput,
 } from "../database/creditCards";
+import { getAllTransactions } from "../database/transactions";
 import { notifyCardsChanged } from "../services/cardsEvents";
-import type { CardPaymentRow, CardPurchaseRow, CreditCardRow } from "../types";
+import { pickFileBytes } from "../services/pickFileBytes";
+import type { CardPaymentRow, CardPurchaseRow, CreditCardRow, TransactionRow } from "../types";
+import type { CardImportPlan } from "../utils/cardImport";
 import {
   cardUsage,
   invoiceRefFor,
@@ -32,6 +36,8 @@ import {
 } from "../utils/creditCards";
 import { formatDateToString } from "../utils/dates";
 import { logError } from "../utils/logger";
+import { planImportFromBytes } from "../utils/statements/statementImport";
+import type { ImportedTransaction } from "../utils/statements/importCsv";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -54,6 +60,12 @@ export interface PurchaseFormData {
   category: string;
   installments: number;
 }
+
+/** O que a leitura do arquivo da fatura devolveu. */
+export type InvoiceFileRead =
+  | { status: "cancelled" }
+  | { status: "error"; error: string }
+  | { status: "ready"; candidates: ImportedTransaction[]; transactions: TransactionRow[] };
 
 interface Loaded {
   cards: CreditCardRow[];
@@ -237,9 +249,43 @@ export function useCreditCards() {
   const undoPayment = (card: CreditCardRow, invoice: Invoice): Promise<ActionResult> =>
     perform(() => undoInvoicePayment(card.id, invoice.ref), "Não foi possível desfazer o pagamento.");
 
+  /** Escolhe o arquivo da fatura (PDF, CSV ou planilha) e lê as linhas dele. Nada é gravado aqui. */
+  const readInvoiceFile = async (): Promise<InvoiceFileRead> => {
+    try {
+      const bytes = await pickFileBytes();
+      if (bytes === null) return { status: "cancelled" };
+      const result = await planImportFromBytes(bytes, []);
+      if (!result.ok) return { status: "error", error: result.error };
+      if (result.plan.toImport.length === 0) {
+        return { status: "error", error: "Não encontrei nenhuma compra nesse arquivo. Confira se é a fatura do cartão (PDF ou CSV)." };
+      }
+      return { status: "ready", candidates: result.plan.toImport, transactions: await getAllTransactions() };
+    } catch (error) {
+      logError("Erro ao ler o arquivo da fatura:", error);
+      return { status: "error", error: "Não foi possível ler o arquivo selecionado." };
+    }
+  };
+
+  /** Grava o que a leitura montou (ver planCardImport); se um débito do extrato já pagou a fatura, marca-a como paga. */
+  const importInvoice = async (card: CreditCardRow, plan: CardImportPlan): Promise<ActionResult> => {
+    if (plan.blocked) return fail(plan.blocked);
+    if (plan.rows.length === 0 && plan.paymentMatch === null) return fail("Não há compras novas para importar.");
+    const match = plan.paymentMatch;
+    return perform(
+      () =>
+        importCardPurchases(
+          plan.rows,
+          match ? { cardId: card.id, ref: plan.ref, transactionId: match.transactionId, paidDate: match.date, amount: match.amount } : null,
+        ),
+      "Não foi possível importar a fatura.",
+    );
+  };
+
   return {
     isLoading: data === null,
     views,
+    purchases: loaded.purchases,
+    payments: loaded.payments,
     categoryOptions,
     saveCard,
     removeCard,
@@ -249,5 +295,7 @@ export function useCreditCards() {
     removeInstallments,
     payInvoice,
     undoPayment,
+    readInvoiceFile,
+    importInvoice,
   };
 }

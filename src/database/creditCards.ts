@@ -74,6 +74,50 @@ export async function addCardPurchases(rows: NewPurchase[]): Promise<void> {
   });
 }
 
+export interface InvoicePaymentLink {
+  cardId: number;
+  ref: string;
+  /** Despesa que já está no app e que pagou a fatura. */
+  transactionId: number;
+  /** DD/MM/AAAA */
+  paidDate: string;
+  amount: number;
+}
+
+/**
+ * Grava as compras lidas de uma fatura e, se um débito do extrato já pagou essa fatura, anota o pagamento ligado a
+ * ele (sem criar outra despesa). Tudo ou nada.
+ */
+export async function importCardPurchases(rows: NewPurchase[], payment: InvoicePaymentLink | null): Promise<void> {
+  const db = await getDatabase();
+  db.withTransactionSync(() => {
+    for (const row of rows) {
+      db.runSync(
+        "INSERT INTO card_purchases (card_id, description, amount, date, category, invoice_ref, installment_group_id, installment_number, installment_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        row.card_id,
+        row.description,
+        row.amount,
+        row.date,
+        row.category,
+        row.invoice_ref,
+        row.installment_group_id,
+        row.installment_number,
+        row.installment_total,
+      );
+    }
+    if (payment) {
+      db.runSync(
+        "INSERT OR IGNORE INTO card_invoice_payments (card_id, invoice_ref, paid_date, amount, transaction_id) VALUES (?, ?, ?, ?, ?)",
+        payment.cardId,
+        payment.ref,
+        payment.paidDate,
+        payment.amount,
+        payment.transactionId,
+      );
+    }
+  });
+}
+
 export interface CardPurchaseUpdate {
   description: string;
   amount: number;

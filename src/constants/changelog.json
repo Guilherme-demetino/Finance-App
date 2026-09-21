@@ -253,5 +253,16 @@
       "As compras ficam fora do seu saldo até você pagar a fatura. Ao pagar (depois do fechamento), uma despesa “Cartão de crédito” entra no saldo com a data de hoje, sem contar o mesmo gasto duas vezes. Dá para desfazer o pagamento.",
       "Faturas por pagar aparecem nos avisos do Início e nos lembretes de vencimento. Cartões, compras e pagamentos também entram no backup e na restauração (backups antigos continuam funcionando)."
     ]
+  },
+  {
+    "id": 27,
+    "date": "21/09/2026",
+    "title": "Fatura do cartão por PDF ou CSV",
+    "items": [
+      "Em Cartões e Faturas, cada cartão tem o botão “Importar fatura (PDF ou CSV)”. O app lê o arquivo, mostra a conferência e só grava quando você confirma.",
+      "As compras entram no cartão, na fatura certa, com as parcelas reconhecidas (por exemplo “Notebook 2/5”). Créditos, estornos e o pagamento da fatura anterior são ignorados. Se o app escolher a fatura errada, você troca antes de importar.",
+      "Nada é lançado duas vezes: compras que já estão no cartão (mesma data, descrição e valor, ou a mesma parcela) são ignoradas. Importar o mesmo arquivo de novo não muda nada.",
+      "O pagamento da fatura não duplica com o extrato: se você já pagou pelo app, a linha do extrato é descartada; se a fatura ainda estava em aberto, a linha do extrato marca a fatura como paga, sem criar outra despesa. Vale também na ordem inversa (extrato primeiro, fatura depois)."
+    ]
   }
 ]

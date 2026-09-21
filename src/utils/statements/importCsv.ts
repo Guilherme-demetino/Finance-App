@@ -6,6 +6,8 @@ export interface ImportedTransaction {
   description: string;
   type: TransactionType;
   category: string;
+  /** Pagamento de fatura de cartão reconhecido no extrato: ao importar, marca a fatura como paga (ver cardImport). */
+  cardPayment?: { cardId: number; ref: string };
 }
 
 export interface CsvImportPlan {
@@ -21,6 +23,8 @@ export interface CsvImportPlan {
   invalid: number;
   /** Movimentações entre a conta e caixinhas/investimentos, que não viram receita nem despesa. */
   ignoredTransfers?: number;
+  /** Pagamentos de fatura do extrato que marcam uma fatura do app como paga, em vez de virar despesa avulsa. */
+  cardPaymentsLinked?: number;
 }
 
 export type CsvImportResult =
