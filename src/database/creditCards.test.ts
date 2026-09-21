@@ -64,7 +64,7 @@ describe("compras no cartão viram despesas", () => {
     expect(purchase.transaction_id).toBe(expense.id);
   });
 
-  it("cada parcela é uma despesa: a primeira na data da compra, as outras no fechamento da fatura delas", async () => {
+  it("cada parcela é uma despesa, na data em que é cobrada (mês a mês)", async () => {
     const m = await load();
     const card = await newCard(m); // fecha 28, vence 5
     const rows = planPurchase({ card, description: "Notebook", totalAmount: 3000, date: new Date(2026, 8, 21), category: "Outros", installments: 3, groupId: "g1" });
@@ -79,8 +79,8 @@ describe("compras no cartão viram despesas", () => {
     ]);
     expect((await expenses(m)).map((t) => [t.description, t.date, t.amount])).toEqual([
       ["Notebook (1/3)", "21/09/2026", 1000],
-      ["Notebook (2/3)", "28/10/2026", 1000],
-      ["Notebook (3/3)", "28/11/2026", 1000],
+      ["Notebook (2/3)", "21/10/2026", 1000],
+      ["Notebook (3/3)", "21/11/2026", 1000],
     ]);
     expect(stored.map((p) => p.transaction_id)).toEqual((await expenses(m)).map((t) => t.id));
   });
@@ -218,7 +218,7 @@ describe("conciliação das compras do cartão com as despesas", () => {
     expect(await m.cards.reconcileCardTransactions()).toBe(1);
 
     const [expense] = await m.transactions.getAllTransactions();
-    expect(expense).toMatchObject({ amount: 300, description: "Notebook (2/5)", category_id: "Outros", date: "28/09/2026" });
+    expect(expense).toMatchObject({ amount: 300, description: "Notebook (2/5)", category_id: "Outros", date: "10/08/2026" });
     expect((await m.cards.getAllCardPurchases())[0].transaction_id).toBe(expense.id);
     expect(await m.cards.reconcileCardTransactions()).toBe(0);
   });
@@ -248,6 +248,40 @@ describe("conciliação das compras do cartão com as despesas", () => {
     expect(await m.cards.reconcileCardTransactions()).toBe(1);
 
     expect(await m.cards.getAllCardPurchases()).toEqual([]);
+  });
+
+  describe("ajuste único da data das parcelas (antes iam para o dia do fechamento)", () => {
+    const seed = (m: Modules, cardId: number, group: string, n: number, date: string, ref: string, expenseDate: string) => {
+      const db = rawDb(m);
+      const expense = db.runSync("INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, 'expense', ?)", 50, expenseDate, `X (${n}/3)`, "Outros");
+      db.runSync(
+        "INSERT INTO card_purchases (card_id, description, amount, date, category, invoice_ref, installment_group_id, installment_number, installment_total, transaction_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        cardId, "X", 50, date, "Outros", ref, group, n, 3, expense.lastInsertRowId,
+      );
+    };
+
+    it("parcela importada volta para a data do arquivo; a lançada à mão vai para a compra mais um mês por parcela", async () => {
+      const m = await load();
+      const card = await newCard(m); // fecha 28, vence 5: a fatura 2026-09 fechou em 28/08
+      seed(m, card.id, "imp-1-x-5000-3", 2, "08/08/2026", "2026-09", "28/08/2026");
+      seed(m, card.id, "manual", 2, "10/07/2026", "2026-09", "28/08/2026");
+
+      expect(await m.cards.reconcileCardTransactions()).toBe(2);
+
+      const dates = (await m.transactions.getAllTransactions()).map((t) => t.date).sort();
+      expect(dates).toEqual(["08/08/2026", "10/08/2026"]);
+      expect(await m.cards.reconcileCardTransactions()).toBe(0);
+    });
+
+    it("não mexe numa despesa cuja data o usuário já editou", async () => {
+      const m = await load();
+      const card = await newCard(m);
+      seed(m, card.id, "imp-1-x-5000-3", 2, "08/08/2026", "2026-09", "15/08/2026");
+
+      expect(await m.cards.reconcileCardTransactions()).toBe(0);
+
+      expect((await m.transactions.getAllTransactions())[0].date).toBe("15/08/2026");
+    });
   });
 
   it("créditos (valor negativo) não ganham despesa", async () => {

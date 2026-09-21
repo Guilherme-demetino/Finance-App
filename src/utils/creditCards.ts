@@ -1,6 +1,6 @@
 import type { CardPaymentRow, CardPurchaseRow, CreditCardRow } from "../types";
 import { splitAmountIntoInstallments } from "./currency";
-import { formatDateToString } from "./dates";
+import { addMonthsToDateString, formatDateToString } from "./dates";
 import { parseDueDate } from "./dueReminders";
 
 /**
@@ -228,18 +228,6 @@ export function cardUsage(card: CreditCardRow, purchases: CardPurchaseRow[], pay
 
 export type NewPurchase = Omit<CardPurchaseRow, "id" | "transaction_id">;
 
-/**
- * Data da despesa que a compra gera: a data da compra. Parcela 2 em diante cai no dia do fechamento da fatura em que
- * está (mês a mês, como as parcelas do resto do app), porque a data gravada nelas é a da compra original.
- */
-export function purchaseExpenseDate(
-  purchase: { date: string; invoice_ref: string; installment_number: number | null },
-  card: CardDays,
-): string {
-  if (purchase.installment_number === null || purchase.installment_number < 2) return purchase.date;
-  return formatDateToString(invoiceDates(purchase.invoice_ref, card).closing);
-}
-
 /** Descrição da despesa: a da compra, com o número da parcela quando é parcelada ("Notebook (2/5)"). */
 export function purchaseExpenseDescription(purchase: {
   description: string;
@@ -254,7 +242,7 @@ export function purchaseExpenseDescription(purchase: {
 /**
  * As linhas de uma compra: uma só, ou uma por parcela, cada uma numa fatura (a primeira na que
  * a data da compra manda, as outras nos meses seguintes). O valor total é dividido em centavos
- * exatos (a diferença vai na última parcela).
+ * exatos (a diferença vai na última parcela). Cada parcela tem a data em que é cobrada: a da compra mais um mês por parcela.
  */
 export function planPurchase(input: {
   card: CreditCardRow;
@@ -273,7 +261,8 @@ export function planPurchase(input: {
     card_id: input.card.id,
     description: input.description.trim(),
     amount,
-    date: formatDateToString(input.date),
+    // Cada parcela leva a data em que é cobrada (mês a mês), como nas faturas dos bancos: é a data da despesa dela.
+    date: addMonthsToDateString(formatDateToString(input.date), index),
     category: input.category,
     invoice_ref: addMonthsToRef(firstRef, index),
     installment_group_id: count > 1 ? input.groupId : null,

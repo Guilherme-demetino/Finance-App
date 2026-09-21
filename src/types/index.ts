@@ -84,7 +84,7 @@ export interface CardPurchaseRow {
   card_id: number;
   description: string;
   amount: number;
-  date: string; // DD/MM/AAAA — data da compra (as parcelas repetem a data original)
+  date: string; // DD/MM/AAAA — data da compra; cada parcela traz a data em que foi cobrada
   category: string;
   /** Fatura em que a compra cai: AAAA-MM do mês de VENCIMENTO da fatura. Gravada na compra: mudar o dia de fechamento não mexe no que já foi lançado. */
   invoice_ref: string;

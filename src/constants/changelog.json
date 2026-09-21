@@ -346,5 +346,15 @@
       "Ao abrir o app, as compras que você já tinha no cartão ganham a despesa delas, e as despesas “Fatura … (pagamento)” criadas antes por pagamentos de fatura são apagadas para o gasto não contar em dobro. Por isso os totais dos meses passados podem mudar.",
       "Apagar no Histórico a despesa de uma compra de cartão tira a compra da fatura; editar a despesa (valor, data, categoria) atualiza a compra. Apagar compra, fatura ou cartão na aba Cartões também apaga as despesas."
     ]
+  },
+  {
+    "id": 40,
+    "date": "21/09/2026",
+    "title": "Parcelas do cartão na data em que são cobradas",
+    "items": [
+      "Ao importar a fatura do cartão, cada parcela (a partir da 2ª) agora entra nas despesas na data que vem no arquivo, que é a data em que o banco a cobrou. Antes ia para o dia de fechamento da fatura, e uma parcela de agosto podia cair em setembro.",
+      "Compras parceladas lançadas à mão passam a ter uma data por parcela: a da compra mais um mês para cada parcela.",
+      "Ao abrir o app, as parcelas que já estavam nas despesas no dia de fechamento são ajustadas uma vez para a data certa. Despesas cuja data você mesmo editou não são mexidas."
+    ]
   }
 ]

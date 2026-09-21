@@ -202,7 +202,9 @@ describe("importar a fatura do cartão (CSV)", () => {
       ["Notebook", 40, 2, 5],
     ]);
     expect(new Set(stored.map((p) => p.invoice_ref)).size).toBe(1);
-    // Cada compra é uma despesa nas despesas do app (a data da parcela 2 é o fechamento da fatura dela).
+    // Cada compra é uma despesa nas despesas do app, na data que vem no arquivo (inclusive a da parcela 2: a fatura já
+    // traz a data em que cada parcela foi cobrada).
+    expect((await getAllTransactions()).map((t) => t.date)).toEqual([formatDateToString(PURCHASE_DAY), formatDateToString(PURCHASE_DAY)]);
     expect((await getAllTransactions()).map((t) => [t.description, t.amount, t.category_id]).sort()).toEqual([
       ["Mercado", 60, "Alimentação"],
       ["Notebook (2/5)", 40, "Geral"],

@@ -1,5 +1,7 @@
 import type { CardPaymentRow, CardPurchaseRow, CreditCardRow } from "../types";
-import { purchaseExpenseDate, purchaseExpenseDescription, type NewPurchase } from "../utils/creditCards";
+import { invoiceDates, purchaseExpenseDescription, type NewPurchase } from "../utils/creditCards";
+import { addMonthsToDateString, formatDateToString } from "../utils/dates";
+import { getMeta, setMeta } from "./appMeta";
 import { getDatabase } from "./sqlite";
 
 type Db = Awaited<ReturnType<typeof getDatabase>>;
@@ -44,13 +46,13 @@ function findCard(db: Db, cardId: number): CreditCardRow {
 }
 
 /** Grava a compra e, se for um gasto (valor positivo), a despesa dela nas despesas do app. Créditos não geram despesa. */
-function insertPurchase(db: Db, row: NewPurchase, card: CreditCardRow): void {
+function insertPurchase(db: Db, row: NewPurchase): void {
   let transactionId: number | null = null;
   if (row.amount > 0) {
     const expense = db.runSync(
       "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, 'expense', ?)",
       row.amount,
-      purchaseExpenseDate(row, card),
+      row.date,
       purchaseExpenseDescription(row),
       row.category,
     );
@@ -99,14 +101,13 @@ export async function getAllCardPurchases(): Promise<CardPurchaseRow[]> {
 export async function addCardPurchases(rows: NewPurchase[]): Promise<void> {
   const db = await getDatabase();
   db.withTransactionSync(() => {
-    const cards = new Map<number, CreditCardRow>();
+    const checked = new Set<number>();
     for (const row of rows) {
-      let card = cards.get(row.card_id);
-      if (!card) {
-        card = findCard(db, row.card_id);
-        cards.set(row.card_id, card);
+      if (!checked.has(row.card_id)) {
+        findCard(db, row.card_id); // recusa compra de um cartão que não existe
+        checked.add(row.card_id);
       }
-      insertPurchase(db, row, card);
+      insertPurchase(db, row);
     }
   });
 }
@@ -140,12 +141,11 @@ export async function updateCardPurchase(id: number, data: CardPurchaseUpdate): 
       id,
     );
     if (current.transaction_id !== null) {
-      const card = findCard(db, current.card_id);
       const next = { ...current, description, date: data.date, invoice_ref: data.invoiceRef };
       db.runSync(
         "UPDATE transactions SET amount = ?, date = ?, description = ?, category_id = ? WHERE id = ?",
         data.amount,
-        purchaseExpenseDate(next, card),
+        next.date,
         purchaseExpenseDescription(next),
         data.category,
         current.transaction_id,
@@ -247,19 +247,13 @@ export async function reconcileCardTransactions(): Promise<number> {
     changed += orphans.changes;
 
     const missing = db.getAllSync<CardPurchaseRow>("SELECT * FROM card_purchases WHERE transaction_id IS NULL AND amount > 0 ORDER BY id");
-    const cards = new Map<number, CreditCardRow>();
     for (const purchase of missing) {
-      let card = cards.get(purchase.card_id);
-      if (!card) {
-        const [found] = db.getAllSync<CreditCardRow>("SELECT * FROM credit_cards WHERE id = ?", purchase.card_id);
-        if (!found) continue;
-        card = found;
-        cards.set(purchase.card_id, card);
-      }
+      const [card] = db.getAllSync<CreditCardRow>("SELECT * FROM credit_cards WHERE id = ?", purchase.card_id);
+      if (!card) continue;
       const expense = db.runSync(
         "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, 'expense', ?)",
         purchase.amount,
-        purchaseExpenseDate(purchase, card),
+        purchase.date,
         purchaseExpenseDescription(purchase),
         purchase.category,
       );
@@ -267,5 +261,40 @@ export async function reconcileCardTransactions(): Promise<number> {
       changed++;
     }
   });
+  changed += await alignInstallmentExpenseDates();
+  return changed;
+}
+
+const INSTALLMENT_DATES_KEY = "card_installment_dates_v2";
+
+/**
+ * Uma vez só: parcelas (a partir da 2ª) foram lançadas nas despesas no dia de fechamento da fatura. Agora a despesa de
+ * cada parcela tem a data em que ela é cobrada: a que vem no arquivo importado (uma fatura do banco já traz a data de cada
+ * parcela) ou, nas lançadas à mão, a da compra mais um mês por parcela. Só mexe na despesa que ainda está no dia de
+ * fechamento, para não desfazer uma data que o usuário tenha editado. Devolve quantas despesas mudaram.
+ */
+async function alignInstallmentExpenseDates(): Promise<number> {
+  if ((await getMeta(INSTALLMENT_DATES_KEY)) === "1") return 0;
+  const db = await getDatabase();
+  let changed = 0;
+  db.withTransactionSync(() => {
+    const rows = db.getAllSync<CardPurchaseRow & { closing_day: number; due_day: number; expense_date: string }>(
+      `SELECT p.*, c.closing_day AS closing_day, c.due_day AS due_day, t.date AS expense_date
+       FROM card_purchases p
+       JOIN credit_cards c ON c.id = p.card_id
+       JOIN transactions t ON t.id = p.transaction_id
+       WHERE p.installment_number >= 2`,
+    );
+    for (const row of rows) {
+      const closing = formatDateToString(invoiceDates(row.invoice_ref, row).closing);
+      if (row.expense_date !== closing) continue;
+      const imported = (row.installment_group_id ?? "").startsWith("imp-");
+      const target = imported ? row.date : addMonthsToDateString(row.date, (row.installment_number ?? 1) - 1);
+      if (target === row.expense_date) continue;
+      db.runSync("UPDATE transactions SET date = ? WHERE id = ?", target, row.transaction_id);
+      changed++;
+    }
+  });
+  await setMeta(INSTALLMENT_DATES_KEY, "1");
   return changed;
 }

@@ -6,7 +6,6 @@ import {
   currentInvoiceRef,
   formatRef,
   invoiceDates,
-  purchaseExpenseDate,
   purchaseExpenseDescription,
   invoiceRefFor,
   invoiceStatus,
@@ -345,12 +344,12 @@ describe("planejar a compra", () => {
     });
   });
 
-  it("parcelada: cada parcela na fatura seguinte, com a data da compra e a mesma série", () => {
+  it("parcelada: cada parcela na fatura seguinte, com a data em que é cobrada (mês a mês) e a mesma série", () => {
     const rows = planPurchase({ ...base, installments: 3 });
 
     expect(rows.map((r) => r.invoice_ref)).toEqual(["2026-10", "2026-11", "2026-12"]);
     expect(rows.map((r) => [r.installment_number, r.installment_total])).toEqual([[1, 3], [2, 3], [3, 3]]);
-    expect(new Set(rows.map((r) => r.date))).toEqual(new Set(["21/09/2026"]));
+    expect(rows.map((r) => r.date)).toEqual(["21/09/2026", "21/10/2026", "21/11/2026"]);
     expect(new Set(rows.map((r) => r.installment_group_id))).toEqual(new Set(["g1"]));
   });
 
@@ -359,6 +358,12 @@ describe("planejar a compra", () => {
 
     expect(rows.map((r) => r.amount)).toEqual([33.33, 33.33, 33.34]);
     expect(Math.round(rows.reduce((s, r) => s + r.amount, 0) * 100)).toBe(10000);
+  });
+
+  it("a data da parcela num mês mais curto vai para o último dia dele", () => {
+    const rows = planPurchase({ ...base, date: day(2026, 1, 31), installments: 3 });
+
+    expect(rows.map((r) => r.date)).toEqual(["31/01/2026", "28/02/2026", "31/03/2026"]);
   });
 
   it("parcelas atravessam a virada de ano", () => {
@@ -491,16 +496,6 @@ describe("créditos da fatura (valor negativo)", () => {
 });
 
 describe("a despesa que a compra gera", () => {
-  it("compra à vista e primeira parcela: na data da compra", () => {
-    expect(purchaseExpenseDate({ date: "12/08/2026", invoice_ref: "2026-09", installment_number: null }, card())).toBe("12/08/2026");
-    expect(purchaseExpenseDate({ date: "12/08/2026", invoice_ref: "2026-09", installment_number: 1 }, card())).toBe("12/08/2026");
-  });
-
-  it("da segunda parcela em diante: no dia do fechamento da fatura em que ela está", () => {
-    // Fecha dia 28, vence dia 5: a fatura que vence em 05/12 fechou em 28/11.
-    expect(purchaseExpenseDate({ date: "12/08/2026", invoice_ref: "2026-12", installment_number: 3 }, card())).toBe("28/11/2026");
-  });
-
   it("a descrição leva o número da parcela, sem repetir quando já está escrito", () => {
     expect(purchaseExpenseDescription({ description: "Mercado", installment_number: null, installment_total: null })).toBe("Mercado");
     expect(purchaseExpenseDescription({ description: "Notebook", installment_number: 2, installment_total: 5 })).toBe("Notebook (2/5)");
