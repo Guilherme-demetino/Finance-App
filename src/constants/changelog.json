@@ -273,5 +273,16 @@
       "A importação da fatura do cartão Nubank em CSV agora lê também o arquivo com as colunas “date, title, amount” (sem a coluna de categoria). Antes, as compras eram lidas como se fossem entradas.",
       "As linhas “Pagamento recebido” e “Fatura anterior” continuam de fora: só as compras entram na fatura."
     ]
+  },
+  {
+    "id": 29,
+    "date": "21/09/2026",
+    "title": "Pagamentos antecipados descontam da fatura",
+    "items": [
+      "Ao importar a fatura do cartão, as linhas “Pagamento recebido” (pagos antes do fechamento) agora entram como pagamento antecipado e descontam do total da fatura. Antes eram ignoradas.",
+      "A conferência mostra as compras, o pagamento antecipado e quanto a fatura fica depois do desconto. Na fatura, o pagamento aparece em negativo e uma linha explica a conta (compras − pagamentos = a pagar).",
+      "Se os pagamentos cobrirem tudo, a fatura fica “Quitada”, sem nada a pagar e sem aviso. Pagar a fatura tira do saldo só o que falta, e o pagamento antecipado também libera o limite do cartão.",
+      "“Fatura anterior” e estornos continuam de fora."
+    ]
   }
 ]

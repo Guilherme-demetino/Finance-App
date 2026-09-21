@@ -29,11 +29,17 @@ export function InvoiceImportModal({ visible, cardName, plan, onSelectRef, onCon
   const canConfirm = plan !== null && plan.blocked === null && (rows.length > 0 || plan.paymentMatch !== null) && !isBusy;
   const ignored: string[] = [];
   if (plan && plan.duplicates > 0) ignored.push(`${plan.duplicates} já lançada${plan.duplicates === 1 ? "" : "s"}`);
-  if (plan && plan.ignoredCredits > 0) ignored.push(`${plan.ignoredCredits} crédito${plan.ignoredCredits === 1 ? "" : "s"}/pagamento${plan.ignoredCredits === 1 ? "" : "s"}`);
+  if (plan && plan.ignoredCredits > 0) ignored.push(`${plan.ignoredCredits} estorno/saldo`);
+
+  const purchasesCount = plan?.purchasesCount ?? 0;
+  const paymentsCount = plan?.paymentsCount ?? 0;
+  const purchasesText = `${purchasesCount} ${purchasesCount === 1 ? "compra" : "compras"}`;
+  const paymentsText = `${paymentsCount} ${paymentsCount === 1 ? "pagamento" : "pagamentos"}`;
+  const importText = paymentsCount === 0 ? purchasesText : purchasesCount === 0 ? paymentsText : `${purchasesText} e ${paymentsText}`;
 
   const confirmLabel =
     rows.length > 0
-      ? `Importar ${rows.length} ${rows.length === 1 ? "compra" : "compras"}`
+      ? `Importar ${importText}`
       : plan?.paymentMatch
         ? "Marcar fatura como paga"
         : "Nada novo para importar";
@@ -44,9 +50,17 @@ export function InvoiceImportModal({ visible, cardName, plan, onSelectRef, onCon
       {plan ? (
         <>
           <Text style={styles.summary}>
-            {rows.length} {rows.length === 1 ? "compra nova" : "compras novas"} ({formatCurrency(plan.total)})
+            {purchasesCount} {purchasesCount === 1 ? "compra nova" : "compras novas"} ({formatCurrency(plan.purchasesTotal)})
+            {paymentsCount > 0
+              ? `, ${paymentsCount} ${paymentsCount === 1 ? "pagamento antecipado" : "pagamentos antecipados"} (− ${formatCurrency(plan.paymentsTotal)})`
+              : ""}
             {ignored.length > 0 ? `. Ignoradas: ${ignored.join(", ")}` : ""}.
           </Text>
+          {paymentsCount > 0 ? (
+            <Text style={styles.match}>
+              Os pagamentos recebidos antes do fechamento descontam do total: a fatura fica em {formatCurrency(plan.invoiceTotal)}.
+            </Text>
+          ) : null}
 
           <Text style={styles.label}>Entra na fatura de</Text>
           <View style={styles.chipRow}>

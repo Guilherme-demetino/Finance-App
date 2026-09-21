@@ -303,7 +303,7 @@ describe("importar a fatura pela tela", () => {
       "date,category,title,amount",
       `${iso(daysAgo(90))},alimentação,Mercado,60.00`,
       `${iso(daysAgo(90))},casa,Notebook - Parcela 2/5,40.00`,
-      `${iso(daysAgo(90))},pagamento,Pagamento recebido,-900.00`,
+      `${iso(daysAgo(90))},estorno,Estorno Loja,-15.00`,
     ].join("\n");
 
   async function seedCard() {
@@ -323,14 +323,33 @@ describe("importar a fatura pela tela", () => {
 
     expect(textOf(tree)).toContain("Importar fatura do Inter");
     expect(textOf(tree)).toContain("2 compras novas (R$ 100,00)");
-    expect(textOf(tree)).toContain("Ignoradas: 1 crédito/pagamento");
+    expect(textOf(tree)).toContain("Ignoradas: 1 estorno/saldo");
     expect(textOf(tree)).toContain("Notebook (2/5)");
     expect(await cards.getAllCardPurchases()).toEqual([]); // nada gravado antes de confirmar
 
     await press(tree, "Importar 2 compras");
 
-    expect(textOf(tree)).toMatch(/2 compras importadas na fatura de [A-Z]{3}\/\d{4}\./);
+    expect(textOf(tree)).toMatch(/Importado na fatura de [A-Z]{3}\/\d{4}: 2 compras\./);
     expect(await cards.getAllCardPurchases()).toHaveLength(2);
+  });
+
+  it("pagamento recebido aparece como pagamento antecipado e desconta do total da fatura", async () => {
+    const cards = await seedCard();
+    const tree = await mount();
+    mockPick.bytes = bytesOf(`${csv()}
+${iso(daysAgo(90))},pagamento,Pagamento recebido,-30.00`);
+
+    await press(tree, "Importar fatura do Inter");
+
+    expect(textOf(tree)).toContain("2 compras novas (R$ 100,00)");
+    expect(textOf(tree)).toContain("1 pagamento antecipado (− R$ 30,00)");
+    expect(textOf(tree)).toContain("a fatura fica em R$ 70,00");
+    await press(tree, "Importar 2 compras e 1 pagamento");
+
+    expect(textOf(tree)).toMatch(/Importado na fatura de [A-Z]{3}\/\d{4}: 2 compras e 1 pagamento antecipado\./);
+    expect((await cards.getAllCardPurchases()).map((row) => row.amount).sort((a, b) => a - b)).toEqual([-30, 40, 60]);
+    // A fatura mostra o total já descontado.
+    expect(buttonStartingWith(tree, "Fatura Inter").props.accessibilityLabel).toContain("R$ 70,00");
   });
 
   it("dá para trocar a fatura escolhida antes de importar", async () => {

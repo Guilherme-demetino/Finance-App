@@ -127,7 +127,7 @@ const invoiceCsv = () =>
     "date,category,title,amount",
     `${iso(PURCHASE_DAY)},alimentação,Mercado,60.00`,
     `${iso(PURCHASE_DAY)},casa,Notebook - Parcela 2/5,40.00`,
-    `${iso(PURCHASE_DAY)},pagamento,Pagamento recebido,-900.00`,
+    `${iso(PURCHASE_DAY)},estorno,Estorno Loja,-15.00`,
   ].join("\n");
 
 /** O extrato da conta (formato Nubank de conta) com uma linha de débito na data dada. */
@@ -276,6 +276,46 @@ describe("importar a fatura do cartão (CSV)", () => {
     expect(plan!.blocked).toContain("já está paga");
     expect(result).toMatchObject({ ok: false });
     expect(await getAllCardPurchases()).toHaveLength(2);
+  });
+});
+
+describe("pagamento recebido na fatura", () => {
+  it("desconta do total, e pagar a fatura tira da conta só o que falta", async () => {
+    await mountApp();
+    const card = await addCard();
+    const withPayment = `${invoiceCsv()}
+${iso(PURCHASE_DAY)},pagamento,Pagamento recebido,-30.00`;
+
+    const { plan, result } = await importInvoiceFile(card, withPayment);
+
+    expect(result).toEqual({ ok: true });
+    expect(plan!.paymentsCount).toBe(1);
+    const stored = await getAllCardPurchases();
+    expect(stored.map((row) => row.amount).sort((a, b) => a - b)).toEqual([-30, 40, 60]);
+    const invoice = seen.cards.views[0].invoices.find((item) => item.total !== 0)!;
+    expect(invoice.total).toBe(70);
+    expect(seen.cards.views[0].usage.used).toBe(70);
+
+    await act(async () => {
+      await seen.cards.payInvoice(card, invoice);
+    });
+    await settle();
+
+    expect((await getAllTransactions())[0]).toMatchObject({ amount: 70, category_id: "Cartão de crédito" });
+  });
+
+  it("importar de novo o mesmo arquivo com o pagamento não repete nada", async () => {
+    await mountApp();
+    const card = await addCard();
+    const withPayment = `${invoiceCsv()}
+${iso(PURCHASE_DAY)},pagamento,Pagamento recebido,-30.00`;
+    await importInvoiceFile(card, withPayment);
+
+    const { plan } = await importInvoiceFile(card, withPayment);
+
+    expect(plan!.rows).toEqual([]);
+    expect(plan!.duplicates).toBe(3);
+    expect(await getAllCardPurchases()).toHaveLength(3);
   });
 });
 

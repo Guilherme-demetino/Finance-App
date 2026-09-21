@@ -44,10 +44,14 @@ export function InvoiceSection({
     overdue: colors.expense,
     paid: colors.income,
     empty: colors.textMuted,
+    settled: colors.income,
   };
   const tint = statusColor[invoice.status];
   const statusLabel = INVOICE_STATUS_LABELS[invoice.status];
   const isPaid = invoice.status === "paid";
+  // Pagamentos feitos antes do fechamento (valor negativo) já estão descontados do total.
+  const advance = invoice.purchases.filter((purchase) => purchase.amount < 0).reduce((sum, purchase) => sum - purchase.amount, 0);
+  const gross = invoice.total + advance;
   const canPay = invoice.status === "closed" || invoice.status === "overdue";
 
   return (
@@ -92,14 +96,16 @@ export function InvoiceSection({
                 <Text style={styles.purchaseAmount}>{formatCurrency(purchase.amount)}</Text>
                 {!isPaid ? (
                   <View style={styles.purchaseActions}>
-                    <TouchableOpacity
-                      onPress={() => onEditPurchase(purchase)}
-                      style={styles.iconButton}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Editar compra ${purchase.description}`}
-                    >
-                      <Ionicons name="pencil" size={16} color={colors.textSecondary} />
-                    </TouchableOpacity>
+                    {purchase.amount > 0 ? (
+                      <TouchableOpacity
+                        onPress={() => onEditPurchase(purchase)}
+                        style={styles.iconButton}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Editar compra ${purchase.description}`}
+                      >
+                        <Ionicons name="pencil" size={16} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    ) : null}
                     <TouchableOpacity
                       onPress={() => onDeletePurchase(purchase)}
                       style={styles.iconButton}
@@ -113,6 +119,12 @@ export function InvoiceSection({
               </View>
             ))
           )}
+
+          {advance > 0 ? (
+            <Text style={[styles.small, styles.spaced]}>
+              Compras {formatCurrency(gross)} − pagamentos antecipados {formatCurrency(advance)} = {formatCurrency(invoice.total)} a pagar.
+            </Text>
+          ) : null}
 
           {invoice.byCategory.length > 1 ? (
             <View style={styles.spaced}>
