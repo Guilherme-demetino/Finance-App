@@ -1,6 +1,7 @@
 import type { CardPaymentRow, CardPurchaseRow, CreditCardRow } from "../types";
 import {
   addMonthsToRef,
+  CARD_CREDIT_CATEGORY,
   currentInvoiceRef,
   invoiceRefFor,
   MAX_INSTALLMENTS,
@@ -13,9 +14,11 @@ import { normalizeText } from "./statements/statementParsing";
 
 /**
  * Leitura da fatura do cartão (PDF, CSV ou planilha), sem lançar nada duas vezes:
- * - a fatura vira compras no cartão (fora do saldo), e o que já está lançado é ignorado;
- * - o pagamento da fatura que aparece no extrato da conta NÃO vira despesa: o dinheiro só entra no saldo quando a
- *   fatura é paga na aba Cartões (ver ignoreCardPayments).
+ * - cada compra da fatura vira uma compra no cartão e uma despesa na data da compra; o que já está lançado é ignorado;
+ * - pagamento recebido (antecipado) e estorno da fatura viram créditos (valor negativo): reduzem o total a pagar, sem
+ *   contar como receita nem como gasto;
+ * - o pagamento da fatura que aparece no extrato da conta NÃO vira despesa: o gasto já foi contado nas compras (ver
+ *   ignoreCardPayments).
  */
 
 const cents = (value: number) => Math.round(value * 100);
@@ -49,10 +52,15 @@ export function splitInstallment(description: string): SplitDescription {
 const PAYMENT_LINE = /(pagamento|pgto|pag\.?)\s*(de\s*)?(fatura|recebido|efetuado|on-?line|em\s+\d)/;
 const BALANCE_LINE = /fatura anterior|saldo (anterior|restante)|total (da )?fatura/;
 
-/** Linha de pagamento recebido ou de saldo da fatura anterior: aparece na própria fatura, mas não é compra e não é lançada. */
-export function isInvoicePaymentLine(description: string): boolean {
+/** Saldo ou total da fatura anterior: aparece na própria fatura, mas não é compra nem crédito e não é lançado. */
+export function isBalanceLine(description: string): boolean {
+  return BALANCE_LINE.test(normalizeText(description));
+}
+
+/** Pagamento recebido na fatura (feito antes do fechamento): entra como crédito e reduz o total a pagar. */
+export function isReceivedPayment(description: string): boolean {
   const text = normalizeText(description);
-  return PAYMENT_LINE.test(text) || BALANCE_LINE.test(text);
+  return PAYMENT_LINE.test(text) && !BALANCE_LINE.test(text);
 }
 
 // Contas de consumo também têm "fatura" ("pagamento de fatura de energia"): essas são despesas de verdade.
@@ -75,15 +83,21 @@ export interface CardImportPlan {
   ref: string;
   /** A fatura detectada e as vizinhas, para o usuário trocar se a leitura errou. */
   refOptions: string[];
-  /** Compras novas, prontas para gravar. */
+  /** Lançamentos novos, prontos para gravar: compras e créditos (estes com valor negativo). */
   rows: NewPurchase[];
+  /** Quantas compras e quanto somam entre os lançamentos novos. */
+  purchasesCount: number;
+  purchasesTotal: number;
+  /** Quantos créditos (pagamento recebido, estorno) e quanto somam (positivo): reduzem o total a pagar. */
+  creditsCount: number;
+  creditsTotal: number;
   /** Compras que já estavam lançadas (mesma data, descrição e valor; ou a mesma parcela). */
   duplicates: number;
-  /** Pagamentos recebidos, estornos e saldos da fatura anterior, que a leitura não lança como compra. */
+  /** Saldos da fatura anterior, que a leitura não lança. */
   ignoredCredits: number;
-  /** Compras lidas no arquivo (novas + já lançadas). */
+  /** Lançamentos lidos no arquivo (novos + já lançados). */
   totalRows: number;
-  /** Soma das compras novas. */
+  /** Compras novas menos os créditos novos: quanto os lançamentos novos mudam o total a pagar. */
   total: number;
   /** Motivo de não poder importar nessa fatura (ex.: já paga); null se pode. */
   blocked: string | null;
@@ -144,18 +158,19 @@ export function planCardImport(input: {
   let ignoredCredits = 0;
 
   const lines = input.candidates.flatMap((candidate) => {
-    // Pagamento recebido (feito antes do fechamento), estorno e saldo anterior não são compras: o total da fatura
-    // é o gasto do período, sem descontar o que já foi pago.
-    if (candidate.type !== "expense" || isInvoicePaymentLine(candidate.description)) {
+    if (isBalanceLine(candidate.description)) {
       ignoredCredits++;
       return [];
     }
     if (!parseDueDate(candidate.date) || !(candidate.amount > 0)) return [];
-    return [{ candidate, split: splitInstallment(candidate.description) }];
+    // Pagamento recebido (antecipado), estorno e reembolso: crédito que reduz o total a pagar (valor negativo).
+    const credit = isReceivedPayment(candidate.description) || candidate.type !== "expense";
+    const split = credit ? { base: candidate.description.trim(), number: null, total: null } : splitInstallment(candidate.description);
+    return [{ candidate, split, credit }];
   });
 
   const detected = detectInvoiceRef(
-    lines.map((line) => ({ date: line.candidate.date, installment: line.split.number !== null })),
+    lines.filter((line) => !line.credit).map((line) => ({ date: line.candidate.date, installment: line.split.number !== null })),
     card,
     today,
   );
@@ -171,8 +186,9 @@ export function planCardImport(input: {
 
   const rows: NewPurchase[] = [];
   let duplicates = 0;
-  for (const { candidate, split } of lines) {
-    const key = purchaseKey(split, split.base, candidate.amount, candidate.date);
+  for (const { candidate, split, credit } of lines) {
+    const amount = credit ? -candidate.amount : candidate.amount;
+    const key = purchaseKey(split, split.base, amount, candidate.date);
     const available = remaining.get(key) ?? 0;
     if (available > 0) {
       remaining.set(key, available - 1);
@@ -182,9 +198,9 @@ export function planCardImport(input: {
     rows.push({
       card_id: card.id,
       description: split.base.slice(0, 80),
-      amount: candidate.amount,
+      amount,
       date: candidate.date,
-      category: candidate.category,
+      category: credit ? CARD_CREDIT_CATEGORY : candidate.category,
       invoice_ref: ref,
       installment_group_id: split.number !== null ? groupIdFor(card.id, split.base, candidate.amount, split.total as number) : null,
       installment_number: split.number,
@@ -192,13 +208,20 @@ export function planCardImport(input: {
     });
   }
 
-  const total = Math.round(rows.reduce((sum, row) => sum + row.amount, 0) * 100) / 100;
+  const round2 = (value: number) => Math.round(value * 100) / 100;
+  const total = round2(rows.reduce((sum, row) => sum + row.amount, 0));
+  const purchaseRows = rows.filter((row) => row.amount > 0);
+  const creditRows = rows.filter((row) => row.amount < 0);
   const blocked = rows.length > 0 ? purchaseBlockedByPayment([ref], input.payments, card.id) : null;
 
   return {
     ref,
     refOptions,
     rows,
+    purchasesCount: purchaseRows.length,
+    purchasesTotal: round2(purchaseRows.reduce((sum, row) => sum + row.amount, 0)),
+    creditsCount: creditRows.length,
+    creditsTotal: round2(-creditRows.reduce((sum, row) => sum + row.amount, 0)),
     duplicates,
     ignoredCredits,
     totalRows: rows.length + duplicates,
@@ -211,9 +234,9 @@ export function planCardImport(input: {
 
 /**
  * Tira do extrato as linhas de pagamento de fatura de cartão (sempre, com ou sem cartão cadastrado): o gasto do cartão
- * só entra no saldo quando a fatura é paga na aba Cartões, então importá-las também contaria o mesmo dinheiro duas
- * vezes. Só olha despesas: um "pagamento recebido" em conta é uma entrada de verdade. As linhas descartadas são
- * contadas para a conferência mostrar o que ficou de fora.
+ * já foi contado compra por compra, na data de cada uma, então o pagamento da fatura é só a liquidação e importá-lo
+ * também contaria o mesmo dinheiro duas vezes. Só olha despesas: um "pagamento recebido" em conta é uma entrada de
+ * verdade. As linhas descartadas são contadas para a conferência mostrar o que ficou de fora.
  */
 export function ignoreCardPayments(plan: CsvImportPlan): CsvImportPlan {
   const toImport: ImportedTransaction[] = [];

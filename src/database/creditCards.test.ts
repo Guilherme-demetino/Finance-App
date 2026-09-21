@@ -16,6 +16,7 @@ async function load() {
     cards: jest.requireActual<typeof import("./creditCards")>("./creditCards"),
     transactions: jest.requireActual<typeof import("./transactions")>("./transactions"),
     sqlite,
+    db: mockState.db,
   };
 }
 
@@ -48,10 +49,24 @@ describe("cartões", () => {
   });
 });
 
-describe("compras no cartão", () => {
-  it("grava a compra à vista e as parcelas, cada uma na sua fatura, todas de uma vez", async () => {
+describe("compras no cartão viram despesas", () => {
+  const expenses = async (m: Modules) => (await m.transactions.getAllTransactions()).slice().reverse();
+
+  it("a compra à vista vira uma despesa na data da compra, com a categoria dela", async () => {
     const m = await load();
     const card = await newCard(m);
+
+    await m.cards.addCardPurchases(planPurchase({ card, description: "Mercado", totalAmount: 80.5, date: new Date(2026, 7, 12), category: "Alimentação", installments: 1, groupId: "a" }));
+
+    const [expense] = await m.transactions.getAllTransactions();
+    expect(expense).toMatchObject({ amount: 80.5, date: "12/08/2026", description: "Mercado", type: "expense", category_id: "Alimentação" });
+    const [purchase] = await m.cards.getAllCardPurchases();
+    expect(purchase.transaction_id).toBe(expense.id);
+  });
+
+  it("cada parcela é uma despesa: a primeira na data da compra, as outras no fechamento da fatura delas", async () => {
+    const m = await load();
+    const card = await newCard(m); // fecha 28, vence 5
     const rows = planPurchase({ card, description: "Notebook", totalAmount: 3000, date: new Date(2026, 8, 21), category: "Outros", installments: 3, groupId: "g1" });
 
     await m.cards.addCardPurchases(rows);
@@ -62,86 +77,96 @@ describe("compras no cartão", () => {
       ["2026-11", 1000, 2, 3, "g1"],
       ["2026-12", 1000, 3, 3, "g1"],
     ]);
+    expect((await expenses(m)).map((t) => [t.description, t.date, t.amount])).toEqual([
+      ["Notebook (1/3)", "21/09/2026", 1000],
+      ["Notebook (2/3)", "28/10/2026", 1000],
+      ["Notebook (3/3)", "28/11/2026", 1000],
+    ]);
+    expect(stored.map((p) => p.transaction_id)).toEqual((await expenses(m)).map((t) => t.id));
   });
 
-  it("uma compra que falha no meio não deixa parcelas pela metade (tudo ou nada)", async () => {
+  it("crédito da fatura (valor negativo) não vira despesa nem receita", async () => {
+    const m = await load();
+    const card = await newCard(m);
+
+    await m.cards.addCardPurchases([
+      { card_id: card.id, description: "Pagamento recebido", amount: -450, date: "15/08/2026", category: "Crédito na fatura", invoice_ref: "2026-09", installment_group_id: null, installment_number: null, installment_total: null },
+    ]);
+
+    expect(await m.transactions.getAllTransactions()).toEqual([]);
+    expect((await m.cards.getAllCardPurchases())[0]).toMatchObject({ amount: -450, transaction_id: null });
+  });
+
+  it("uma compra que falha no meio não deixa parcelas nem despesas pela metade (tudo ou nada)", async () => {
     const m = await load();
     const card = await newCard(m);
     const rows = planPurchase({ card, description: "X", totalAmount: 90, date: new Date(2026, 8, 21), category: "Outros", installments: 3, groupId: "g" });
-    // Uma linha com card_id nulo estoura a restrição NOT NULL na terceira parcela.
-    const broken = rows.map((row, index) => (index === 2 ? { ...row, card_id: null as unknown as number } : row));
+    // Uma linha com cartão inexistente estoura na terceira parcela.
+    const broken = rows.map((row, index) => (index === 2 ? { ...row, card_id: 999 } : row));
 
     await expect(m.cards.addCardPurchases(broken)).rejects.toThrow();
 
     expect(await m.cards.getAllCardPurchases()).toEqual([]);
+    expect(await m.transactions.getAllTransactions()).toEqual([]);
   });
 
-  it("edita uma compra e apaga uma ou uma série inteira", async () => {
+  it("editar a compra muda a despesa dela junto", async () => {
     const m = await load();
     const card = await newCard(m);
     await m.cards.addCardPurchases(planPurchase({ card, description: "Mercado", totalAmount: 50, date: new Date(2026, 8, 1), category: "Alimentação", installments: 1, groupId: "a" }));
-    await m.cards.addCardPurchases(planPurchase({ card, description: "TV", totalAmount: 200, date: new Date(2026, 8, 1), category: "Outros", installments: 2, groupId: "tv" }));
     const [market] = await m.cards.getAllCardPurchases();
 
     await m.cards.updateCardPurchase(market.id, { description: "  Supermercado ", amount: 75.5, date: "02/09/2026", category: "Lazer", invoiceRef: "2026-10" });
+
     expect((await m.cards.getAllCardPurchases())[0]).toMatchObject({ description: "Supermercado", amount: 75.5, date: "02/09/2026", category: "Lazer" });
-
-    await m.cards.deleteCardPurchaseGroup("tv");
-    expect((await m.cards.getAllCardPurchases()).map((p) => p.description)).toEqual(["Supermercado"]);
-
-    await m.cards.deleteCardPurchase(market.id);
-    expect(await m.cards.getAllCardPurchases()).toEqual([]);
+    expect((await m.transactions.getAllTransactions())[0]).toMatchObject({ description: "Supermercado", amount: 75.5, date: "02/09/2026", category_id: "Lazer" });
   });
-});
 
-describe("apagar várias compras", () => {
-  it("apaga as escolhidas de uma vez e deixa as outras", async () => {
+  it("apagar uma compra, uma série ou várias tira as despesas delas, e só delas", async () => {
     const m = await load();
     const card = await newCard(m);
-    await m.cards.addCardPurchases(planPurchase({ card, description: "TV", totalAmount: 300, date: new Date(2026, 8, 1), category: "Outros", installments: 3, groupId: "tv" }));
-    const [a, b, c] = await m.cards.getAllCardPurchases();
+    await m.transactions.createTransaction({ amount: 10, date: "01/09/2026", description: "Outra", type: "expense", category: "Lazer" });
+    await m.cards.addCardPurchases(planPurchase({ card, description: "Mercado", totalAmount: 50, date: new Date(2026, 8, 1), category: "Alimentação", installments: 1, groupId: "a" }));
+    await m.cards.addCardPurchases(planPurchase({ card, description: "TV", totalAmount: 200, date: new Date(2026, 8, 1), category: "Outros", installments: 2, groupId: "tv" }));
+    await m.cards.addCardPurchases(planPurchase({ card, description: "Sofá", totalAmount: 300, date: new Date(2026, 8, 1), category: "Moradia", installments: 3, groupId: "sofa" }));
+    const all = await m.cards.getAllCardPurchases();
+    const market = all.find((p) => p.description === "Mercado")!;
+    const sofa = all.filter((p) => p.description === "Sofá");
 
-    await m.cards.deleteCardPurchases([a.id, c.id]);
+    await m.cards.deleteCardPurchaseGroup("tv");
+    expect((await m.transactions.getAllTransactions()).map((t) => t.description).sort()).toEqual(["Mercado", "Outra", "Sofá (1/3)", "Sofá (2/3)", "Sofá (3/3)"]);
 
-    expect((await m.cards.getAllCardPurchases()).map((p) => p.id)).toEqual([b.id]);
+    await m.cards.deleteCardPurchases([sofa[0].id, sofa[2].id]);
+    expect((await m.transactions.getAllTransactions()).map((t) => t.description).sort()).toEqual(["Mercado", "Outra", "Sofá (2/3)"]);
+
+    await m.cards.deleteCardPurchase(market.id);
+    expect((await m.transactions.getAllTransactions()).map((t) => t.description).sort()).toEqual(["Outra", "Sofá (2/3)"]);
+    expect((await m.cards.getAllCardPurchases()).map((p) => p.description)).toEqual(["Sofá"]);
   });
 });
 
 describe("pagar a fatura", () => {
-  const pay = (m: Modules, cardId: number, over = {}) =>
-    m.cards.payInvoice({ cardId, cardName: "Nubank", ref: "2026-10", amount: 1250.5, paidDate: "05/10/2026", ...over });
+  const pay = (m: Modules, cardId: number, over = {}) => m.cards.payInvoice({ cardId, ref: "2026-10", amount: 1250.5, paidDate: "05/10/2026", ...over });
 
-  it("cria a despesa no saldo e anota o pagamento ligado a ela", async () => {
+  it("só marca a fatura como paga: não cria outra despesa (o gasto já foi contado nas compras)", async () => {
     const m = await load();
     const card = await newCard(m);
+    await m.cards.addCardPurchases(planPurchase({ card, description: "TV", totalAmount: 1250.5, date: new Date(2026, 8, 21), category: "Outros", installments: 1, groupId: "g" }));
 
     await pay(m, card.id);
 
-    const [expense] = await m.transactions.getAllTransactions();
-    expect(expense).toMatchObject({ amount: 1250.5, date: "05/10/2026", type: "expense", category_id: "Cartão de crédito", description: "Fatura Nubank OUT/2026" });
+    expect(await m.transactions.getAllTransactions()).toHaveLength(1); // só a despesa da compra
     const [payment] = await m.cards.getAllCardPayments();
-    expect(payment).toMatchObject({ card_id: card.id, invoice_ref: "2026-10", paid_date: "05/10/2026", amount: 1250.5, transaction_id: expense.id });
+    expect(payment).toMatchObject({ card_id: card.id, invoice_ref: "2026-10", paid_date: "05/10/2026", amount: 1250.5, transaction_id: null });
   });
 
-  it("a despesa entra com a data informada (mês da fatura) e o pagamento guarda o dia em que foi feito", async () => {
-    const m = await load();
-    const card = await newCard(m);
-
-    await pay(m, card.id, { paidDate: "10/09/2026", expenseDate: "28/08/2026" });
-
-    const [expense] = await m.transactions.getAllTransactions();
-    expect(expense.date).toBe("28/08/2026");
-    expect((await m.cards.getAllCardPayments())[0].paid_date).toBe("10/09/2026");
-  });
-
-  it("recusa pagar a mesma fatura duas vezes, sem criar outra despesa", async () => {
+  it("recusa pagar a mesma fatura duas vezes", async () => {
     const m = await load();
     const card = await newCard(m);
     await pay(m, card.id);
 
     await expect(pay(m, card.id)).rejects.toThrow("Essa fatura já está paga.");
 
-    expect(await m.transactions.getAllTransactions()).toHaveLength(1);
     expect(await m.cards.getAllCardPayments()).toHaveLength(1);
   });
 
@@ -155,34 +180,20 @@ describe("pagar a fatura", () => {
     await pay(m, b.id);
 
     expect(await m.cards.getAllCardPayments()).toHaveLength(3);
-    expect(await m.transactions.getAllTransactions()).toHaveLength(3);
   });
 
-  it("desfazer apaga o pagamento e a despesa que ele criou, e só ela", async () => {
+  it("desfazer apaga só o registro do pagamento: as despesas não mudam, e dá para pagar de novo", async () => {
     const m = await load();
     const card = await newCard(m);
-    await m.transactions.createTransaction({ amount: 10, date: "01/10/2026", description: "Outra", type: "expense", category: "Lazer" });
+    await m.cards.addCardPurchases(planPurchase({ card, description: "TV", totalAmount: 100, date: new Date(2026, 8, 21), category: "Outros", installments: 1, groupId: "g" }));
     await pay(m, card.id);
 
     await m.cards.undoInvoicePayment(card.id, "2026-10");
 
     expect(await m.cards.getAllCardPayments()).toEqual([]);
-    expect((await m.transactions.getAllTransactions()).map((t) => t.description)).toEqual(["Outra"]);
-    // E dá para pagar de novo.
+    expect(await m.transactions.getAllTransactions()).toHaveLength(1);
     await pay(m, card.id);
     expect(await m.cards.getAllCardPayments()).toHaveLength(1);
-  });
-
-  it("desfazer quando a despesa já foi apagada à mão ainda libera a fatura", async () => {
-    const m = await load();
-    const card = await newCard(m);
-    await pay(m, card.id);
-    const [expense] = await m.transactions.getAllTransactions();
-    await m.transactions.deleteTransaction(expense.id);
-
-    await m.cards.undoInvoicePayment(card.id, "2026-10");
-
-    expect(await m.cards.getAllCardPayments()).toEqual([]);
   });
 
   it("desfazer o que não foi pago não faz nada", async () => {
@@ -193,91 +204,134 @@ describe("pagar a fatura", () => {
   });
 });
 
-describe("limpeza dos pagamentos recebidos lançados por uma versão anterior", () => {
-  it("ao abrir o banco, apaga compras de valor negativo e mantém as normais", async () => {
+describe("conciliação das compras do cartão com as despesas", () => {
+  const rawDb = (m: Modules) => m.db as unknown as { runSync: (sql: string, ...params: unknown[]) => { lastInsertRowId: number } };
+
+  it("compra sem despesa (lançada antes desta regra) ganha a dela, uma vez só", async () => {
     const m = await load();
     const card = await newCard(m);
-    await m.cards.addCardPurchases(planPurchase({ card, description: "Mercado", totalAmount: 50, date: new Date(2026, 8, 1), category: "Outros", installments: 1, groupId: "x" }));
-    const db = mockState.db as { runSync: (sql: string, ...params: unknown[]) => unknown };
-    db.runSync(
-      "INSERT INTO card_purchases (card_id, description, amount, date, category, invoice_ref) VALUES (?, ?, ?, ?, ?, ?)",
-      card.id,
-      "Pagamento recebido",
-      -450,
-      "15/08/2026",
-      "Pagamento",
-      "2026-09",
+    rawDb(m).runSync(
+      "INSERT INTO card_purchases (card_id, description, amount, date, category, invoice_ref, installment_group_id, installment_number, installment_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      card.id, "Notebook", 300, "10/08/2026", "Outros", "2026-10", "g", 2, 5,
     );
-    expect(await m.cards.getAllCardPurchases()).toHaveLength(2);
 
-    // Reabre o app: o banco é o mesmo, os módulos são novos.
-    jest.resetModules();
-    await jest.requireActual<typeof import("./sqlite")>("./sqlite").getDatabase();
-    const reopened = jest.requireActual<typeof import("./creditCards")>("./creditCards");
+    expect(await m.cards.reconcileCardTransactions()).toBe(1);
 
-    expect((await reopened.getAllCardPurchases()).map((p) => p.description)).toEqual(["Mercado"]);
+    const [expense] = await m.transactions.getAllTransactions();
+    expect(expense).toMatchObject({ amount: 300, description: "Notebook (2/5)", category_id: "Outros", date: "28/09/2026" });
+    expect((await m.cards.getAllCardPurchases())[0].transaction_id).toBe(expense.id);
+    expect(await m.cards.reconcileCardTransactions()).toBe(0);
+  });
+
+  it("o pagamento de fatura de uma versão anterior perde a despesa própria (senão o gasto contaria em dobro)", async () => {
+    const m = await load();
+    const card = await newCard(m);
+    await m.cards.addCardPurchases(planPurchase({ card, description: "TV", totalAmount: 500, date: new Date(2026, 8, 1), category: "Outros", installments: 1, groupId: "g" }));
+    const db = rawDb(m);
+    const legacy = db.runSync("INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, 'expense', ?)", 500, "05/10/2026", "Fatura Nubank OUT/2026", "Cartão de crédito");
+    db.runSync("INSERT INTO card_invoice_payments (card_id, invoice_ref, paid_date, amount, transaction_id) VALUES (?, ?, ?, ?, ?)", card.id, "2026-10", "05/10/2026", 500, legacy.lastInsertRowId);
+
+    expect(await m.cards.reconcileCardTransactions()).toBe(1);
+
+    expect((await m.transactions.getAllTransactions()).map((t) => t.description)).toEqual(["TV"]);
+    expect((await m.cards.getAllCardPayments())[0]).toMatchObject({ invoice_ref: "2026-10", transaction_id: null });
+  });
+
+  it("compra cuja despesa não existe mais sai do cartão", async () => {
+    const m = await load();
+    const card = await newCard(m);
+    rawDb(m).runSync(
+      "INSERT INTO card_purchases (card_id, description, amount, date, category, invoice_ref, transaction_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      card.id, "Fantasma", 10, "10/08/2026", "Outros", "2026-09", 12345,
+    );
+
+    expect(await m.cards.reconcileCardTransactions()).toBe(1);
+
+    expect(await m.cards.getAllCardPurchases()).toEqual([]);
+  });
+
+  it("créditos (valor negativo) não ganham despesa", async () => {
+    const m = await load();
+    const card = await newCard(m);
+    rawDb(m).runSync(
+      "INSERT INTO card_purchases (card_id, description, amount, date, category, invoice_ref) VALUES (?, ?, ?, ?, ?, ?)",
+      card.id, "Pagamento recebido", -450, "15/08/2026", "Crédito na fatura", "2026-09",
+    );
+
+    expect(await m.cards.reconcileCardTransactions()).toBe(0);
+
+    expect(await m.transactions.getAllTransactions()).toEqual([]);
   });
 });
 
-describe("ajuste único das datas de pagamentos antigos", () => {
-  it("leva a despesa para o dia do fechamento (mês da fatura), só uma vez", async () => {
-    const m = await load();
-    const card = await newCard(m); // fecha 28, vence 5
-    // Pagamento feito por uma versão anterior: a despesa ficou no dia do pagamento.
-    await m.cards.payInvoice({ cardId: card.id, cardName: "Nubank", ref: "2026-09", amount: 500, paidDate: "10/09/2026" });
-
-    expect(await m.cards.alignCardPaymentDates()).toBe(1);
-
-    const [expense] = await m.transactions.getAllTransactions();
-    expect(expense.date).toBe("28/08/2026");
-    expect((await m.cards.getAllCardPayments())[0].paid_date).toBe("10/09/2026");
-    expect(await m.cards.alignCardPaymentDates()).toBe(0);
-  });
-
-  it("não mexe numa despesa cuja data o usuário já editou", async () => {
+describe("despesas e compras andam juntas (Histórico)", () => {
+  async function withPurchase() {
     const m = await load();
     const card = await newCard(m);
-    await m.cards.payInvoice({ cardId: card.id, cardName: "Nubank", ref: "2026-09", amount: 500, paidDate: "10/09/2026" });
+    await m.cards.addCardPurchases(planPurchase({ card, description: "Mercado", totalAmount: 50, date: new Date(2026, 8, 1), category: "Alimentação", installments: 1, groupId: "a" }));
     const [expense] = await m.transactions.getAllTransactions();
-    await m.transactions.updateTransaction(expense.id, { amount: 500, date: "15/09/2026", description: "Fatura Nubank SET/2026", type: "expense", category: "Cartão de crédito" });
+    return { m, card, expense };
+  }
 
-    expect(await m.cards.alignCardPaymentDates()).toBe(0);
+  it("apagar a despesa no Histórico tira a compra do cartão", async () => {
+    const { m, expense } = await withPurchase();
 
-    expect((await m.transactions.getAllTransactions())[0].date).toBe("15/09/2026");
+    await m.transactions.deleteTransaction(expense.id);
+
+    expect(await m.cards.getAllCardPurchases()).toEqual([]);
   });
 
-  it("pagamento já lançado no mês certo não muda", async () => {
-    const m = await load();
-    const card = await newCard(m);
-    await m.cards.payInvoice({ cardId: card.id, cardName: "Nubank", ref: "2026-09", amount: 500, paidDate: "28/08/2026" });
+  it("apagar o mês inteiro no Histórico também", async () => {
+    const { m } = await withPurchase();
 
-    expect(await m.cards.alignCardPaymentDates()).toBe(0);
+    await m.transactions.deleteTransactionsByMonth("09", "2026");
+
+    expect(await m.cards.getAllCardPurchases()).toEqual([]);
+  });
+
+  it("editar a despesa no Histórico muda a compra", async () => {
+    const { m, expense } = await withPurchase();
+
+    await m.transactions.updateTransaction(expense.id, { amount: 65, date: "03/09/2026", description: "Feira", type: "expense", category: "Lazer" });
+
+    expect((await m.cards.getAllCardPurchases())[0]).toMatchObject({ amount: 65, date: "03/09/2026", description: "Feira", category: "Lazer" });
+  });
+
+  it("mexer numa despesa comum não toca nas compras do cartão", async () => {
+    const { m } = await withPurchase();
+    await m.transactions.createTransaction({ amount: 10, date: "01/09/2026", description: "Outra", type: "expense", category: "Lazer" });
+    const outra = (await m.transactions.getAllTransactions()).find((t) => t.description === "Outra")!;
+
+    await m.transactions.deleteTransaction(outra.id);
+
+    expect(await m.cards.getAllCardPurchases()).toHaveLength(1);
   });
 });
 
 describe("apagar cartão e zerar", () => {
-  it("apaga o cartão, as compras e os pagamentos dele, mas a despesa do pagamento fica no saldo", async () => {
+  it("apaga o cartão, as compras e os pagamentos dele, e as despesas dessas compras", async () => {
     const m = await load();
     const a = await newCard(m);
     const b = await newCard(m, { name: "Inter" });
+    await m.transactions.createTransaction({ amount: 10, date: "01/09/2026", description: "Outra", type: "expense", category: "Lazer" });
     for (const card of [a, b]) {
-      await m.cards.addCardPurchases(planPurchase({ card, description: "Compra", totalAmount: 10, date: new Date(2026, 8, 1), category: "Outros", installments: 1, groupId: "x" }));
+      await m.cards.addCardPurchases(planPurchase({ card, description: `Compra ${card.name}`, totalAmount: 10, date: new Date(2026, 8, 1), category: "Outros", installments: 1, groupId: "x" }));
     }
-    await m.cards.payInvoice({ cardId: a.id, cardName: "Nubank", ref: "2026-10", amount: 10, paidDate: "05/10/2026" });
+    await m.cards.payInvoice({ cardId: a.id, ref: "2026-10", amount: 10, paidDate: "05/10/2026" });
 
     await m.cards.deleteCreditCard(a.id);
 
     expect((await m.cards.getAllCreditCards()).map((c) => c.name)).toEqual(["Inter"]);
     expect((await m.cards.getAllCardPurchases()).map((p) => p.card_id)).toEqual([b.id]);
     expect(await m.cards.getAllCardPayments()).toEqual([]);
-    expect(await m.transactions.getAllTransactions()).toHaveLength(1); // o dinheiro saiu de verdade
+    expect((await m.transactions.getAllTransactions()).map((t) => t.description).sort()).toEqual(["Compra Inter", "Outra"]);
   });
 
   it("zerar os dados do app apaga os cartões, as compras e os pagamentos", async () => {
     const m = await load();
     const card = await newCard(m);
     await m.cards.addCardPurchases(planPurchase({ card, description: "Compra", totalAmount: 10, date: new Date(2026, 8, 1), category: "Outros", installments: 1, groupId: "x" }));
-    await m.cards.payInvoice({ cardId: card.id, cardName: "Nubank", ref: "2026-10", amount: 10, paidDate: "05/10/2026" });
+    await m.cards.payInvoice({ cardId: card.id, ref: "2026-10", amount: 10, paidDate: "05/10/2026" });
 
     await m.sqlite.resetDatabase();
 

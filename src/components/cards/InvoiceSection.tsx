@@ -46,6 +46,7 @@ export function InvoiceSection({
     overdue: colors.expense,
     paid: colors.income,
     empty: colors.textMuted,
+    settled: colors.income,
   };
   const tint = statusColor[invoice.status];
   const statusLabel = INVOICE_STATUS_LABELS[invoice.status];
@@ -64,6 +65,7 @@ export function InvoiceSection({
         <View style={styles.summaryText}>
           <Text style={styles.invoiceLabel}>{invoice.label}</Text>
           <Text style={styles.small}>Vence em {invoice.dueDate}</Text>
+          {invoice.credits > 0 ? <Text style={styles.small}>Compras {formatCurrency(invoice.spend)}</Text> : null}
         </View>
         <View style={styles.summaryRight}>
           <Text style={styles.total}>{formatCurrency(invoice.total)}</Text>
@@ -94,14 +96,16 @@ export function InvoiceSection({
                 <Text style={styles.purchaseAmount}>{formatCurrency(purchase.amount)}</Text>
                 {!isPaid ? (
                   <View style={styles.purchaseActions}>
-                    <TouchableOpacity
-                      onPress={() => onEditPurchase(purchase)}
-                      style={styles.iconButton}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Editar compra ${purchase.description}`}
-                    >
-                      <Ionicons name="pencil" size={16} color={colors.textSecondary} />
-                    </TouchableOpacity>
+                    {purchase.amount > 0 ? (
+                      <TouchableOpacity
+                        onPress={() => onEditPurchase(purchase)}
+                        style={styles.iconButton}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Editar compra ${purchase.description}`}
+                      >
+                        <Ionicons name="pencil" size={16} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    ) : null}
                     <TouchableOpacity
                       onPress={() => onDeletePurchase(purchase)}
                       style={styles.iconButton}
@@ -115,6 +119,13 @@ export function InvoiceSection({
               </View>
             ))
           )}
+
+          {invoice.credits > 0 ? (
+            <Text style={[styles.small, styles.spaced]}>
+              Compras {formatCurrency(invoice.spend)} − créditos {formatCurrency(invoice.credits)} (pagamento recebido, estorno) ={" "}
+              {formatCurrency(invoice.total)} a pagar. Os créditos não entram nos gastos nem nas receitas.
+            </Text>
+          ) : null}
 
           {invoice.byCategory.length > 1 ? (
             <View style={styles.spaced}>
@@ -131,7 +142,7 @@ export function InvoiceSection({
           {isPaid && invoice.payment ? (
             <View style={styles.spaced}>
               <Text style={styles.small}>
-                Paga em {invoice.payment.paid_date}: {formatCurrency(invoice.payment.amount)} saíram do seu saldo.
+                Paga em {invoice.payment.paid_date}: {formatCurrency(invoice.payment.amount)}. O gasto já estava nas despesas, compra por compra.
               </Text>
               <TouchableOpacity
                 onPress={onUndoPayment}
@@ -168,7 +179,7 @@ export function InvoiceSection({
 
           {invoice.status === "open" ? (
             <Text style={[styles.small, styles.spaced]}>
-              A fatura ainda está aberta e recebe compras até {invoice.closingDate}. Se pagar agora, ela não recebe mais compras.
+              A fatura ainda está aberta e recebe compras até {invoice.closingDate}. Se marcar como paga agora, ela não recebe mais compras.
             </Text>
           ) : null}
         </View>

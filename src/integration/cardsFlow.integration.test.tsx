@@ -148,7 +148,7 @@ afterEach(() => {
 });
 
 describe("cartões e faturas (painel + banco)", () => {
-  it("compra parcelada fica fora do saldo e cada parcela vira uma fatura por pagar no painel", async () => {
+  it("compra parcelada: cada parcela é uma despesa e uma fatura por pagar no painel", async () => {
     await mountApp();
     await addOpenCard();
 
@@ -164,12 +164,14 @@ describe("cartões e faturas (painel + banco)", () => {
     });
     await settle();
 
-    expect(seen.transactions.totalExpense).toBe(0);
+    // A primeira parcela é da data da compra (este mês); as outras caem nos meses das faturas seguintes.
+    expect(seen.transactions.totalExpense).toBe(300);
+    expect((await getAllTransactions()).map((t) => t.description).sort()).toEqual(["Notebook (1/3)", "Notebook (2/3)", "Notebook (3/3)"]);
     expect(seen.dues.invoiceDues.map((due) => due.amount)).toEqual([300, 300, 300]);
     expect(seen.cards.views[0].usage).toMatchObject({ used: 900, available: 100 });
   });
 
-  it("dá para pagar uma fatura ainda aberta: vira despesa no saldo e a fatura deixa de receber compras", async () => {
+  it("dá para pagar uma fatura ainda aberta: só marca como paga, e a fatura deixa de receber compras", async () => {
     await mountApp();
     await addOpenCard();
     await act(async () => {
@@ -208,10 +210,10 @@ describe("cartões e faturas (painel + banco)", () => {
       allowed = await seen.cards.addPurchase(cardOf("Nubank"), again);
     });
     expect(allowed).toEqual({ ok: true });
-    expect(seen.transactions.totalExpense).toBe(0);
+    expect(seen.transactions.totalExpense).toBe(60); // Mercado (50) + Outra (10): desfazer o pagamento não mexe nas despesas
   });
 
-  it("pagar a fatura vencida cria a despesa no saldo do painel e tira o aviso; desfazer devolve tudo", async () => {
+  it("pagar a fatura vencida só a marca como paga e tira o aviso; desfazer devolve o aviso, sem mexer nas despesas", async () => {
     await mountApp();
     await act(async () => {
       await seen.cards.saveCard(null, { name: "Inter", closingDay: 10, dueDay: 20, limit: null });
@@ -230,11 +232,11 @@ describe("cartões e faturas (painel + banco)", () => {
     });
     await settle();
 
-    // A despesa entra no mês da fatura (data do fechamento), não no dia em que foi paga.
-    const [expense] = await getAllTransactions();
-    expect(expense).toMatchObject({ amount: 1200, category_id: "Cartão de crédito", date: invoice.closingDate });
-    expect(expense.date).not.toBe(formatDateToString(new Date()));
-    expect((await getAllCardPayments())[0].paid_date).toBe(formatDateToString(new Date()));
+    // Pagar não cria despesa: só a da compra (TV), que está na data da compra, 90 dias atrás.
+    const stored = await getAllTransactions();
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toMatchObject({ amount: 1200, description: "TV", date: formatDateToString(daysAgo(90)) });
+    expect((await getAllCardPayments())[0]).toMatchObject({ paid_date: formatDateToString(new Date()), amount: 1200, transaction_id: null });
     expect(seen.dues.invoiceDues).toEqual([]);
     expect(seen.cards.views[0].usage.used).toBe(0);
 
@@ -251,23 +253,47 @@ describe("cartões e faturas (painel + banco)", () => {
     });
     await settle();
 
-    expect(await getAllTransactions()).toEqual([]);
+    expect((await getAllTransactions()).map((t) => t.description)).toEqual(["TV"]);
     expect(seen.dues.invoiceDues).toHaveLength(1);
   });
 
-  it("ao abrir o painel, um pagamento antigo (despesa no dia em que foi pago) vai para o mês da fatura, uma vez só", async () => {
-    const { setMeta } = jest.requireActual<typeof import("../database/appMeta")>("../database/appMeta");
-    await setMeta("card_payment_dates_aligned", "0");
-    const { createCreditCard, getAllCreditCards, payInvoice } = jest.requireActual<typeof import("../database/creditCards")>("../database/creditCards");
+  it("ao abrir o painel, o pagamento de fatura antigo perde a despesa própria e a compra sem despesa ganha a dela", async () => {
+    const { createCreditCard, getAllCreditCards } = jest.requireActual<typeof import("../database/creditCards")>("../database/creditCards");
     await createCreditCard({ name: "Inter", closingDay: 10, dueDay: 20, limit: null });
     const [card] = await getAllCreditCards();
-    await payInvoice({ cardId: card.id, cardName: "Inter", ref: "2026-01", amount: 300, paidDate: "05/02/2026" });
-    expect((await getAllTransactions())[0].date).toBe("05/02/2026");
+    const db = mockState.db as { runSync: (sql: string, ...params: unknown[]) => { lastInsertRowId: number } };
+    // Como uma versão anterior deixava: compra sem despesa e o pagamento da fatura com despesa própria.
+    db.runSync(
+      "INSERT INTO card_purchases (card_id, description, amount, date, category, invoice_ref) VALUES (?, ?, ?, ?, ?, ?)",
+      card.id, "TV", 300, "05/01/2026", "Outros", "2026-01",
+    );
+    const legacy = db.runSync("INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, 'expense', ?)", 300, "05/02/2026", "Fatura Inter JAN/2026", "Cartão de crédito");
+    db.runSync("INSERT INTO card_invoice_payments (card_id, invoice_ref, paid_date, amount, transaction_id) VALUES (?, ?, ?, ?, ?)", card.id, "2026-01", "05/02/2026", 300, legacy.lastInsertRowId);
 
     await mountApp();
 
-    expect((await getAllTransactions())[0].date).toBe("10/01/2026");
-    expect((await getAllCardPayments())[0].paid_date).toBe("05/02/2026");
+    const stored = await getAllTransactions();
+    expect(stored.map((t) => [t.description, t.date, t.amount])).toEqual([["TV", "05/01/2026", 300]]);
+    expect((await getAllCardPayments())[0]).toMatchObject({ transaction_id: null });
+    expect(seen.transactions.transactions).toEqual([]); // o painel mostra o mês atual: a TV é de janeiro
+  });
+
+  it("apagar a despesa de uma compra no Histórico tira a compra do cartão", async () => {
+    await mountApp();
+    await addOpenCard();
+    await act(async () => {
+      await seen.cards.addPurchase(cardOf("Nubank"), { description: "Mercado", amount: 50, date: new Date(), category: "Alimentação", installments: 1 });
+    });
+    await settle();
+    expect(seen.transactions.transactions).toHaveLength(1);
+
+    await act(async () => {
+      await seen.transactions.handleDeleteTransaction(String(seen.transactions.transactions[0].id));
+    });
+    await settle();
+
+    expect(seen.cards.purchases).toEqual([]);
+    expect(seen.dues.invoiceDues).toEqual([]);
   });
 
   it("apagar uma compra parcelada leva só as parcelas ainda não pagas", async () => {
@@ -349,7 +375,7 @@ describe("cartões e faturas (painel + banco)", () => {
     expect(seen.dues.invoiceDues).toHaveLength(2);
   });
 
-  it("fatura paga não pode ser excluída inteira (desfaça o pagamento antes); a despesa do pagamento fica no saldo", async () => {
+  it("fatura paga não pode ser excluída inteira (desfaça o pagamento antes); as despesas ficam", async () => {
     await mountApp();
     await addOpenCard();
     const card = cardOf("Nubank");
@@ -370,7 +396,8 @@ describe("cartões e faturas (painel + banco)", () => {
     });
 
     expect(result).toMatchObject({ ok: false, error: expect.stringContaining("Desfaça o pagamento") });
-    expect(seen.transactions.transactions[0]).toMatchObject({ amount: 50, category_id: "Cartão de crédito", description: expect.stringContaining("Fatura Nubank") });
+    expect(seen.transactions.transactions).toHaveLength(1);
+    expect(seen.transactions.transactions[0]).toMatchObject({ amount: 50, category_id: "Alimentação", description: "Mercado" });
   });
 
   it("apagar o cartão tira as faturas do painel", async () => {

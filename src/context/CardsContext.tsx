@@ -1,6 +1,6 @@
 import { createContext, useEffect, useState, type ReactNode } from "react";
 
-import { alignCardPaymentDates, getAllCardPayments, getAllCardPurchases, getAllCreditCards } from "../database/creditCards";
+import { getAllCardPayments, getAllCardPurchases, getAllCreditCards, reconcileCardTransactions } from "../database/creditCards";
 import { subscribeToCardChanges } from "../services/cardsEvents";
 import { unpaidInvoiceDues, type InvoiceDue } from "../utils/creditCards";
 import { logError } from "../utils/logger";
@@ -21,7 +21,7 @@ async function readInvoiceDues(): Promise<InvoiceDue[]> {
 
 /**
  * As faturas por pagar, para os avisos do Início e os lembretes. A tela de cartões fica fora do painel:
- * quando ela grava algo, este provider relê as faturas e as transações (pagar uma fatura cria uma despesa).
+ * quando ela grava algo, este provider relê as faturas e as transações (cada compra do cartão é uma despesa).
  */
 export function CardsProvider({ children }: { children: ReactNode }) {
   const { refreshTransactions } = useTransactionsMutations();
@@ -37,12 +37,16 @@ export function CardsProvider({ children }: { children: ReactNode }) {
         .catch((error) => logError("Erro ao ler as faturas de cartão:", error));
 
     load();
-    // Uma vez só: pagamentos antigos passam a cair no mês da fatura (ver alignCardPaymentDates).
-    alignCardPaymentDates()
+    // Deixa as despesas coerentes com as compras do cartão (compras antigas ganham a despesa, o pagamento de fatura de
+    // uma versão anterior perde a dele) e relê as transações se algo mudou.
+    reconcileCardTransactions()
       .then((changed) => {
-        if (changed > 0) return refreshTransactions();
+        if (changed > 0) {
+          load();
+          return refreshTransactions();
+        }
       })
-      .catch((error) => logError("Erro ao ajustar as datas dos pagamentos de fatura:", error));
+      .catch((error) => logError("Erro ao conciliar as compras do cartão com as despesas:", error));
     const unsubscribe = subscribeToCardChanges(() => {
       load();
       refreshTransactions().catch((error) => logError("Erro ao atualizar as transações após mexer nos cartões:", error));

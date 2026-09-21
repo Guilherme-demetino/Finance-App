@@ -251,6 +251,7 @@ function readData(raw: unknown): BackupData {
         if (r.installment_group_id != null && !isString(r.installment_group_id)) return "série";
         if (r.installment_number != null && !isInteger(r.installment_number)) return "parcela";
         if (r.installment_total != null && !isInteger(r.installment_total)) return "total de parcelas";
+        if (r.transaction_id != null && !isInteger(r.transaction_id)) return "despesa";
         return null;
       });
 

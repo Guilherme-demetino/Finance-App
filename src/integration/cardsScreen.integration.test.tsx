@@ -104,11 +104,11 @@ afterEach(() => {
 });
 
 describe("tela de cartões", () => {
-  it("sem cartões explica o que fazer e explica a regra do saldo", async () => {
+  it("sem cartões explica o que fazer e explica que a compra vira despesa na data dela", async () => {
     const tree = await mount();
 
     expect(textOf(tree)).toContain("Nenhum cartão ainda");
-    expect(textOf(tree)).toContain("fora do seu saldo até você pagar a fatura");
+    expect(textOf(tree)).toContain("Cada compra no cartão entra nas despesas na data da compra");
   });
 
   it("cria um cartão pelo formulário; dia inválido avisa e não grava", async () => {
@@ -164,6 +164,9 @@ describe("tela de cartões", () => {
     const stored = await cards.getAllCardPurchases();
     expect(stored.map((row) => row.amount)).toEqual([300, 300, 300]);
     expect(new Set(stored.map((row) => row.invoice_ref)).size).toBe(3);
+    // Cada parcela é uma despesa (o gasto aparece nos meses das parcelas).
+    const { transactions } = await database();
+    expect((await transactions.getAllTransactions()).map((t) => t.description).sort()).toEqual(["Notebook (1/3)", "Notebook (2/3)", "Notebook (3/3)"]);
   });
 
   it("compra sem descrição ou sem valor não grava", async () => {
@@ -221,7 +224,7 @@ describe("pagar a fatura pela tela", () => {
     return { cards, card };
   }
 
-  it("fatura vencida mostra o valor, pede confirmação e cria a despesa no saldo", async () => {
+  it("fatura vencida mostra o valor, pede confirmação e só marca como paga (não cria outra despesa)", async () => {
     const { cards } = await seedOverdueInvoice();
     const { transactions } = await database();
     const tree = await mount();
@@ -231,12 +234,12 @@ describe("pagar a fatura pela tela", () => {
 
     await pressStartingWith(tree, "Fatura Inter");
     await pressStartingWith(tree, "Pagar fatura");
-    expect(textOf(tree)).toContain("Registrar o pagamento da fatura");
+    expect(textOf(tree)).toContain("Isso não cria outra despesa");
     await press(tree, "Pagar");
 
-    expect(textOf(tree)).toContain("Fatura paga. A despesa entrou no seu saldo.");
-    const [expense] = await transactions.getAllTransactions();
-    expect(expense).toMatchObject({ amount: 1200, category_id: "Cartão de crédito", type: "expense" });
+    expect(textOf(tree)).toContain("Fatura marcada como paga.");
+    // Só a despesa da compra (TV) existe: pagar a fatura não cria outra.
+    expect((await transactions.getAllTransactions()).map((t) => [t.description, t.amount])).toEqual([["TV", 1200]]);
     expect(await cards.getAllCardPayments()).toHaveLength(1);
     // Paga: some da lista até pedir para mostrar as pagas.
     expect(textOf(tree)).toContain("Mostrar faturas pagas (1)");
@@ -257,6 +260,7 @@ describe("pagar a fatura pela tela", () => {
 
     expect(textOf(tree)).toMatch(/Fatura [A-Z]{3}\/\d{4} excluída\./);
     expect(await cards.getAllCardPurchases()).toEqual([]);
+    expect(await (await database()).transactions.getAllTransactions()).toEqual([]);
   });
 
   it("fatura paga não mostra o botão de excluir a fatura inteira", async () => {
@@ -264,7 +268,7 @@ describe("pagar a fatura pela tela", () => {
     await cards.createCreditCard({ name: "Inter", closingDay: 10, dueDay: 20, limit: null });
     const [card] = await cards.getAllCreditCards();
     await cards.addCardPurchases(planPurchase({ card, description: "TV", totalAmount: 1200, date: daysAgo(90), category: "Outros", installments: 1, groupId: "g" }));
-    await cards.payInvoice({ cardId: card.id, cardName: "Inter", ref: (await cards.getAllCardPurchases())[0].invoice_ref, amount: 1200, paidDate: "01/01/2026" });
+    await cards.payInvoice({ cardId: card.id, ref: (await cards.getAllCardPurchases())[0].invoice_ref, amount: 1200, paidDate: "01/01/2026" });
     const tree = await mount();
     await press(tree, "Mostrar faturas pagas (1)");
     const paidInvoice = tree.root.findAllByType(TouchableOpacity).find((node) => String(node.props.accessibilityLabel ?? "").includes(", Paga,"));
@@ -284,20 +288,20 @@ describe("pagar a fatura pela tela", () => {
     const tree = await mount();
 
     await pressStartingWith(tree, "Fatura Nubank");
-    expect(textOf(tree)).toContain("Se pagar agora, ela não recebe mais compras.");
+    expect(textOf(tree)).toContain("Se marcar como paga agora, ela não recebe mais compras.");
     await pressStartingWith(tree, "Pagar fatura");
     expect(textOf(tree)).toContain("Ela ainda está aberta: depois de paga, não recebe mais compras");
     await press(tree, "Pagar");
 
-    expect(textOf(tree)).toContain("Fatura paga. A despesa entrou no seu saldo.");
-    expect((await transactions.getAllTransactions())[0]).toMatchObject({ amount: 80, category_id: "Cartão de crédito" });
+    expect(textOf(tree)).toContain("Fatura marcada como paga.");
+    expect((await transactions.getAllTransactions()).map((t) => [t.description, t.amount])).toEqual([["Mercado", 80]]);
     expect(await cards.getAllCardPayments()).toHaveLength(1);
   });
 
-  it("desfazer o pagamento devolve a fatura e tira a despesa", async () => {
+  it("desfazer o pagamento devolve a fatura em aberto, sem mexer nas despesas das compras", async () => {
     const { cards, card } = await seedOverdueInvoice();
     const { transactions } = await database();
-    await cards.payInvoice({ cardId: card.id, cardName: "Inter", ref: (await cards.getAllCardPurchases())[0].invoice_ref, amount: 1200, paidDate: "01/01/2026" });
+    await cards.payInvoice({ cardId: card.id, ref: (await cards.getAllCardPurchases())[0].invoice_ref, amount: 1200, paidDate: "01/01/2026" });
     const tree = await mount();
 
     await press(tree, "Mostrar faturas pagas (1)");
@@ -310,7 +314,7 @@ describe("pagar a fatura pela tela", () => {
 
     expect(textOf(tree)).toContain("Pagamento desfeito");
     expect(await cards.getAllCardPayments()).toEqual([]);
-    expect(await transactions.getAllTransactions()).toEqual([]);
+    expect((await transactions.getAllTransactions()).map((t) => t.description)).toEqual(["TV"]);
   });
 
   it("excluir o cartão pede confirmação e apaga tudo dele", async () => {
@@ -324,6 +328,7 @@ describe("pagar a fatura pela tela", () => {
     expect(textOf(tree)).toContain("Cartão excluído.");
     expect(await cards.getAllCreditCards()).toEqual([]);
     expect(await cards.getAllCardPurchases()).toEqual([]);
+    expect(await (await database()).transactions.getAllTransactions()).toEqual([]);
   });
 });
 
@@ -335,8 +340,8 @@ describe("importar a fatura pela tela", () => {
       "date,category,title,amount",
       `${iso(daysAgo(90))},alimentação,Mercado,60.00`,
       `${iso(daysAgo(90))},casa,Notebook - Parcela 2/5,40.00`,
-      `${iso(daysAgo(90))},estorno,Estorno Loja,-15.00`,
     ].join("\n");
+  const withCredit = () => [csv(), `${iso(daysAgo(90))},pagamento,Pagamento recebido,-30.00`].join("\n");
 
   async function seedCard() {
     const { cards } = await database();
@@ -355,7 +360,6 @@ describe("importar a fatura pela tela", () => {
 
     expect(textOf(tree)).toContain("Importar fatura do Inter");
     expect(textOf(tree)).toContain("2 compras novas (R$ 100,00)");
-    expect(textOf(tree)).toContain("Ignoradas: 1 crédito (pagamento recebido, estorno ou saldo)");
     expect(textOf(tree)).toContain("Notebook (2/5)");
     expect(await cards.getAllCardPurchases()).toEqual([]); // nada gravado antes de confirmar
 
@@ -363,23 +367,29 @@ describe("importar a fatura pela tela", () => {
 
     expect(textOf(tree)).toMatch(/Importado na fatura de [A-Z]{3}\/\d{4}: 2 compras\./);
     expect(await cards.getAllCardPurchases()).toHaveLength(2);
+    // Cada compra virou uma despesa no Histórico.
+    expect((await (await database()).transactions.getAllTransactions()).map((t) => t.description).sort()).toEqual(["Mercado", "Notebook (2/5)"]);
   });
 
-  it("pagamento recebido não desconta: a fatura fica com o gasto do período", async () => {
+  it("pagamento recebido é um crédito: reduz o total a pagar, mas não é gasto nem receita", async () => {
     const cards = await seedCard();
     const tree = await mount();
-    mockPick.bytes = bytesOf(`${csv()}
-${iso(daysAgo(90))},pagamento,Pagamento recebido,-30.00`);
+    mockPick.bytes = bytesOf(withCredit());
 
     await press(tree, "Importar fatura do Inter");
 
-    expect(textOf(tree)).toContain("2 compras novas (R$ 100,00)");
-    expect(textOf(tree)).toContain("Ignoradas: 2 créditos (pagamento recebido, estorno ou saldo)");
-    expect(textOf(tree)).not.toContain("antecipado");
-    await press(tree, "Importar 2 compras");
+    expect(textOf(tree)).toContain("2 compras novas (R$ 100,00), 1 crédito (− R$ 30,00)");
+    expect(textOf(tree)).toContain("Não entram nos gastos nem nas receitas");
+    await press(tree, "Importar 2 compras e 1 crédito");
 
-    expect((await cards.getAllCardPurchases()).map((row) => row.amount).sort((a, b) => a - b)).toEqual([40, 60]);
-    expect(buttonStartingWith(tree, "Fatura Inter").props.accessibilityLabel).toContain("R$ 100,00");
+    expect(textOf(tree)).toMatch(/Importado na fatura de [A-Z]{3}\/\d{4}: 2 compras e 1 crédito\./);
+    expect((await cards.getAllCardPurchases()).map((row) => row.amount).sort((a, b) => a - b)).toEqual([-30, 40, 60]);
+    // O crédito não vira despesa nem receita: só as 2 compras estão no Histórico.
+    expect(await (await database()).transactions.getAllTransactions()).toHaveLength(2);
+    // A fatura mostra o total a pagar (100 − 30) e o gasto (100).
+    const summary = buttonStartingWith(tree, "Fatura Inter").props.accessibilityLabel as string;
+    expect(summary).toContain("R$ 70,00");
+    expect(textOf(tree)).toContain("Compras R$ 100,00");
   });
 
   it("dá para trocar a fatura escolhida antes de importar", async () => {

@@ -333,5 +333,18 @@
       "O pagamento continua anotado com o dia em que você pagou (“Paga em …”), e desfazer o pagamento remove a despesa como antes.",
       "Faturas que você já tinha pago pelo app também são ajustadas uma vez, ao abrir o app: a despesa vai para o dia do fechamento. Despesas cuja data você mesmo editou não são mexidas."
     ]
+  },
+  {
+    "id": 39,
+    "date": "21/09/2026",
+    "title": "Gasto do cartão no mês da compra",
+    "items": [
+      "Cada compra no cartão agora é uma despesa do app na data da compra, com a categoria dela: o gasto aparece no resumo, nos gráficos, nos orçamentos e no Histórico no mês em que aconteceu, mesmo com a fatura fechando e vencendo depois. Parcelas: a primeira na data da compra e as outras no fechamento de cada fatura.",
+      "Pagar a fatura só a marca como paga: não cria mais uma despesa “Cartão de crédito”, porque o gasto já foi contado nas compras. Desfazer o pagamento não mexe nas despesas.",
+      "Pagamento recebido antes do fechamento e estorno na fatura viram créditos: reduzem o total a pagar da fatura (que mostra “Compras − créditos = a pagar”), mas não são receita nem gasto. “Fatura anterior” continua de fora. Se os créditos cobrirem tudo, a fatura fica “Quitada”.",
+      "O extrato continua sem o pagamento de fatura, e caixinha/investimento e Pix recebido seguem como antes.",
+      "Ao abrir o app, as compras que você já tinha no cartão ganham a despesa delas, e as despesas “Fatura … (pagamento)” criadas antes por pagamentos de fatura são apagadas para o gasto não contar em dobro. Por isso os totais dos meses passados podem mudar.",
+      "Apagar no Histórico a despesa de uma compra de cartão tira a compra da fatura; editar a despesa (valor, data, categoria) atualiza a compra. Apagar compra, fatura ou cartão na aba Cartões também apaga as despesas."
+    ]
   }
 ]

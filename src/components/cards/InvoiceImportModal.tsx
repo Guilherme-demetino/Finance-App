@@ -29,9 +29,15 @@ export function InvoiceImportModal({ visible, cardName, plan, onSelectRef, onCon
   const canConfirm = plan !== null && plan.blocked === null && rows.length > 0 && !isBusy;
   const ignored: string[] = [];
   if (plan && plan.duplicates > 0) ignored.push(`${plan.duplicates} já lançada${plan.duplicates === 1 ? "" : "s"}`);
-  if (plan && plan.ignoredCredits > 0) ignored.push(`${plan.ignoredCredits} ${plan.ignoredCredits === 1 ? "crédito" : "créditos"} (pagamento recebido, estorno ou saldo)`);
+  if (plan && plan.ignoredCredits > 0) ignored.push(`${plan.ignoredCredits} saldo${plan.ignoredCredits === 1 ? "" : "s"} da fatura anterior`);
 
-  const confirmLabel = rows.length > 0 ? `Importar ${rows.length} ${rows.length === 1 ? "compra" : "compras"}` : "Nada novo para importar";
+  const purchasesCount = plan?.purchasesCount ?? 0;
+  const creditsCount = plan?.creditsCount ?? 0;
+  const purchasesText = `${purchasesCount} ${purchasesCount === 1 ? "compra" : "compras"}`;
+  const creditsText = `${creditsCount} ${creditsCount === 1 ? "crédito" : "créditos"}`;
+  const importText = creditsCount === 0 ? purchasesText : purchasesCount === 0 ? creditsText : `${purchasesText} e ${creditsText}`;
+
+  const confirmLabel = rows.length > 0 ? `Importar ${importText}` : "Nada novo para importar";
   const shownError = errorMessage ?? plan?.blocked ?? null;
 
   return (
@@ -39,9 +45,16 @@ export function InvoiceImportModal({ visible, cardName, plan, onSelectRef, onCon
       {plan ? (
         <>
           <Text style={styles.summary}>
-            {rows.length} {rows.length === 1 ? "compra nova" : "compras novas"} ({formatCurrency(plan.total)})
-            {ignored.length > 0 ? `. Ignoradas: ${ignored.join(", ")}` : ""}.
+            {purchasesCount} {purchasesCount === 1 ? "compra nova" : "compras novas"} ({formatCurrency(plan.purchasesTotal)})
+            {creditsCount > 0 ? `, ${creditsText} (− ${formatCurrency(plan.creditsTotal)})` : ""}
+            {ignored.length > 0 ? `. Ignorados: ${ignored.join(", ")}` : ""}.
           </Text>
+          {creditsCount > 0 ? (
+            <Text style={styles.hint}>
+              Créditos (pagamento recebido, estorno) reduzem o total a pagar da fatura. Não entram nos gastos nem nas
+              receitas.
+            </Text>
+          ) : null}
 
           <Text style={styles.label}>Entra na fatura de</Text>
           <View style={styles.chipRow}>
@@ -76,7 +89,7 @@ export function InvoiceImportModal({ visible, cardName, plan, onSelectRef, onCon
           ) : null}
 
           <Text style={styles.hint}>
-            As compras ficam fora do seu saldo até a fatura ser paga. Confira os valores antes de importar.
+            Cada compra entra nas despesas na data dela. Confira os valores antes de importar.
           </Text>
         </>
       ) : null}

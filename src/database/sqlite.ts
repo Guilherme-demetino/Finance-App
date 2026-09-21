@@ -93,7 +93,7 @@ function createTables(db: SQLite.SQLiteDatabase) {
       );
     `);
 
-    // Cartões de crédito: as compras ficam fora do saldo até a fatura ser paga (o pagamento vira uma despesa).
+    // Cartões de crédito: cada compra vira uma despesa na data da compra; pagar a fatura só liquida (não cria outra despesa).
     db.runSync(`
       CREATE TABLE IF NOT EXISTS credit_cards (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -115,7 +115,8 @@ function createTables(db: SQLite.SQLiteDatabase) {
         invoice_ref TEXT NOT NULL,
         installment_group_id TEXT,
         installment_number INTEGER,
-        installment_total INTEGER
+        installment_total INTEGER,
+        transaction_id INTEGER
       );
     `);
 
@@ -135,9 +136,12 @@ function createTables(db: SQLite.SQLiteDatabase) {
       "CREATE INDEX IF NOT EXISTS idx_card_purchases_card ON card_purchases(card_id, invoice_ref);",
     );
 
-    // Uma versão anterior lançava o "Pagamento recebido" da fatura como compra de valor negativo. O pagamento recebido
-    // não conta mais (o total é o gasto do período), e compra de verdade nunca é negativa: tira esses lançamentos.
-    db.runSync("DELETE FROM card_purchases WHERE amount < 0");
+    // Bancos criados antes de a compra no cartão virar despesa não têm a coluna que liga a compra à despesa.
+    try {
+      db.runSync("ALTER TABLE card_purchases ADD COLUMN transaction_id INTEGER");
+    } catch {
+      // Já existe (banco novo ou já atualizado).
+    }
 
     // Guarda avisos do próprio app (ex: qual novidade o usuário já viu).
     // Fica fora do resetDatabase de propósito: não é dado financeiro.

@@ -13,6 +13,18 @@ function generateRecurrenceGroupId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
 
+type Db = Awaited<ReturnType<typeof getDatabase>>;
+
+/**
+ * Compras de cartão de crédito viram despesas (ver database/creditCards). Apagar a despesa no Histórico tira a compra
+ * do cartão também, senão ela ficaria na fatura sem gasto correspondente.
+ */
+function pruneCardPurchases(db: Db): void {
+  db.runSync(
+    "DELETE FROM card_purchases WHERE transaction_id IS NOT NULL AND transaction_id NOT IN (SELECT id FROM transactions)",
+  );
+}
+
 export async function getAllTransactions(): Promise<TransactionRow[]> {
   const db = await getDatabase();
   return db.getAllAsync<TransactionRow>(
@@ -105,11 +117,21 @@ export async function updateTransaction(
     data.category,
     id,
   );
+  // Se a despesa é uma compra de cartão, a compra acompanha (valor, data, descrição e categoria).
+  db.runSync(
+    "UPDATE card_purchases SET amount = ?, date = ?, description = ?, category = ? WHERE transaction_id = ?",
+    data.amount,
+    data.date,
+    data.description,
+    data.category,
+    id,
+  );
 }
 
 export async function deleteTransaction(id: number): Promise<void> {
   const db = await getDatabase();
   db.runSync("DELETE FROM transactions WHERE id = ?", id);
+  pruneCardPurchases(db);
 }
 
 /** Apaga todas as transações de um mês/ano específico (formato DD/MM/AAAA). */
@@ -122,6 +144,7 @@ export async function deleteTransactionsByMonth(
     "DELETE FROM transactions WHERE date LIKE ?",
     `%/${monthNumber}/${year}`,
   );
+  pruneCardPurchases(db);
 }
 
 /** Busca todas as ocorrências de uma série recorrente/parcelada, em ordem cronológica. */
@@ -144,6 +167,7 @@ export async function deleteTransactionsByGroupId(
     "DELETE FROM transactions WHERE recurrence_group_id = ?",
     groupId,
   );
+  pruneCardPurchases(db);
 }
 
 /**
@@ -161,6 +185,7 @@ export async function deleteTransactionsFromIdInGroup(
     groupId,
     fromId,
   );
+  pruneCardPurchases(db);
 }
 
 /**

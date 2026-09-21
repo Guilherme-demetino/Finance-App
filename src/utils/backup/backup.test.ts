@@ -64,6 +64,7 @@ const DATA: BackupData = {
       installment_group_id: "g1",
       installment_number: 1,
       installment_total: 2,
+      transaction_id: 1,
     },
   ],
   cardPayments: [{ id: 1, card_id: 1, invoice_ref: "2026-09", paid_date: "05/09/2026", amount: 300, transaction_id: null }],

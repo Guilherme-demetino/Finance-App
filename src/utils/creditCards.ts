@@ -10,10 +10,14 @@ import { parseDueDate } from "./dueReminders";
  * - A fatura vence no mês do fechamento se o dia de vencimento é maior que o de fechamento;
  *   senão, no mês seguinte. Em mês curto, dia 31 vale o último dia do mês.
  * - Uma fatura é identificada por AAAA-MM do mês de VENCIMENTO (como os bancos costumam chamar).
- * - As compras ficam fora do saldo; pagar a fatura é que vira despesa (ver database/creditCards).
+ * - Cada compra vira uma despesa do app na data da compra (o "gasto real" cai no mês em que aconteceu). Pagar a fatura
+ *   só a liquida: não cria outra despesa, senão o mesmo gasto seria contado duas vezes (ver database/creditCards).
+ * - Créditos da fatura (pagamento recebido antecipado, estorno) são lançamentos de valor negativo: reduzem o total a
+ *   pagar da fatura, mas não são receita nem entram no gasto.
  */
 
-export const CREDIT_CARD_CATEGORY = "Cartão de crédito";
+/** Categoria dos créditos da fatura (pagamento recebido, estorno): valor negativo, fora do gasto e da receita. */
+export const CARD_CREDIT_CATEGORY = "Crédito na fatura";
 export const MAX_INSTALLMENTS = 48;
 
 export type CardDays = Pick<CreditCardRow, "closing_day" | "due_day">;
@@ -89,13 +93,14 @@ export function invoiceDates(ref: string, card: CardDays): InvoiceDates {
 
 /**
  * "open": ainda recebe compras (até o dia do fechamento, inclusive). "closed": fechou e ainda não
- * venceu. "overdue": venceu sem pagar. "paid": paga. "empty": sem compras (nada a pagar).
+ * venceu. "overdue": venceu sem pagar. "paid": paga. "empty": sem lançamentos (nada a pagar). "settled": tem lançamentos,
+ * mas os créditos (pagamento recebido, estorno) já cobriram tudo (nada a pagar).
  */
-export type InvoiceStatus = "open" | "closed" | "overdue" | "paid" | "empty";
+export type InvoiceStatus = "open" | "closed" | "overdue" | "paid" | "empty" | "settled";
 
-export function invoiceStatus(input: { dates: InvoiceDates; total: number; paid: boolean; today: Date }): InvoiceStatus {
+export function invoiceStatus(input: { dates: InvoiceDates; total: number; paid: boolean; today: Date; hasEntries?: boolean }): InvoiceStatus {
   if (input.paid) return "paid";
-  if (input.total <= 0) return "empty";
+  if (input.total <= 0) return input.hasEntries ? "settled" : "empty";
   const today = startOfDay(input.today);
   if (today <= input.dates.closing) return "open";
   return today <= input.dates.due ? "closed" : "overdue";
@@ -107,6 +112,7 @@ export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
   overdue: "Vencida",
   paid: "Paga",
   empty: "Sem compras",
+  settled: "Quitada",
 };
 
 // -------------------------------------------------------------------- montando as faturas
@@ -119,7 +125,12 @@ export interface Invoice {
   periodStart: string;
   closingDate: string;
   dueDate: string;
+  /** A pagar: as compras menos os créditos (pagamento recebido, estorno). */
   total: number;
+  /** Gasto do período: só as compras. */
+  spend: number;
+  /** Créditos da fatura, em valor positivo. */
+  credits: number;
   status: InvoiceStatus;
   purchases: CardPurchaseRow[];
   /** Total por categoria, da maior para a menor. */
@@ -147,9 +158,14 @@ export function buildInvoice(input: {
     });
   const payment = input.payments.find((item) => item.card_id === card.id && item.invoice_ref === ref) ?? null;
   const total = round2(purchases.reduce((sum, purchase) => sum + purchase.amount, 0));
+  const spend = round2(purchases.filter((purchase) => purchase.amount > 0).reduce((sum, purchase) => sum + purchase.amount, 0));
+  const credits = round2(-purchases.filter((purchase) => purchase.amount < 0).reduce((sum, purchase) => sum + purchase.amount, 0));
 
   const perCategory = new Map<string, number>();
-  for (const purchase of purchases) perCategory.set(purchase.category, (perCategory.get(purchase.category) ?? 0) + purchase.amount);
+  // O total por categoria é do gasto: os créditos descontam do total a pagar, não de uma categoria.
+  for (const purchase of purchases) {
+    if (purchase.amount > 0) perCategory.set(purchase.category, (perCategory.get(purchase.category) ?? 0) + purchase.amount);
+  }
 
   return {
     cardId: card.id,
@@ -159,22 +175,13 @@ export function buildInvoice(input: {
     closingDate: formatDateToString(dates.closing),
     dueDate: formatDateToString(dates.due),
     total,
-    status: invoiceStatus({ dates, total, paid: payment !== null, today }),
+    spend,
+    credits,
+    status: invoiceStatus({ dates, total, paid: payment !== null, today, hasEntries: purchases.length > 0 }),
     purchases,
     byCategory: [...perCategory.entries()].map(([category, value]) => ({ category, total: round2(value) })).sort((a, b) => b.total - a.total),
     payment,
   };
-}
-
-/**
- * Data com que o pagamento da fatura entra nas despesas: o dia do fechamento, que cai no mês da fatura (a fatura de
- * agosto fecha em agosto), e não o dia em que ela é paga, já no mês seguinte. Se o pagamento é feito antes do
- * fechamento (fatura aberta), vale o dia do pagamento, para a despesa não ficar no futuro.
- */
-export function invoiceExpenseDate(ref: string, card: CardDays, paidOn: Date): Date {
-  const { closing } = invoiceDates(ref, card);
-  const paid = startOfDay(paidOn);
-  return closing <= paid ? closing : paid;
 }
 
 /** A fatura que recebe as compras de hoje. */
@@ -219,7 +226,30 @@ export function cardUsage(card: CreditCardRow, purchases: CardPurchaseRow[], pay
 
 // -------------------------------------------------------------------- compra (com parcelas)
 
-export type NewPurchase = Omit<CardPurchaseRow, "id">;
+export type NewPurchase = Omit<CardPurchaseRow, "id" | "transaction_id">;
+
+/**
+ * Data da despesa que a compra gera: a data da compra. Parcela 2 em diante cai no dia do fechamento da fatura em que
+ * está (mês a mês, como as parcelas do resto do app), porque a data gravada nelas é a da compra original.
+ */
+export function purchaseExpenseDate(
+  purchase: { date: string; invoice_ref: string; installment_number: number | null },
+  card: CardDays,
+): string {
+  if (purchase.installment_number === null || purchase.installment_number < 2) return purchase.date;
+  return formatDateToString(invoiceDates(purchase.invoice_ref, card).closing);
+}
+
+/** Descrição da despesa: a da compra, com o número da parcela quando é parcelada ("Notebook (2/5)"). */
+export function purchaseExpenseDescription(purchase: {
+  description: string;
+  installment_number: number | null;
+  installment_total: number | null;
+}): string {
+  const numbered = purchase.installment_number !== null && purchase.installment_total !== null;
+  const alreadyNumbered = /\(\d+\/\d+\)\s*$/.test(purchase.description);
+  return numbered && !alreadyNumbered ? `${purchase.description} (${purchase.installment_number}/${purchase.installment_total})` : purchase.description;
+}
 
 /**
  * As linhas de uma compra: uma só, ou uma por parcela, cada uma numa fatura (a primeira na que
@@ -306,7 +336,7 @@ export function unpaidInvoiceDues(input: {
   const dues: InvoiceDue[] = [];
   for (const card of input.cards) {
     for (const invoice of listInvoices({ card, purchases: input.purchases, payments: input.payments, today: input.today })) {
-      if (invoice.status === "paid" || invoice.status === "empty") continue;
+      if (invoice.status === "paid" || invoice.status === "empty" || invoice.status === "settled") continue;
       dues.push({
         id: `invoice-${card.id}-${invoice.ref}`,
         cardId: card.id,

@@ -91,6 +91,8 @@ export interface CardPurchaseRow {
   installment_group_id: string | null;
   installment_number: number | null;
   installment_total: number | null;
+  /** Despesa que essa compra gerou nas despesas do app (na data da compra). Nula para créditos (valor negativo). */
+  transaction_id: number | null;
 }
 
 /** Linha crua da tabela `card_invoice_payments`: a fatura foi paga (gera uma despesa no saldo). */

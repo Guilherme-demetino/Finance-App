@@ -21,6 +21,7 @@ import type {
 } from "../types";
 import { getMonthNumber } from "../utils/dates";
 import { logError } from "../utils/logger";
+import { notifyCardsChanged } from "../services/cardsEvents";
 
 interface MonthDatum {
   label: string;
@@ -225,26 +226,33 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
       await createTransaction(data);
     }
     await refresh();
+    // Editar uma despesa que é compra de cartão também muda a compra: a tela de cartões relê.
+    if (editingId) notifyCardsChanged();
   };
 
+  // Apagar despesas que são compras de cartão tira a compra do cartão: a tela de cartões relê.
   const removeTransaction = async (id: number) => {
     await deleteTransaction(id);
     await refresh();
+    notifyCardsChanged();
   };
 
   const removeAllForCurrentPeriod = async () => {
     await deleteTransactionsByMonth(getMonthNumber(selectedMonth), selectedYear);
     await refresh();
+    notifyCardsChanged();
   };
 
   const removeSeries = async (groupId: string) => {
     await deleteTransactionsByGroupId(groupId);
     await refresh();
+    notifyCardsChanged();
   };
 
   const removeSeriesFromId = async (groupId: string, fromId: number) => {
     await deleteTransactionsFromIdInGroup(groupId, fromId);
     await refresh();
+    notifyCardsChanged();
   };
 
   return {

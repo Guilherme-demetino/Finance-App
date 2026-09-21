@@ -42,7 +42,7 @@ export async function readBackupData(): Promise<BackupData> {
     "SELECT id, name, closing_day, due_day, credit_limit FROM credit_cards ORDER BY id",
   );
   const cardPurchases = await db.getAllAsync<CardPurchaseRow>(
-    "SELECT id, card_id, description, amount, date, category, invoice_ref, installment_group_id, installment_number, installment_total FROM card_purchases ORDER BY id",
+    "SELECT id, card_id, description, amount, date, category, invoice_ref, installment_group_id, installment_number, installment_total, transaction_id FROM card_purchases ORDER BY id",
   );
   const cardPayments = await db.getAllAsync<CardPaymentRow>(
     "SELECT id, card_id, invoice_ref, paid_date, amount, transaction_id FROM card_invoice_payments ORDER BY id",
@@ -161,10 +161,9 @@ export async function replaceAllData(data: BackupData): Promise<void> {
         c.credit_limit ?? null,
       );
     }
-    // Backup feito por uma versão que lançava o pagamento recebido como compra negativa: esses lançamentos não valem mais.
-    for (const p of (data.cardPurchases ?? []).filter((purchase) => purchase.amount > 0)) {
+    for (const p of data.cardPurchases ?? []) {
       db.runSync(
-        "INSERT INTO card_purchases (id, card_id, description, amount, date, category, invoice_ref, installment_group_id, installment_number, installment_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO card_purchases (id, card_id, description, amount, date, category, invoice_ref, installment_group_id, installment_number, installment_total, transaction_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         p.id,
         p.card_id,
         p.description,
@@ -175,6 +174,7 @@ export async function replaceAllData(data: BackupData): Promise<void> {
         p.installment_group_id ?? null,
         p.installment_number ?? null,
         p.installment_total ?? null,
+        p.transaction_id ?? null,
       );
     }
     for (const p of data.cardPayments ?? []) {

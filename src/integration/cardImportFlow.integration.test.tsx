@@ -120,13 +120,12 @@ const iso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1)
 // Fecha dia 10, vence dia 20. Compras de 90 dias atrás caem numa fatura que já venceu (sempre paga-se e concilia-se).
 const PURCHASE_DAY = daysAgo(90);
 
-/** A fatura em CSV do cartão (formato Nubank: valor positivo é compra, negativo é crédito ou pagamento). */
+/** A fatura em CSV do cartão (formato Nubank: valor positivo é compra, negativo é crédito ou pagamento). Total das compras: 100. */
 const invoiceCsv = () =>
   [
     "date,category,title,amount",
     `${iso(PURCHASE_DAY)},alimentação,Mercado,60.00`,
     `${iso(PURCHASE_DAY)},casa,Notebook - Parcela 2/5,40.00`,
-    `${iso(PURCHASE_DAY)},estorno,Estorno Loja,-15.00`,
   ].join("\n");
 
 /** O extrato da conta (formato Nubank de conta) com uma linha de débito na data dada. */
@@ -189,22 +188,25 @@ afterEach(() => {
 });
 
 describe("importar a fatura do cartão (CSV)", () => {
-  it("as compras entram no cartão, na fatura certa e fora do saldo; parcela e crédito são tratados", async () => {
+  it("as compras entram no cartão, na fatura certa, e cada uma vira uma despesa; a parcela é reconhecida", async () => {
     await mountApp();
     const card = await addCard();
 
-    const { plan, result } = await importInvoiceFile(card, invoiceCsv());
+    const { plan, result } = await importInvoiceFile(card, `${invoiceCsv()}\n${iso(PURCHASE_DAY)},saldo,Fatura anterior,-200.00`);
 
     expect(result).toEqual({ ok: true });
-    expect(plan!.ignoredCredits).toBe(1);
+    expect(plan!.ignoredCredits).toBe(1); // "Fatura anterior" não é lançada
     const stored = await getAllCardPurchases();
     expect(stored.map((p) => [p.description, p.amount, p.installment_number, p.installment_total]).sort()).toEqual([
       ["Mercado", 60, null, null],
       ["Notebook", 40, 2, 5],
     ]);
     expect(new Set(stored.map((p) => p.invoice_ref)).size).toBe(1);
-    expect(seen.transactions.totalExpense).toBe(0);
-    expect(await getAllTransactions()).toEqual([]);
+    // Cada compra é uma despesa nas despesas do app (a data da parcela 2 é o fechamento da fatura dela).
+    expect((await getAllTransactions()).map((t) => [t.description, t.amount, t.category_id]).sort()).toEqual([
+      ["Mercado", 60, "Alimentação"],
+      ["Notebook (2/5)", 40, "Geral"],
+    ]);
   });
 
   it("importar o mesmo arquivo de novo não duplica nada", async () => {
@@ -279,26 +281,37 @@ describe("importar a fatura do cartão (CSV)", () => {
 describe("pagamento recebido na fatura", () => {
   const withPayment = () => [invoiceCsv(), `${iso(PURCHASE_DAY)},pagamento,Pagamento recebido,-30.00`].join("\n");
 
-  it("não desconta do total: a fatura mostra o gasto do período e pagar tira da conta o valor cheio", async () => {
+  it("é um crédito: reduz o total a pagar, mas não vira despesa nem receita, e o gasto continua o das compras", async () => {
     await mountApp();
     const card = await addCard();
 
     const { plan, result } = await importInvoiceFile(card, withPayment());
 
     expect(result).toEqual({ ok: true });
-    expect(plan!.ignoredCredits).toBe(2); // estorno e pagamento recebido
-    const stored = await getAllCardPurchases();
-    expect(stored.map((row) => row.amount).sort((a, b) => a - b)).toEqual([40, 60]);
+    expect(plan!.creditsCount).toBe(1);
+    expect((await getAllCardPurchases()).map((row) => row.amount).sort((a, b) => a - b)).toEqual([-30, 40, 60]);
     const invoice = seen.cards.views[0].invoices.find((item) => item.total !== 0)!;
-    expect(invoice.total).toBe(100);
-    expect(seen.cards.views[0].usage.used).toBe(100);
+    expect(invoice).toMatchObject({ total: 70, spend: 100, credits: 30 });
+    expect(seen.cards.views[0].usage.used).toBe(70);
+    // Só as duas compras estão nas despesas: o crédito não é gasto nem receita.
+    const stored = await getAllTransactions();
+    expect(stored).toHaveLength(2);
+    expect(stored.map((t) => t.type)).toEqual(["expense", "expense"]);
+  });
+
+  it("pagar a fatura só a marca como paga: nenhuma despesa nova, e o valor pago é o total a pagar", async () => {
+    await mountApp();
+    const card = await addCard();
+    await importInvoiceFile(card, withPayment());
+    const invoice = seen.cards.views[0].invoices.find((item) => item.total !== 0)!;
 
     await act(async () => {
       await seen.cards.payInvoice(card, invoice);
     });
     await settle();
 
-    expect((await getAllTransactions())[0]).toMatchObject({ amount: 100, category_id: "Cartão de crédito" });
+    expect(await getAllTransactions()).toHaveLength(2);
+    expect((await getAllCardPayments())[0]).toMatchObject({ amount: 70, transaction_id: null });
   });
 
   it("importar de novo o mesmo arquivo não repete nada", async () => {
@@ -309,8 +322,9 @@ describe("pagamento recebido na fatura", () => {
     const { plan } = await importInvoiceFile(card, withPayment());
 
     expect(plan!.rows).toEqual([]);
-    expect(plan!.duplicates).toBe(2);
-    expect(await getAllCardPurchases()).toHaveLength(2);
+    expect(plan!.duplicates).toBe(3);
+    expect(await getAllCardPurchases()).toHaveLength(3);
+    expect(await getAllTransactions()).toHaveLength(2);
   });
 });
 
@@ -364,12 +378,12 @@ describe("extrato: o pagamento da fatura só vira despesa ao pagar na aba Cartõ
       await seen.cards.payInvoice(card, invoice);
     });
     await settle();
-    expect(await getAllTransactions()).toHaveLength(1);
+    expect(await getAllTransactions()).toHaveLength(2); // as duas compras
 
     await mountApp();
     await pickStatement(statementCsv(formatDateToString(new Date()), "Pagamento de fatura Inter", "-100.00"));
 
     expect(seen.transfer.pendingImport).toBeNull();
-    expect(await getAllTransactions()).toHaveLength(1);
+    expect(await getAllTransactions()).toHaveLength(2);
   });
 });

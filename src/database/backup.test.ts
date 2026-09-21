@@ -89,6 +89,7 @@ const SAMPLE: BackupData = {
       installment_group_id: "g1",
       installment_number: 1,
       installment_total: 2,
+      transaction_id: 11,
     },
     {
       id: 21,
@@ -101,9 +102,10 @@ const SAMPLE: BackupData = {
       installment_group_id: null,
       installment_number: null,
       installment_total: null,
+      transaction_id: null,
     },
   ],
-  cardPayments: [{ id: 30, card_id: 7, invoice_ref: "2026-09", paid_date: "05/09/2026", amount: 300, transaction_id: 11 }],
+  cardPayments: [{ id: 30, card_id: 7, invoice_ref: "2026-09", paid_date: "05/09/2026", amount: 300, transaction_id: null }],
 };
 
 describe("backup do banco", () => {
@@ -160,14 +162,28 @@ describe("backup do banco", () => {
     expect(id).toBeGreaterThan(7);
   });
 
-  it("backup de uma versão que lançava o pagamento recebido como compra negativa: esse lançamento não é restaurado", async () => {
+  it("crédito da fatura (valor negativo) volta do backup como estava", async () => {
     const { backup, sqlite } = await loadModules();
     await sqlite.getDatabase();
-    const negative = { ...SAMPLE.cardPurchases![0], id: 99, description: "Pagamento recebido", amount: -450, category: "Pagamento" };
+    const credit = { ...SAMPLE.cardPurchases![0], id: 99, description: "Pagamento recebido", amount: -450, category: "Crédito na fatura", installment_group_id: null, installment_number: null, installment_total: null, transaction_id: null };
 
-    await backup.replaceAllData({ ...SAMPLE, cardPurchases: [...SAMPLE.cardPurchases!, negative] });
+    await backup.replaceAllData({ ...SAMPLE, cardPurchases: [...SAMPLE.cardPurchases!, credit] });
 
-    expect((await backup.readBackupData()).cardPurchases).toEqual(SAMPLE.cardPurchases);
+    expect((await backup.readBackupData()).cardPurchases).toEqual([...SAMPLE.cardPurchases!, credit]);
+  });
+
+  it("backup antigo (compras sem a ligação com a despesa): depois de restaurar, a conciliação cria as despesas", async () => {
+    const { backup, sqlite, transactions } = await loadModules();
+    await sqlite.getDatabase();
+    const old = SAMPLE.cardPurchases!.map((p) => ({ ...p, transaction_id: undefined })) as unknown as NonNullable<BackupData["cardPurchases"]>;
+    await backup.replaceAllData({ ...SAMPLE, cardPurchases: old });
+    const cards = jest.requireActual<typeof import("./creditCards")>("./creditCards");
+
+    expect(await cards.reconcileCardTransactions()).toBe(SAMPLE.cardPurchases!.length);
+
+    const descriptions = (await transactions.getAllTransactions()).map((t) => t.description);
+    expect(descriptions).toContain("TV (1/2)");
+    expect(descriptions).toContain("Mercado");
   });
 
   it("uma falha nos cartões também desfaz a restauração inteira", async () => {

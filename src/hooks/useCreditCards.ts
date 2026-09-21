@@ -18,13 +18,12 @@ import {
   updateCreditCard,
   type CreditCardInput,
 } from "../database/creditCards";
-import { notifyCardsChanged } from "../services/cardsEvents";
+import { notifyCardsChanged, subscribeToCardChanges } from "../services/cardsEvents";
 import { pickFileBytes } from "../services/pickFileBytes";
 import type { CardPaymentRow, CardPurchaseRow, CreditCardRow } from "../types";
 import type { CardImportPlan } from "../utils/cardImport";
 import {
   cardUsage,
-  invoiceExpenseDate,
   invoiceRefFor,
   listInvoices,
   planPurchase,
@@ -102,6 +101,14 @@ export function useCreditCards() {
 
   useEffect(() => {
     let cancelled = false;
+    // Algo mudou fora desta tela (ex.: uma despesa de compra de cartão foi apagada no Histórico): relê.
+    const unsubscribe = subscribeToCardChanges(() => {
+      readAll()
+        .then((loaded) => {
+          if (!cancelled) setData(loaded);
+        })
+        .catch((error) => logError("Erro ao reler os cartões:", error));
+    });
     readAll()
       .then((loaded) => {
         if (!cancelled) setData(loaded);
@@ -117,6 +124,7 @@ export function useCreditCards() {
       .catch((error) => logError("Erro ao ler as categorias dos cartões:", error));
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, []);
 
@@ -237,8 +245,8 @@ export function useCreditCards() {
   };
 
   /**
-   * A fatura (aberta, fechada ou vencida) vira uma despesa "Cartão de crédito" no saldo, no mês dela (data do
-   * fechamento; se ainda aberta, o dia do pagamento). O pagamento fica anotado com a data de hoje.
+   * Marca a fatura (aberta, fechada ou vencida) como paga, com a data de hoje. Não cria despesa: as compras dela já
+   * entraram nas despesas na data de cada uma.
    */
   const payInvoice = async (card: CreditCardRow, invoice: Invoice): Promise<ActionResult> => {
     if (invoice.status !== "open" && invoice.status !== "closed" && invoice.status !== "overdue") return fail("Não há o que pagar nessa fatura.");
@@ -246,11 +254,9 @@ export function useCreditCards() {
       () =>
         payInvoiceInDb({
           cardId: card.id,
-          cardName: card.name,
           ref: invoice.ref,
           amount: invoice.total,
           paidDate: formatDateToString(now()),
-          expenseDate: formatDateToString(invoiceExpenseDate(invoice.ref, card, now())),
         }),
       "Não foi possível pagar a fatura.",
     );

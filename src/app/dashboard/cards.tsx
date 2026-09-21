@@ -34,18 +34,14 @@ function confirmationText(confirmation: Confirmation): { title: string; message:
     case "delete-card":
       return {
         title: "Excluir cartão",
-        message: `Apagar o cartão ${confirmation.card.name}, as compras e os pagamentos dele? As despesas de faturas já pagas continuam no seu saldo.`,
+        message: `Apagar o cartão ${confirmation.card.name}, as compras e os pagamentos dele? As despesas dessas compras também saem das suas despesas.`,
         confirmLabel: "Excluir",
         destructive: true,
       };
     case "pay":
       return {
         title: "Pagar fatura",
-        message: `Registrar o pagamento da fatura ${confirmation.invoice.label} do ${confirmation.card.name}: ${formatCurrency(confirmation.invoice.total)}. Uma despesa "Cartão de crédito" entra no seu saldo ${
-          confirmation.invoice.status === "open"
-            ? "com a data de hoje"
-            : `no mês da fatura, com a data do fechamento (${confirmation.invoice.closingDate})`
-        }.${
+        message: `Marcar a fatura ${confirmation.invoice.label} do ${confirmation.card.name} como paga (${formatCurrency(confirmation.invoice.total)}). Isso não cria outra despesa: o gasto já entrou nas despesas, compra por compra, na data de cada uma.${
           confirmation.invoice.status === "open"
             ? ` Ela ainda está aberta: depois de paga, não recebe mais compras (até o fechamento, em ${confirmation.invoice.closingDate}). Para lançar outra compra, desfaça o pagamento.`
             : ""
@@ -56,7 +52,7 @@ function confirmationText(confirmation: Confirmation): { title: string; message:
     case "undo":
       return {
         title: "Desfazer pagamento",
-        message: `A fatura ${confirmation.invoice.label} volta a ficar em aberto e a despesa do pagamento sai do seu saldo.`,
+        message: `A fatura ${confirmation.invoice.label} volta a ficar em aberto. As despesas das compras não mudam.`,
         confirmLabel: "Desfazer",
         destructive: true,
       };
@@ -64,7 +60,7 @@ function confirmationText(confirmation: Confirmation): { title: string; message:
       const count = confirmation.invoice.purchases.length;
       return {
         title: "Excluir fatura inteira",
-        message: `Apagar a fatura ${confirmation.invoice.label} do ${confirmation.card.name}: ${count} ${count === 1 ? "compra" : "compras"}, ${formatCurrency(confirmation.invoice.total)}? As parcelas dessas compras que estão em outras faturas continuam lá.`,
+        message: `Apagar a fatura ${confirmation.invoice.label} do ${confirmation.card.name}: ${count} ${count === 1 ? "compra" : "compras"}, ${formatCurrency(confirmation.invoice.total)}? As despesas dessas compras também saem. As parcelas que estão em outras faturas continuam lá.`,
         confirmLabel: "Excluir fatura",
         destructive: true,
       };
@@ -74,8 +70,8 @@ function confirmationText(confirmation: Confirmation): { title: string; message:
       return {
         title: "Excluir compra",
         message: isSeries
-          ? `Apagar "${confirmation.purchase.description}" e as parcelas que ainda não foram pagas? As de faturas já pagas ficam.`
-          : `Apagar "${confirmation.purchase.description}" da fatura?`,
+          ? `Apagar "${confirmation.purchase.description}" e as parcelas que ainda não foram pagas (e as despesas delas)? As de faturas já pagas ficam.`
+          : `Apagar "${confirmation.purchase.description}" da fatura? A despesa dela também sai.`,
         confirmLabel: "Excluir",
         destructive: true,
       };
@@ -163,9 +159,13 @@ export default function CardsScreen() {
       setFormError(result.error);
       return;
     }
-    const count = importPlan.rows.length;
+    const { purchasesCount, creditsCount } = importPlan;
+    const parts = [
+      purchasesCount > 0 ? `${purchasesCount} ${purchasesCount === 1 ? "compra" : "compras"}` : null,
+      creditsCount > 0 ? `${creditsCount} ${creditsCount === 1 ? "crédito" : "créditos"}` : null,
+    ].filter((part) => part !== null);
     setImportDraft(null);
-    setNotice(`Importado na fatura de ${formatRef(importPlan.ref)}: ${count} ${count === 1 ? "compra" : "compras"}.`);
+    setNotice(`Importado na fatura de ${formatRef(importPlan.ref)}: ${parts.join(" e ")}.`);
   };
 
   const handleConfirm = async () => {
@@ -181,7 +181,7 @@ export default function CardsScreen() {
         break;
       case "pay":
         result = await cards.payInvoice(current.card, current.invoice);
-        success = "Fatura paga. A despesa entrou no seu saldo.";
+        success = "Fatura marcada como paga.";
         break;
       case "undo":
         result = await cards.undoPayment(current.card, current.invoice);
@@ -216,8 +216,9 @@ export default function CardsScreen() {
           </TouchableOpacity>
         </View>
         <Text style={styles.intro}>
-          As compras no cartão ficam fora do seu saldo até você pagar a fatura: aí o valor sai de uma vez, como despesa
-          &quot;Cartão de crédito&quot;. Assim o mesmo gasto não é contado duas vezes.
+          Cada compra no cartão entra nas despesas na data da compra, com a categoria escolhida: o gasto aparece no mês em
+          que aconteceu. Pagar a fatura só a marca como paga e não cria outra despesa, para o mesmo gasto não ser contado
+          duas vezes.
         </Text>
 
         {notice !== null ? (
