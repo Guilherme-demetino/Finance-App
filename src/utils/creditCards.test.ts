@@ -6,6 +6,7 @@ import {
   currentInvoiceRef,
   formatRef,
   invoiceDates,
+  invoiceExpenseDate,
   invoiceRefFor,
   invoiceStatus,
   listInvoices,
@@ -442,5 +443,33 @@ describe("faturas a pagar (avisos e lembretes)", () => {
 
   it("sem compras, nada a pagar", () => {
     expect(unpaidInvoiceDues({ cards, purchases: [], payments: [], today })).toEqual([]);
+  });
+});
+
+describe("data da despesa ao pagar a fatura", () => {
+  const ymd = (date: Date) => formatDateToString(date);
+
+  it("fatura fechada ou vencida entra no dia do fechamento, no mês dela e não no mês em que é paga", () => {
+    // Fecha dia 28, vence dia 5: a fatura que vence em 05/09 fechou em 28/08.
+    expect(ymd(invoiceExpenseDate("2026-09", card(), new Date(2026, 8, 4)))).toBe("28/08/2026");
+    expect(ymd(invoiceExpenseDate("2026-09", card(), new Date(2026, 8, 20)))).toBe("28/08/2026");
+  });
+
+  it("fecha e vence no mesmo mês: o fechamento do próprio mês", () => {
+    const early = card({ closing_day: 3, due_day: 10 });
+
+    expect(ymd(invoiceExpenseDate("2026-08", early, new Date(2026, 7, 10)))).toBe("03/08/2026");
+  });
+
+  it("fatura ainda aberta usa o dia do pagamento, para a despesa não ficar no futuro", () => {
+    expect(ymd(invoiceExpenseDate("2026-09", card(), new Date(2026, 7, 20)))).toBe("20/08/2026");
+  });
+
+  it("pagar no próprio dia do fechamento vale esse dia", () => {
+    expect(ymd(invoiceExpenseDate("2026-09", card(), new Date(2026, 7, 28)))).toBe("28/08/2026");
+  });
+
+  it("mês curto: fechamento no dia 31 vale o último dia do mês", () => {
+    expect(ymd(invoiceExpenseDate("2026-03", card({ closing_day: 31, due_day: 10 }), new Date(2026, 2, 15)))).toBe("28/02/2026");
   });
 });

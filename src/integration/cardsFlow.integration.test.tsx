@@ -5,7 +5,9 @@ import { DueRemindersRunner } from "../components/dashboard/DueRemindersRunner";
 import { useCardsContext } from "../context/CardsContext";
 import { DashboardProviders } from "../context/DashboardProviders";
 import { useTransactionsData } from "../context/TransactionsContext";
+import { getAllCardPayments } from "../database/creditCards";
 import { resetDatabase } from "../database/sqlite";
+import { getAllTransactions } from "../database/transactions";
 import { useCreditCards } from "../hooks/useCreditCards";
 import { REMINDER_META } from "../services/dueReminders";
 import type { createFakeScheduler } from "../test/fakeReminderScheduler";
@@ -228,8 +230,11 @@ describe("cartões e faturas (painel + banco)", () => {
     });
     await settle();
 
-    expect(seen.transactions.totalExpense).toBe(1200);
-    expect(seen.transactions.transactions[0]).toMatchObject({ category_id: "Cartão de crédito", date: formatDateToString(new Date()) });
+    // A despesa entra no mês da fatura (data do fechamento), não no dia em que foi paga.
+    const [expense] = await getAllTransactions();
+    expect(expense).toMatchObject({ amount: 1200, category_id: "Cartão de crédito", date: invoice.closingDate });
+    expect(expense.date).not.toBe(formatDateToString(new Date()));
+    expect((await getAllCardPayments())[0].paid_date).toBe(formatDateToString(new Date()));
     expect(seen.dues.invoiceDues).toEqual([]);
     expect(seen.cards.views[0].usage.used).toBe(0);
 
@@ -246,8 +251,23 @@ describe("cartões e faturas (painel + banco)", () => {
     });
     await settle();
 
-    expect(seen.transactions.totalExpense).toBe(0);
+    expect(await getAllTransactions()).toEqual([]);
     expect(seen.dues.invoiceDues).toHaveLength(1);
+  });
+
+  it("ao abrir o painel, um pagamento antigo (despesa no dia em que foi pago) vai para o mês da fatura, uma vez só", async () => {
+    const { setMeta } = jest.requireActual<typeof import("../database/appMeta")>("../database/appMeta");
+    await setMeta("card_payment_dates_aligned", "0");
+    const { createCreditCard, getAllCreditCards, payInvoice } = jest.requireActual<typeof import("../database/creditCards")>("../database/creditCards");
+    await createCreditCard({ name: "Inter", closingDay: 10, dueDay: 20, limit: null });
+    const [card] = await getAllCreditCards();
+    await payInvoice({ cardId: card.id, cardName: "Inter", ref: "2026-01", amount: 300, paidDate: "05/02/2026" });
+    expect((await getAllTransactions())[0].date).toBe("05/02/2026");
+
+    await mountApp();
+
+    expect((await getAllTransactions())[0].date).toBe("10/01/2026");
+    expect((await getAllCardPayments())[0].paid_date).toBe("05/02/2026");
   });
 
   it("apagar uma compra parcelada leva só as parcelas ainda não pagas", async () => {

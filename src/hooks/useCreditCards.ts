@@ -24,6 +24,7 @@ import type { CardPaymentRow, CardPurchaseRow, CreditCardRow } from "../types";
 import type { CardImportPlan } from "../utils/cardImport";
 import {
   cardUsage,
+  invoiceExpenseDate,
   invoiceRefFor,
   listInvoices,
   planPurchase,
@@ -235,7 +236,10 @@ export function useCreditCards() {
     return perform(() => deleteCardPurchases(invoice.purchases.map((purchase) => purchase.id)), "Não foi possível excluir a fatura.");
   };
 
-  /** A fatura (aberta, fechada ou vencida) vira uma despesa "Cartão de crédito" no saldo, na data de hoje. */
+  /**
+   * A fatura (aberta, fechada ou vencida) vira uma despesa "Cartão de crédito" no saldo, no mês dela (data do
+   * fechamento; se ainda aberta, o dia do pagamento). O pagamento fica anotado com a data de hoje.
+   */
   const payInvoice = async (card: CreditCardRow, invoice: Invoice): Promise<ActionResult> => {
     if (invoice.status !== "open" && invoice.status !== "closed" && invoice.status !== "overdue") return fail("Não há o que pagar nessa fatura.");
     return perform(
@@ -246,6 +250,7 @@ export function useCreditCards() {
           ref: invoice.ref,
           amount: invoice.total,
           paidDate: formatDateToString(now()),
+          expenseDate: formatDateToString(invoiceExpenseDate(invoice.ref, card, now())),
         }),
       "Não foi possível pagar a fatura.",
     );

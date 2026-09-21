@@ -123,6 +123,17 @@ describe("pagar a fatura", () => {
     expect(payment).toMatchObject({ card_id: card.id, invoice_ref: "2026-10", paid_date: "05/10/2026", amount: 1250.5, transaction_id: expense.id });
   });
 
+  it("a despesa entra com a data informada (mês da fatura) e o pagamento guarda o dia em que foi feito", async () => {
+    const m = await load();
+    const card = await newCard(m);
+
+    await pay(m, card.id, { paidDate: "10/09/2026", expenseDate: "28/08/2026" });
+
+    const [expense] = await m.transactions.getAllTransactions();
+    expect(expense.date).toBe("28/08/2026");
+    expect((await m.cards.getAllCardPayments())[0].paid_date).toBe("10/09/2026");
+  });
+
   it("recusa pagar a mesma fatura duas vezes, sem criar outra despesa", async () => {
     const m = await load();
     const card = await newCard(m);
@@ -205,6 +216,42 @@ describe("limpeza dos pagamentos recebidos lançados por uma versão anterior", 
     const reopened = jest.requireActual<typeof import("./creditCards")>("./creditCards");
 
     expect((await reopened.getAllCardPurchases()).map((p) => p.description)).toEqual(["Mercado"]);
+  });
+});
+
+describe("ajuste único das datas de pagamentos antigos", () => {
+  it("leva a despesa para o dia do fechamento (mês da fatura), só uma vez", async () => {
+    const m = await load();
+    const card = await newCard(m); // fecha 28, vence 5
+    // Pagamento feito por uma versão anterior: a despesa ficou no dia do pagamento.
+    await m.cards.payInvoice({ cardId: card.id, cardName: "Nubank", ref: "2026-09", amount: 500, paidDate: "10/09/2026" });
+
+    expect(await m.cards.alignCardPaymentDates()).toBe(1);
+
+    const [expense] = await m.transactions.getAllTransactions();
+    expect(expense.date).toBe("28/08/2026");
+    expect((await m.cards.getAllCardPayments())[0].paid_date).toBe("10/09/2026");
+    expect(await m.cards.alignCardPaymentDates()).toBe(0);
+  });
+
+  it("não mexe numa despesa cuja data o usuário já editou", async () => {
+    const m = await load();
+    const card = await newCard(m);
+    await m.cards.payInvoice({ cardId: card.id, cardName: "Nubank", ref: "2026-09", amount: 500, paidDate: "10/09/2026" });
+    const [expense] = await m.transactions.getAllTransactions();
+    await m.transactions.updateTransaction(expense.id, { amount: 500, date: "15/09/2026", description: "Fatura Nubank SET/2026", type: "expense", category: "Cartão de crédito" });
+
+    expect(await m.cards.alignCardPaymentDates()).toBe(0);
+
+    expect((await m.transactions.getAllTransactions())[0].date).toBe("15/09/2026");
+  });
+
+  it("pagamento já lançado no mês certo não muda", async () => {
+    const m = await load();
+    const card = await newCard(m);
+    await m.cards.payInvoice({ cardId: card.id, cardName: "Nubank", ref: "2026-09", amount: 500, paidDate: "28/08/2026" });
+
+    expect(await m.cards.alignCardPaymentDates()).toBe(0);
   });
 });
 

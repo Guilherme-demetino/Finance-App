@@ -323,5 +323,15 @@
       "Na aba Cartões, dentro de cada fatura que ainda não foi paga, o novo botão “Excluir fatura inteira” apaga todas as compras dela de uma vez, com confirmação. Não precisa mais apagar compra por compra.",
       "As parcelas dessas compras que estão em outras faturas continuam lá. Fatura paga não tem o botão: desfaça o pagamento antes. A despesa “Cartão de crédito” do pagamento não é apagada."
     ]
+  },
+  {
+    "id": 38,
+    "date": "21/09/2026",
+    "title": "Fatura paga entra no mês dela",
+    "items": [
+      "Ao pagar a fatura do cartão, a despesa “Cartão de crédito” agora entra no mês da fatura, com a data do fechamento (a fatura de agosto que fecha dia 28 entra em 28/08), e não no mês seguinte em que ela é paga. Se a fatura ainda está aberta, vale o dia do pagamento.",
+      "O pagamento continua anotado com o dia em que você pagou (“Paga em …”), e desfazer o pagamento remove a despesa como antes.",
+      "Faturas que você já tinha pago pelo app também são ajustadas uma vez, ao abrir o app: a despesa vai para o dia do fechamento. Despesas cuja data você mesmo editou não são mexidas."
+    ]
   }
 ]

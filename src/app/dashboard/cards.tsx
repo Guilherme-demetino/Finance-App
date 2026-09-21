@@ -41,7 +41,11 @@ function confirmationText(confirmation: Confirmation): { title: string; message:
     case "pay":
       return {
         title: "Pagar fatura",
-        message: `Registrar o pagamento da fatura ${confirmation.invoice.label} do ${confirmation.card.name}: ${formatCurrency(confirmation.invoice.total)}. Uma despesa "Cartão de crédito" entra no seu saldo com a data de hoje.${
+        message: `Registrar o pagamento da fatura ${confirmation.invoice.label} do ${confirmation.card.name}: ${formatCurrency(confirmation.invoice.total)}. Uma despesa "Cartão de crédito" entra no seu saldo ${
+          confirmation.invoice.status === "open"
+            ? "com a data de hoje"
+            : `no mês da fatura, com a data do fechamento (${confirmation.invoice.closingDate})`
+        }.${
           confirmation.invoice.status === "open"
             ? ` Ela ainda está aberta: depois de paga, não recebe mais compras (até o fechamento, em ${confirmation.invoice.closingDate}). Para lançar outra compra, desfaça o pagamento.`
             : ""

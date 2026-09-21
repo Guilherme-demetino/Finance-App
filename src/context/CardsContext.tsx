@@ -1,6 +1,6 @@
 import { createContext, useEffect, useState, type ReactNode } from "react";
 
-import { getAllCardPayments, getAllCardPurchases, getAllCreditCards } from "../database/creditCards";
+import { alignCardPaymentDates, getAllCardPayments, getAllCardPurchases, getAllCreditCards } from "../database/creditCards";
 import { subscribeToCardChanges } from "../services/cardsEvents";
 import { unpaidInvoiceDues, type InvoiceDue } from "../utils/creditCards";
 import { logError } from "../utils/logger";
@@ -37,6 +37,12 @@ export function CardsProvider({ children }: { children: ReactNode }) {
         .catch((error) => logError("Erro ao ler as faturas de cartão:", error));
 
     load();
+    // Uma vez só: pagamentos antigos passam a cair no mês da fatura (ver alignCardPaymentDates).
+    alignCardPaymentDates()
+      .then((changed) => {
+        if (changed > 0) return refreshTransactions();
+      })
+      .catch((error) => logError("Erro ao ajustar as datas dos pagamentos de fatura:", error));
     const unsubscribe = subscribeToCardChanges(() => {
       load();
       refreshTransactions().catch((error) => logError("Erro ao atualizar as transações após mexer nos cartões:", error));

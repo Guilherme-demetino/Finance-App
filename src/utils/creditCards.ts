@@ -166,6 +166,17 @@ export function buildInvoice(input: {
   };
 }
 
+/**
+ * Data com que o pagamento da fatura entra nas despesas: o dia do fechamento, que cai no mês da fatura (a fatura de
+ * agosto fecha em agosto), e não o dia em que ela é paga, já no mês seguinte. Se o pagamento é feito antes do
+ * fechamento (fatura aberta), vale o dia do pagamento, para a despesa não ficar no futuro.
+ */
+export function invoiceExpenseDate(ref: string, card: CardDays, paidOn: Date): Date {
+  const { closing } = invoiceDates(ref, card);
+  const paid = startOfDay(paidOn);
+  return closing <= paid ? closing : paid;
+}
+
 /** A fatura que recebe as compras de hoje. */
 export const currentInvoiceRef = (card: CardDays, today: Date = new Date()): string => invoiceRefFor(today, card);
 

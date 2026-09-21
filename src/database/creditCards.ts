@@ -1,5 +1,8 @@
 import type { CardPaymentRow, CardPurchaseRow, CreditCardRow } from "../types";
-import { CREDIT_CARD_CATEGORY, formatRef, type NewPurchase } from "../utils/creditCards";
+import { CREDIT_CARD_CATEGORY, formatRef, invoiceExpenseDate, type NewPurchase } from "../utils/creditCards";
+import { formatDateToString } from "../utils/dates";
+import { parseDueDate } from "../utils/dueReminders";
+import { getMeta, setMeta } from "./appMeta";
 import { getDatabase } from "./sqlite";
 
 export interface CreditCardInput {
@@ -126,8 +129,10 @@ export interface PayInvoiceInput {
   cardName: string;
   ref: string;
   amount: number;
-  /** DD/MM/AAAA */
+  /** DD/MM/AAAA: o dia em que o pagamento foi feito (fica anotado no pagamento). */
   paidDate: string;
+  /** DD/MM/AAAA: a data da despesa no saldo (ver invoiceExpenseDate). Sem ela, vale a do pagamento. */
+  expenseDate?: string;
 }
 
 /**
@@ -147,7 +152,7 @@ export async function payInvoice(input: PayInvoiceInput): Promise<void> {
     const expense = db.runSync(
       "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, 'expense', ?)",
       input.amount,
-      input.paidDate,
+      input.expenseDate ?? input.paidDate,
       `Fatura ${input.cardName} ${formatRef(input.ref)}`,
       CREDIT_CARD_CATEGORY,
     );
@@ -160,6 +165,39 @@ export async function payInvoice(input: PayInvoiceInput): Promise<void> {
       expense.lastInsertRowId,
     );
   });
+}
+
+const ALIGNED_DATES_KEY = "card_payment_dates_aligned";
+
+/**
+ * Uma vez só: pagamentos de fatura feitos antes da regra da data (que lançavam a despesa no dia do pagamento) passam a
+ * cair no mês da fatura. Só mexe na despesa que ainda está com a data do pagamento, para não desfazer uma data que o
+ * usuário tenha editado. Devolve quantas despesas mudaram.
+ */
+export async function alignCardPaymentDates(): Promise<number> {
+  if ((await getMeta(ALIGNED_DATES_KEY)) === "1") return 0;
+  const db = await getDatabase();
+  let changed = 0;
+  db.withTransactionSync(() => {
+    const rows = db.getAllSync<{ transaction_id: number; invoice_ref: string; paid_date: string; closing_day: number; due_day: number; date: string }>(
+      `SELECT p.transaction_id AS transaction_id, p.invoice_ref AS invoice_ref, p.paid_date AS paid_date,
+              c.closing_day AS closing_day, c.due_day AS due_day, t.date AS date
+       FROM card_invoice_payments p
+       JOIN credit_cards c ON c.id = p.card_id
+       JOIN transactions t ON t.id = p.transaction_id`,
+    );
+    for (const row of rows) {
+      if (row.date !== row.paid_date) continue;
+      const paidOn = parseDueDate(row.paid_date);
+      if (!paidOn) continue;
+      const target = formatDateToString(invoiceExpenseDate(row.invoice_ref, { closing_day: row.closing_day, due_day: row.due_day }, paidOn));
+      if (target === row.date) continue;
+      db.runSync("UPDATE transactions SET date = ? WHERE id = ?", target, row.transaction_id);
+      changed++;
+    }
+  });
+  await setMeta(ALIGNED_DATES_KEY, "1");
+  return changed;
 }
 
 /** Desfaz o pagamento: a fatura volta a ficar em aberto e a despesa que ele criou sai do saldo. */
