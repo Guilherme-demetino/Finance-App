@@ -167,7 +167,7 @@ describe("cartões e faturas (painel + banco)", () => {
     expect(seen.cards.views[0].usage).toMatchObject({ used: 900, available: 100 });
   });
 
-  it("não deixa pagar uma fatura que ainda está aberta", async () => {
+  it("dá para pagar uma fatura ainda aberta: vira despesa no saldo e a fatura deixa de receber compras", async () => {
     await mountApp();
     await addOpenCard();
     await act(async () => {
@@ -176,12 +176,36 @@ describe("cartões e faturas (painel + banco)", () => {
     await settle();
     const [invoice] = seen.cards.views[0].invoices.filter((item) => item.total > 0);
 
+    expect(invoice.status).toBe("open");
+
     let result: unknown;
     await act(async () => {
       result = await seen.cards.payInvoice(cardOf("Nubank"), invoice);
     });
+    await settle();
 
-    expect(result).toEqual({ ok: false, error: expect.stringContaining("ainda está aberta") });
+    expect(result).toEqual({ ok: true });
+    expect(seen.transactions.totalExpense).toBe(50);
+    expect(seen.dues.invoiceDues).toEqual([]);
+
+    // Paga, a fatura não recebe mais compras; desfazendo o pagamento ela volta a receber.
+    const again = { description: "Outra", amount: 10, date: new Date(), category: "Lazer", installments: 1 };
+    let blocked: unknown;
+    await act(async () => {
+      blocked = await seen.cards.addPurchase(cardOf("Nubank"), again);
+    });
+    expect(blocked).toMatchObject({ ok: false, error: expect.stringContaining("já está paga") });
+
+    const paid = seen.cards.views[0].invoices.find((item) => item.status === "paid")!;
+    await act(async () => {
+      await seen.cards.undoPayment(cardOf("Nubank"), paid);
+    });
+    await settle();
+    let allowed: unknown;
+    await act(async () => {
+      allowed = await seen.cards.addPurchase(cardOf("Nubank"), again);
+    });
+    expect(allowed).toEqual({ ok: true });
     expect(seen.transactions.totalExpense).toBe(0);
   });
 

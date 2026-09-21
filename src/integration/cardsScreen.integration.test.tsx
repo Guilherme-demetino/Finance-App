@@ -242,6 +242,26 @@ describe("pagar a fatura pela tela", () => {
     expect(textOf(tree)).toContain("Mostrar faturas pagas (1)");
   });
 
+  it("fatura ainda aberta também tem o botão de pagar, com o aviso de que ela deixa de receber compras", async () => {
+    const { cards, transactions } = await database();
+    await cards.createCreditCard({ name: "Nubank", closingDay: 31, dueDay: 5, limit: null });
+    const [card] = await cards.getAllCreditCards();
+    await cards.addCardPurchases(
+      planPurchase({ card, description: "Mercado", totalAmount: 80, date: new Date(), category: "Alimentação", installments: 1, groupId: "g" }),
+    );
+    const tree = await mount();
+
+    await pressStartingWith(tree, "Fatura Nubank");
+    expect(textOf(tree)).toContain("Se pagar agora, ela não recebe mais compras.");
+    await pressStartingWith(tree, "Pagar fatura");
+    expect(textOf(tree)).toContain("Ela ainda está aberta: depois de paga, não recebe mais compras");
+    await press(tree, "Pagar");
+
+    expect(textOf(tree)).toContain("Fatura paga. A despesa entrou no seu saldo.");
+    expect((await transactions.getAllTransactions())[0]).toMatchObject({ amount: 80, category_id: "Cartão de crédito" });
+    expect(await cards.getAllCardPayments()).toHaveLength(1);
+  });
+
   it("desfazer o pagamento devolve a fatura e tira a despesa", async () => {
     const { cards, card } = await seedOverdueInvoice();
     const { transactions } = await database();

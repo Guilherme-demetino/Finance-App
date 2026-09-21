@@ -275,5 +275,14 @@
       "Nada é lançado duas vezes: o que já está no cartão é ignorado, e importar o mesmo arquivo de novo não muda nada.",
       "O pagamento da fatura não duplica com o extrato: se você já pagou pelo app, a linha do extrato é descartada; se a fatura ainda estava em aberto, a linha do extrato marca a fatura como paga, sem criar outra despesa. Vale também na ordem inversa."
     ]
+  },
+  {
+    "id": 33,
+    "date": "21/09/2026",
+    "title": "Pagar a fatura aberta",
+    "items": [
+      "Na aba Cartões, a fatura ainda aberta (antes do fechamento) agora também tem o botão “Pagar fatura”.",
+      "Ao pagar, entra no saldo uma despesa “Cartão de crédito” com o valor da fatura até aquele momento. A confirmação avisa que, depois de paga, a fatura não recebe mais compras. Para lançar outra compra nela, desfaça o pagamento."
+    ]
   }
 ]

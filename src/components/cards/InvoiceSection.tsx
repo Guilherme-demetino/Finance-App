@@ -52,7 +52,7 @@ export function InvoiceSection({
   // Pagamentos feitos antes do fechamento (valor negativo) já estão descontados do total.
   const advance = invoice.purchases.filter((purchase) => purchase.amount < 0).reduce((sum, purchase) => sum - purchase.amount, 0);
   const gross = invoice.total + advance;
-  const canPay = invoice.status === "closed" || invoice.status === "overdue";
+  const canPay = invoice.status === "open" || invoice.status === "closed" || invoice.status === "overdue";
 
   return (
     <View style={styles.box}>
@@ -167,7 +167,7 @@ export function InvoiceSection({
 
           {invoice.status === "open" ? (
             <Text style={[styles.small, styles.spaced]}>
-              A fatura ainda recebe compras. Dá para pagar depois do fechamento, em {invoice.closingDate}.
+              A fatura ainda está aberta e recebe compras até {invoice.closingDate}. Se pagar agora, ela não recebe mais compras.
             </Text>
           ) : null}
         </View>

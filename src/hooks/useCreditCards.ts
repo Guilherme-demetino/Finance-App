@@ -229,10 +229,9 @@ export function useCreditCards() {
     return perform(() => deleteCardPurchases(ids), "Não foi possível excluir as parcelas.");
   };
 
-  /** Só depois do fechamento: a fatura vira uma despesa "Cartão de crédito" no saldo, na data de hoje. */
+  /** A fatura (aberta, fechada ou vencida) vira uma despesa "Cartão de crédito" no saldo, na data de hoje. */
   const payInvoice = async (card: CreditCardRow, invoice: Invoice): Promise<ActionResult> => {
-    if (invoice.status === "open") return fail("Essa fatura ainda está aberta. Dá para pagar depois do fechamento.");
-    if (invoice.status !== "closed" && invoice.status !== "overdue") return fail("Não há o que pagar nessa fatura.");
+    if (invoice.status !== "open" && invoice.status !== "closed" && invoice.status !== "overdue") return fail("Não há o que pagar nessa fatura.");
     return perform(
       () =>
         payInvoiceInDb({
