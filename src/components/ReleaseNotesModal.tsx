@@ -1,4 +1,4 @@
-import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
+import { Modal, ScrollView, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import type { Release } from "../constants/changelog";
 import { useMenuStyles } from "../styles/menuStyles";
 import { Text, useTheme } from "../theme";
@@ -12,6 +12,9 @@ interface ReleaseNotesModalProps {
 export function ReleaseNotesModal({ releases, onClose }: ReleaseNotesModalProps) {
   const { colors } = useTheme();
   const menuStyles = useMenuStyles();
+  const { height } = useWindowDimensions();
+  // Quem perdeu várias atualizações vê todas aqui, numa lista rolável que usa boa parte da tela.
+  const listHeight = Math.max(240, Math.round(height * 0.5));
   return (
     <Modal
       visible={releases.length > 0}
@@ -22,9 +25,14 @@ export function ReleaseNotesModal({ releases, onClose }: ReleaseNotesModalProps)
       <View style={menuStyles.modalContainer}>
         <View style={menuStyles.modalContent}>
           <Text style={menuStyles.modalTitle}>O app foi atualizado</Text>
+          {releases.length > 1 ? (
+            <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
+              {releases.length} novidades desde a última vez que você abriu o app
+            </Text>
+          ) : null}
 
           <ScrollView
-            style={{ maxHeight: 340, marginBottom: 24 }}
+            style={{ maxHeight: listHeight, marginBottom: 24 }}
             showsVerticalScrollIndicator={false}
           >
             {releases.map((release, index) => (

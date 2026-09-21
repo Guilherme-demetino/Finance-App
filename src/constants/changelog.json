@@ -356,5 +356,15 @@
       "Compras parceladas lançadas à mão passam a ter uma data por parcela: a da compra mais um mês para cada parcela.",
       "Ao abrir o app, as parcelas que já estavam nas despesas no dia de fechamento são ajustadas uma vez para a data certa. Despesas cuja data você mesmo editou não são mexidas."
     ]
+  },
+  {
+    "id": 41,
+    "date": "21/09/2026",
+    "title": "Todas as novidades de uma vez",
+    "items": [
+      "Se você ficou várias atualizações sem abrir o app, o pop-up “O app foi atualizado” agora lista todas as novidades que você perdeu de uma vez, da mais nova para a mais antiga, sem cortar nenhuma. Antes ele mostrava só as 5 mais recentes.",
+      "O pop-up avisa quantas novidades são e a lista rola, usando mais espaço da tela.",
+      "Na tela Atualizações, antes de baixar, agora aparecem até as 15 últimas novidades (eram 6)."
+    ]
   }
 ]

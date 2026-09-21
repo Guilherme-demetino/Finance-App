@@ -7,8 +7,9 @@
 // a partir do changelog.json da pasta de trabalho.
 const changelog = require("./src/constants/changelog.json");
 
-// Quantas novidades viajam no manifesto: cobre quem ficou algumas atualizações sem abrir o app.
-const RELEASE_NOTES_IN_MANIFEST = 6;
+// Quantas novidades viajam no manifesto: cobre quem ficou várias atualizações sem abrir o app (a tela "Atualizações"
+// mostra todas de uma vez antes de baixar).
+const RELEASE_NOTES_IN_MANIFEST = 15;
 
 module.exports = ({ config }) => ({
   ...config,

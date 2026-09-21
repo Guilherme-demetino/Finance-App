@@ -11,7 +11,7 @@ const release = (id: number): Release => ({
 describe("getUnseenReleases", () => {
   const changelog = [release(1), release(2), release(3)];
 
-  it("mostra tudo para quem nunca viu nenhuma, da mais nova pra mais antiga", () => {
+  it("quem nunca viu nenhuma vê as mais recentes, da mais nova pra mais antiga", () => {
     expect(getUnseenReleases(changelog, null).map((r) => r.id)).toEqual([3, 2, 1]);
   });
 
@@ -23,7 +23,15 @@ describe("getUnseenReleases", () => {
     expect(getUnseenReleases(changelog, 3)).toEqual([]);
   });
 
-  it("limita a quantidade listada", () => {
+  it("quem perdeu várias atualizações vê todas de uma vez, sem limite", () => {
+    const many = Array.from({ length: 20 }, (_, i) => release(i + 1));
+
+    const shown = getUnseenReleases(many, 2).map((r) => r.id);
+
+    expect(shown).toEqual([20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3]);
+  });
+
+  it("sem nenhuma vista, não despeja o histórico inteiro: só as mais recentes", () => {
     const many = Array.from({ length: 8 }, (_, i) => release(i + 1));
     expect(getUnseenReleases(many, null).map((r) => r.id)).toEqual([8, 7, 6, 5, 4]);
   });
