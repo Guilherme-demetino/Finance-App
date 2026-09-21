@@ -301,6 +301,58 @@ describe("cartões e faturas (painel + banco)", () => {
     expect(edited).toMatchObject({ date: "15/09/2026", invoice_ref: "2026-10" });
   });
 
+  it("excluir a fatura inteira apaga todas as compras dela de uma vez e deixa as outras faturas", async () => {
+    await mountApp();
+    await addOpenCard();
+    const card = cardOf("Nubank");
+    await act(async () => {
+      await seen.cards.addPurchase(card, { description: "Notebook", amount: 900, date: new Date(), category: "Outros", installments: 3 });
+      await seen.cards.addPurchase(card, { description: "Mercado", amount: 50, date: new Date(), category: "Alimentação", installments: 1 });
+      await seen.cards.addPurchase(card, { description: "Padaria", amount: 20, date: new Date(), category: "Alimentação", installments: 1 });
+    });
+    await settle();
+    const [first] = seen.cards.views[0].invoices.filter((item) => item.total > 0);
+    expect(first.purchases).toHaveLength(3); // 1ª parcela + Mercado + Padaria
+
+    let result: unknown;
+    await act(async () => {
+      result = await seen.cards.removeInvoice(first);
+    });
+    await settle();
+
+    expect(result).toEqual({ ok: true });
+    const left = seen.cards.views[0].invoices.flatMap((invoice) => invoice.purchases);
+    expect(left.map((purchase) => [purchase.description, purchase.installment_number])).toEqual([
+      ["Notebook", 2],
+      ["Notebook", 3],
+    ]);
+    expect(seen.dues.invoiceDues).toHaveLength(2);
+  });
+
+  it("fatura paga não pode ser excluída inteira (desfaça o pagamento antes); a despesa do pagamento fica no saldo", async () => {
+    await mountApp();
+    await addOpenCard();
+    const card = cardOf("Nubank");
+    await act(async () => {
+      await seen.cards.addPurchase(card, { description: "Mercado", amount: 50, date: new Date(), category: "Alimentação", installments: 1 });
+    });
+    await settle();
+    const invoice = seen.cards.views[0].invoices.find((item) => item.total > 0)!;
+    await act(async () => {
+      await seen.cards.payInvoice(card, invoice);
+    });
+    await settle();
+    const paid = seen.cards.views[0].invoices.find((item) => item.status === "paid")!;
+
+    let result: unknown;
+    await act(async () => {
+      result = await seen.cards.removeInvoice(paid);
+    });
+
+    expect(result).toMatchObject({ ok: false, error: expect.stringContaining("Desfaça o pagamento") });
+    expect(seen.transactions.transactions[0]).toMatchObject({ amount: 50, category_id: "Cartão de crédito", description: expect.stringContaining("Fatura Nubank") });
+  });
+
   it("apagar o cartão tira as faturas do painel", async () => {
     await mountApp();
     await addOpenCard();

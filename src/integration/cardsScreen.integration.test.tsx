@@ -242,6 +242,38 @@ describe("pagar a fatura pela tela", () => {
     expect(textOf(tree)).toContain("Mostrar faturas pagas (1)");
   });
 
+  it("excluir a fatura inteira pede confirmação e apaga todas as compras dela", async () => {
+    const { cards } = await database();
+    await cards.createCreditCard({ name: "Nubank", closingDay: 31, dueDay: 5, limit: null });
+    const [card] = await cards.getAllCreditCards();
+    await cards.addCardPurchases(planPurchase({ card, description: "Mercado", totalAmount: 80, date: new Date(), category: "Alimentação", installments: 1, groupId: "a" }));
+    await cards.addCardPurchases(planPurchase({ card, description: "Padaria", totalAmount: 20, date: new Date(), category: "Alimentação", installments: 1, groupId: "b" }));
+    const tree = await mount();
+
+    await pressStartingWith(tree, "Fatura Nubank");
+    await pressStartingWith(tree, "Excluir fatura");
+    expect(textOf(tree)).toContain("2 compras, R$ 100,00");
+    await press(tree, "Excluir fatura");
+
+    expect(textOf(tree)).toMatch(/Fatura [A-Z]{3}\/\d{4} excluída\./);
+    expect(await cards.getAllCardPurchases()).toEqual([]);
+  });
+
+  it("fatura paga não mostra o botão de excluir a fatura inteira", async () => {
+    const { cards } = await database();
+    await cards.createCreditCard({ name: "Inter", closingDay: 10, dueDay: 20, limit: null });
+    const [card] = await cards.getAllCreditCards();
+    await cards.addCardPurchases(planPurchase({ card, description: "TV", totalAmount: 1200, date: daysAgo(90), category: "Outros", installments: 1, groupId: "g" }));
+    await cards.payInvoice({ cardId: card.id, cardName: "Inter", ref: (await cards.getAllCardPurchases())[0].invoice_ref, amount: 1200, paidDate: "01/01/2026" });
+    const tree = await mount();
+    await press(tree, "Mostrar faturas pagas (1)");
+    const paidInvoice = tree.root.findAllByType(TouchableOpacity).find((node) => String(node.props.accessibilityLabel ?? "").includes(", Paga,"));
+    await act(async () => paidInvoice!.props.onPress());
+
+    expect(textOf(tree)).toContain("Paga em 01/01/2026");
+    expect(() => buttonStartingWith(tree, "Excluir fatura")).toThrow();
+  });
+
   it("fatura ainda aberta também tem o botão de pagar, com o aviso de que ela deixa de receber compras", async () => {
     const { cards, transactions } = await database();
     await cards.createCreditCard({ name: "Nubank", closingDay: 31, dueDay: 5, limit: null });

@@ -21,7 +21,8 @@ type Confirmation =
   | { kind: "delete-card"; card: CreditCardRow }
   | { kind: "pay"; card: CreditCardRow; invoice: Invoice }
   | { kind: "undo"; card: CreditCardRow; invoice: Invoice }
-  | { kind: "delete-purchase"; card: CreditCardRow; purchase: CardPurchaseRow };
+  | { kind: "delete-purchase"; card: CreditCardRow; purchase: CardPurchaseRow }
+  | { kind: "delete-invoice"; card: CreditCardRow; invoice: Invoice };
 
 type CardFormState = { card: CreditCardRow | null };
 type PurchaseFormState = { card: CreditCardRow; purchase: CardPurchaseRow | null };
@@ -55,6 +56,15 @@ function confirmationText(confirmation: Confirmation): { title: string; message:
         confirmLabel: "Desfazer",
         destructive: true,
       };
+    case "delete-invoice": {
+      const count = confirmation.invoice.purchases.length;
+      return {
+        title: "Excluir fatura inteira",
+        message: `Apagar a fatura ${confirmation.invoice.label} do ${confirmation.card.name}: ${count} ${count === 1 ? "compra" : "compras"}, ${formatCurrency(confirmation.invoice.total)}? As parcelas dessas compras que estão em outras faturas continuam lá.`,
+        confirmLabel: "Excluir fatura",
+        destructive: true,
+      };
+    }
     case "delete-purchase": {
       const isSeries = confirmation.purchase.installment_group_id !== null;
       return {
@@ -176,6 +186,10 @@ export default function CardsScreen() {
       case "delete-purchase":
         result = await cards.removeInstallments(current.purchase);
         success = "Compra excluída.";
+        break;
+      case "delete-invoice":
+        result = await cards.removeInvoice(current.invoice);
+        success = `Fatura ${current.invoice.label} excluída.`;
         break;
     }
     setNotice(result.ok ? success : result.error);
@@ -299,6 +313,7 @@ export default function CardsScreen() {
                     onUndoPayment={() => setConfirmation({ kind: "undo", card, invoice })}
                     onEditPurchase={(purchase) => openPurchaseForm(card, purchase)}
                     onDeletePurchase={(purchase) => setConfirmation({ kind: "delete-purchase", card, purchase })}
+                    onDeleteInvoice={() => setConfirmation({ kind: "delete-invoice", card, invoice })}
                   />
                 );
               })}

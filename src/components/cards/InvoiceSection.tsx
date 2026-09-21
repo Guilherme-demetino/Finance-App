@@ -15,6 +15,7 @@ interface InvoiceSectionProps {
   onUndoPayment: () => void;
   onEditPurchase: (purchase: CardPurchaseRow) => void;
   onDeletePurchase: (purchase: CardPurchaseRow) => void;
+  onDeleteInvoice: () => void;
 }
 
 function purchaseTitle(purchase: CardPurchaseRow): string {
@@ -34,6 +35,7 @@ export function InvoiceSection({
   onUndoPayment,
   onEditPurchase,
   onDeletePurchase,
+  onDeleteInvoice,
 }: InvoiceSectionProps) {
   const { colors } = useTheme();
   const styles = useStyles();
@@ -153,6 +155,17 @@ export function InvoiceSection({
             </TouchableOpacity>
           ) : null}
 
+          {!isPaid && invoice.purchases.length > 0 ? (
+            <TouchableOpacity
+              onPress={onDeleteInvoice}
+              style={styles.deleteButton}
+              accessibilityRole="button"
+              accessibilityLabel={`Excluir fatura ${invoice.label} inteira`}
+            >
+              <Text style={styles.deleteText}>Excluir fatura inteira</Text>
+            </TouchableOpacity>
+          ) : null}
+
           {invoice.status === "open" ? (
             <Text style={[styles.small, styles.spaced]}>
               A fatura ainda está aberta e recebe compras até {invoice.closingDate}. Se pagar agora, ela não recebe mais compras.
@@ -212,5 +225,14 @@ const useStyles = makeStyles(({ colors }) => ({
     backgroundColor: colors.accent,
     marginTop: 12,
   },
+  deleteButton: {
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.expense,
+    marginTop: 10,
+  },
+  deleteText: { color: colors.expense, fontSize: 14, fontWeight: "600" },
   payText: { color: colors.textOnColor, fontSize: 15, fontWeight: "700" },
 }));

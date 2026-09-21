@@ -228,6 +228,13 @@ export function useCreditCards() {
     return perform(() => deleteCardPurchases(ids), "Não foi possível excluir as parcelas.");
   };
 
+  /** Apaga todas as compras de uma fatura de uma vez. Fatura paga não: desfaça o pagamento antes. */
+  const removeInvoice = async (invoice: Invoice): Promise<ActionResult> => {
+    if (invoice.status === "paid") return fail("Essa fatura está paga. Desfaça o pagamento antes de apagá-la.");
+    if (invoice.purchases.length === 0) return fail("Essa fatura não tem compras.");
+    return perform(() => deleteCardPurchases(invoice.purchases.map((purchase) => purchase.id)), "Não foi possível excluir a fatura.");
+  };
+
   /** A fatura (aberta, fechada ou vencida) vira uma despesa "Cartão de crédito" no saldo, na data de hoje. */
   const payInvoice = async (card: CreditCardRow, invoice: Invoice): Promise<ActionResult> => {
     if (invoice.status !== "open" && invoice.status !== "closed" && invoice.status !== "overdue") return fail("Não há o que pagar nessa fatura.");
@@ -283,6 +290,7 @@ export function useCreditCards() {
     editPurchase,
     removePurchase,
     removeInstallments,
+    removeInvoice,
     payInvoice,
     undoPayment,
     readInvoiceFile,
