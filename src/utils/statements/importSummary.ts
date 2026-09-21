@@ -33,10 +33,10 @@ export function describeImportPlan(plan: CsvImportPlan): string {
   const rest = count - preview.length;
   if (rest > 0) preview.push(`… e mais ${rest}`);
 
-  const linked = plan.cardPaymentsLinked ?? 0;
+  const skipped = plan.cardPaymentsIgnored ?? 0;
   const linkedNote =
-    linked > 0
-      ? `\n${linked === 1 ? "1 pagamento de fatura de cartão marca" : `${linked} pagamentos de fatura de cartão marcam`} a fatura como paga, sem criar outra despesa.`
+    skipped > 0
+      ? `\n${skipped === 1 ? "1 pagamento de fatura de cartão ficou" : `${skipped} pagamentos de fatura de cartão ficaram`} de fora: essa despesa entra quando você paga a fatura na aba Cartões.`
       : "";
 
   return `${summary}${linkedNote}\n\n${preview.join("\n")}\n\nConfira os valores e os tipos antes de importar.`;

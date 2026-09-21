@@ -109,12 +109,12 @@ function DashboardChrome() {
           }}
         />
         <Tabs.Screen
-          name="history"
+          name="cards"
           options={{
-            title: "Histórico",
+            title: "Cartões",
             tabBarIcon: ({ color, focused }) => (
               <Ionicons
-                name={focused ? "time" : "time-outline"}
+                name={focused ? "card" : "card-outline"}
                 size={22}
                 color={color}
               />
@@ -122,12 +122,12 @@ function DashboardChrome() {
           }}
         />
         <Tabs.Screen
-          name="cards"
+          name="history"
           options={{
-            title: "Cartões",
+            title: "Histórico",
             tabBarIcon: ({ color, focused }) => (
               <Ionicons
-                name={focused ? "card" : "card-outline"}
+                name={focused ? "time" : "time-outline"}
                 size={22}
                 color={color}
               />

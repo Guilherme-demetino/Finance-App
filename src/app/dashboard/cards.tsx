@@ -10,7 +10,7 @@ import { ConfirmModal } from "../../components/ConfirmModal";
 import type { CreditCardInput } from "../../database/creditCards";
 import { useCreditCards, type ActionResult, type CardView, type PurchaseFormData } from "../../hooks/useCreditCards";
 import { makeStyles, Text, useTheme } from "../../theme";
-import type { CardPurchaseRow, CreditCardRow, TransactionRow } from "../../types";
+import type { CardPurchaseRow, CreditCardRow } from "../../types";
 import { planCardImport } from "../../utils/cardImport";
 import type { ImportedTransaction } from "../../utils/statements/importCsv";
 import type { Invoice } from "../../utils/creditCards";
@@ -26,7 +26,7 @@ type Confirmation =
 type CardFormState = { card: CreditCardRow | null };
 type PurchaseFormState = { card: CreditCardRow; purchase: CardPurchaseRow | null };
 /** Fatura lida de um arquivo, esperando a conferência do usuário. `ref` é a fatura que ele escolheu (senão, a detectada). */
-type ImportDraft = { card: CreditCardRow; candidates: ImportedTransaction[]; transactions: TransactionRow[]; ref: string | null };
+type ImportDraft = { card: CreditCardRow; candidates: ImportedTransaction[]; ref: string | null };
 
 function confirmationText(confirmation: Confirmation): { title: string; message: string; confirmLabel: string; destructive: boolean } {
   switch (confirmation.kind) {
@@ -123,7 +123,6 @@ export default function CardsScreen() {
         card: importDraft.card,
         purchases: cards.purchases,
         payments: cards.payments,
-        transactions: importDraft.transactions,
         today: new Date(),
         ref: importDraft.ref ?? undefined,
       })
@@ -138,7 +137,7 @@ export default function CardsScreen() {
       setNotice(read.error);
       return;
     }
-    setImportDraft({ card, candidates: read.candidates, transactions: read.transactions, ref: null });
+    setImportDraft({ card, candidates: read.candidates, ref: null });
   };
 
   const handleConfirmImport = async () => {
@@ -156,9 +155,8 @@ export default function CardsScreen() {
       paymentsCount > 0 ? `${paymentsCount} ${paymentsCount === 1 ? "pagamento antecipado" : "pagamentos antecipados"}` : null,
     ].filter((part) => part !== null);
     const imported = parts.length > 0 ? `Importado na fatura de ${formatRef(importPlan.ref)}: ${parts.join(" e ")}.` : "";
-    const paid = importPlan.paymentMatch ? " A fatura foi marcada como paga pelo pagamento que já estava no extrato." : "";
     setImportDraft(null);
-    setNotice(`${imported}${paid}`.trim());
+    setNotice(imported);
   };
 
   const handleConfirm = async () => {

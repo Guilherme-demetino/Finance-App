@@ -28,17 +28,12 @@ import { realBudgetAlertDeps } from "../services/budgetAlertsDeps";
 import { syncDueReminders } from "../services/dueReminders";
 import { realDueReminderDeps } from "../services/dueRemindersDeps";
 import { readBackupData, replaceAllData } from "../database/backup";
-import {
-  getAllCardPayments,
-  getAllCardPurchases,
-  getAllCreditCards,
-} from "../database/creditCards";
+import { getAllCreditCards } from "../database/creditCards";
 import {
   getAllTransactions,
   importTransactions,
 } from "../database/transactions";
-import { notifyCardsChanged } from "../services/cardsEvents";
-import { reconcileCardPayments } from "../utils/cardImport";
+import { ignoreCardPayments } from "../utils/cardImport";
 import {
   backupFileName,
   BACKUP_FORMAT,
@@ -330,19 +325,8 @@ export function useDataTransfer() {
         return;
       }
 
-      // O pagamento da fatura do cartão não pode entrar duas vezes: uma vez pelo app e outra pelo extrato.
-      const [cards, purchases, payments] = await Promise.all([
-        getAllCreditCards(),
-        getAllCardPurchases(),
-        getAllCardPayments(),
-      ]);
-      const plan = reconcileCardPayments(result.plan, {
-        cards,
-        purchases,
-        payments,
-        transactions: existing,
-        today: new Date(),
-      });
+      // O pagamento da fatura do cartão só vira despesa quando é pago na aba Cartões: aqui fica de fora.
+      const plan = ignoreCardPayments(result.plan, (await getAllCreditCards()).length > 0);
       if (plan.toImport.length === 0) {
         showAlert(
           "Nada para importar",
@@ -350,7 +334,9 @@ export function useDataTransfer() {
             ? plan.ignoredTransfers
               ? "O arquivo só tem movimentações de caixinha/investimento, que não são importadas."
               : "O arquivo não tem nenhuma transação."
-            : `Todas as transações válidas do arquivo já estão no app${plan.invalid > 0 ? ` (${plan.invalid} linhas inválidas foram ignoradas)` : ""}.`,
+            : (plan.cardPaymentsIgnored
+                ? `O arquivo só tem pagamento de fatura de cartão, que entra quando você paga a fatura na aba Cartões${plan.duplicates > 0 ? ", e transações que já estão no app" : ""}.`
+                : `Todas as transações válidas do arquivo já estão no app${plan.invalid > 0 ? ` (${plan.invalid} linhas inválidas foram ignoradas)` : ""}.`),
         );
         return;
       }
@@ -372,8 +358,6 @@ export function useDataTransfer() {
     try {
       await importTransactions(plan.toImport);
       await refreshTransactions();
-      // Um pagamento de fatura reconhecido no extrato muda o estado das faturas.
-      notifyCardsChanged();
       showAlert(
         "Sucesso",
         `${plan.toImport.length} ${plan.toImport.length === 1 ? "transação importada" : "transações importadas"} com sucesso.`,

@@ -284,5 +284,16 @@
       "Na aba Cartões, a fatura ainda aberta (antes do fechamento) agora também tem o botão “Pagar fatura”.",
       "Ao pagar, entra no saldo uma despesa “Cartão de crédito” com o valor da fatura até aquele momento. A confirmação avisa que, depois de paga, a fatura não recebe mais compras. Para lançar outra compra nela, desfaça o pagamento."
     ]
+  },
+  {
+    "id": 34,
+    "date": "21/09/2026",
+    "title": "Extrato sem pagamento de fatura e Cartões antes do Histórico",
+    "items": [
+      "Ao importar um extrato, as linhas de pagamento de fatura de cartão (por exemplo “Pagamento da fatura”) não entram mais como despesa. Essa despesa passa a entrar só quando você paga a fatura na aba Cartões, assim o mesmo gasto não é contado duas vezes.",
+      "A conferência da importação mostra quantos pagamentos de fatura ficaram de fora. Isso só vale quando você tem pelo menos um cartão cadastrado; sem cartão, o pagamento entra como uma despesa comum. Contas de consumo como “fatura de energia” continuam entrando.",
+      "Na importação da fatura do cartão, o app não marca mais a fatura como paga a partir do extrato: o pagamento é sempre feito por você na aba Cartões.",
+      "Na barra de navegação, o Histórico voltou a ser a última aba, depois de Cartões."
+    ]
   }
 ]

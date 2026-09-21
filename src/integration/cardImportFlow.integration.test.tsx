@@ -12,7 +12,6 @@ import { useDataTransfer } from "../hooks/useDataTransfer";
 import { createSqlJsDatabase } from "../test/sqliteFake";
 import type { CreditCardRow } from "../types";
 import { planCardImport } from "../utils/cardImport";
-import { invoiceDates, invoiceRefFor } from "../utils/creditCards";
 import { formatDateToString } from "../utils/dates";
 
 /**
@@ -154,7 +153,6 @@ async function importInvoiceFile(card: CreditCardRow, csv: string) {
     card,
     purchases: seen.cards.purchases,
     payments: seen.cards.payments,
-    transactions: read.transactions,
     today: new Date(),
   });
   let result!: Awaited<ReturnType<typeof seen.cards.importInvoice>>;
@@ -165,7 +163,6 @@ async function importInvoiceFile(card: CreditCardRow, csv: string) {
   return { read, plan, result };
 }
 
-const invoiceDue = (card: CreditCardRow) => formatDateToString(invoiceDates(invoiceRefFor(PURCHASE_DAY, card), card).due);
 
 async function pickStatement(csv: string) {
   mockPick.bytes = bytesOf(csv);
@@ -319,8 +316,45 @@ ${iso(PURCHASE_DAY)},pagamento,Pagamento recebido,-30.00`;
   });
 });
 
-describe("extrato e fatura sem lançar duas vezes", () => {
-  it("o pagamento feito pelo app não entra de novo quando o extrato traz o mesmo débito", async () => {
+describe("extrato: o pagamento da fatura só vira despesa ao pagar na aba Cartões", () => {
+  it("o pagamento de fatura do extrato fica de fora; as outras linhas entram", async () => {
+    await mountApp();
+    await addCard();
+    const csv = ["Data,Valor,Identificador,Descrição", `${formatDateToString(new Date())},-100.00,x1,Pagamento de fatura Inter`, `${formatDateToString(new Date())},-20.00,x2,Compra no débito - Padaria`].join("\n");
+
+    await pickStatement(csv);
+
+    expect(seen.transfer.pendingImport?.toImport.map((row) => row.description)).toEqual(["Compra no débito - Padaria"]);
+    expect(seen.transfer.pendingImport?.cardPaymentsIgnored).toBe(1);
+    await act(async () => {
+      await seen.transfer.confirmImport();
+    });
+    await settle();
+    expect((await getAllTransactions()).map((row) => row.description)).toEqual(["Compra no débito - Padaria"]);
+    expect(await getAllCardPayments()).toEqual([]);
+  });
+
+  it("um extrato só com o pagamento da fatura avisa que a despesa entra ao pagar na aba Cartões", async () => {
+    await mountApp();
+    await addCard();
+
+    await pickStatement(statementCsv(formatDateToString(new Date()), "Pagamento de fatura Inter", "-100.00"));
+
+    expect(seen.transfer.pendingImport).toBeNull();
+    expect(seen.alert.alertTitle).toBe("Nada para importar");
+    expect(seen.alert.alertMessage).toContain("aba Cartões");
+    expect(await getAllTransactions()).toEqual([]);
+  });
+
+  it("sem nenhum cartão cadastrado, o pagamento de fatura entra como uma despesa comum", async () => {
+    await mountApp();
+
+    await pickStatement(statementCsv(formatDateToString(new Date()), "Pagamento de fatura Inter", "-100.00"));
+
+    expect(seen.transfer.pendingImport?.toImport).toHaveLength(1);
+  });
+
+  it("depois de pagar a fatura na aba, importar o extrato com o mesmo débito não conta o gasto duas vezes", async () => {
     await mountApp();
     const card = await addCard();
     await importInvoiceFile(card, invoiceCsv());
@@ -331,72 +365,10 @@ describe("extrato e fatura sem lançar duas vezes", () => {
     await settle();
     expect(await getAllTransactions()).toHaveLength(1);
 
-    await mountApp(); // painel relido, como ao abrir o app
-    const today = formatDateToString(new Date());
-    await pickStatement(statementCsv(today, "Pagamento de fatura Inter", "-100.00"));
+    await mountApp();
+    await pickStatement(statementCsv(formatDateToString(new Date()), "Pagamento de fatura Inter", "-100.00"));
 
     expect(seen.transfer.pendingImport).toBeNull();
-    expect(seen.alert.alertTitle).toBe("Nada para importar");
     expect(await getAllTransactions()).toHaveLength(1);
-  });
-
-  it("o pagamento que só está no extrato marca a fatura como paga, sem criar outra despesa avulsa", async () => {
-    await mountApp();
-    const card = await addCard();
-    await importInvoiceFile(card, invoiceCsv());
-    expect(seen.cards.views[0].invoices.find((item) => item.total > 0)!.status).toBe("overdue");
-
-    await pickStatement(statementCsv(invoiceDue(card), "Pagamento de fatura Inter", "-100.00"));
-
-    expect(seen.transfer.pendingImport?.cardPaymentsLinked).toBe(1);
-    await act(async () => {
-      await seen.transfer.confirmImport();
-    });
-    await settle();
-
-    const [expense] = await getAllTransactions();
-    expect(expense).toMatchObject({ amount: 100, type: "expense", category_id: "Cartão de crédito" });
-    const [payment] = await getAllCardPayments();
-    expect(payment).toMatchObject({ card_id: card.id, amount: 100, transaction_id: expense.id });
-
-    // Importar o mesmo extrato outra vez não repete.
-    await pickStatement(statementCsv(invoiceDue(card), "Pagamento de fatura Inter", "-100.00"));
-    expect(seen.transfer.pendingImport).toBeNull();
-    expect(await getAllTransactions()).toHaveLength(1);
-  });
-
-  it("um débito que não bate com a fatura entra como despesa comum", async () => {
-    await mountApp();
-    const card = await addCard();
-    await importInvoiceFile(card, invoiceCsv());
-
-    await pickStatement(statementCsv(invoiceDue(card), "Pagamento de fatura Inter", "-99.00"));
-    await act(async () => {
-      await seen.transfer.confirmImport();
-    });
-    await settle();
-
-    expect(await getAllCardPayments()).toEqual([]);
-    expect(await getAllTransactions()).toHaveLength(1);
-  });
-
-  it("extrato importado antes da fatura: ao ler a fatura, o pagamento é reconhecido e nada é duplicado", async () => {
-    await mountApp();
-    const card = await addCard();
-    await pickStatement(statementCsv(invoiceDue(card), "Pagamento de fatura Inter", "-100.00"));
-    await act(async () => {
-      await seen.transfer.confirmImport();
-    });
-    await settle();
-    expect(await getAllTransactions()).toHaveLength(1);
-
-    const { plan, result } = await importInvoiceFile(card, invoiceCsv());
-
-    expect(plan!.paymentMatch).toMatchObject({ amount: 100 });
-    expect(result).toEqual({ ok: true });
-    const [expense] = await getAllTransactions();
-    expect((await getAllCardPayments())[0]).toMatchObject({ transaction_id: expense.id, amount: 100 });
-    expect(await getAllTransactions()).toHaveLength(1);
-    expect(seen.cards.views[0].invoices.find((item) => item.total > 0)!.status).toBe("paid");
   });
 });

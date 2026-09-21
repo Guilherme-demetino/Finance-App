@@ -21,12 +21,12 @@ interface InvoiceImportModalProps {
 
 const PREVIEW_LIMIT = 5;
 
-/** Conferência da fatura lida de um PDF ou CSV: em qual fatura entra, o que é novo, o que já existia e o pagamento no extrato. */
+/** Conferência da fatura lida de um PDF ou CSV: em qual fatura entra, o que é novo e o que já estava lançado. */
 export function InvoiceImportModal({ visible, cardName, plan, onSelectRef, onConfirm, onClose, isBusy = false, errorMessage = null }: InvoiceImportModalProps) {
   const styles = useStyles();
 
   const rows = plan?.rows ?? [];
-  const canConfirm = plan !== null && plan.blocked === null && (rows.length > 0 || plan.paymentMatch !== null) && !isBusy;
+  const canConfirm = plan !== null && plan.blocked === null && rows.length > 0 && !isBusy;
   const ignored: string[] = [];
   if (plan && plan.duplicates > 0) ignored.push(`${plan.duplicates} já lançada${plan.duplicates === 1 ? "" : "s"}`);
   if (plan && plan.ignoredCredits > 0) ignored.push(`${plan.ignoredCredits} estorno/saldo`);
@@ -38,11 +38,7 @@ export function InvoiceImportModal({ visible, cardName, plan, onSelectRef, onCon
   const importText = paymentsCount === 0 ? purchasesText : purchasesCount === 0 ? paymentsText : `${purchasesText} e ${paymentsText}`;
 
   const confirmLabel =
-    rows.length > 0
-      ? `Importar ${importText}`
-      : plan?.paymentMatch
-        ? "Marcar fatura como paga"
-        : "Nada novo para importar";
+    rows.length > 0 ? `Importar ${importText}` : "Nada novo para importar";
   const shownError = errorMessage ?? plan?.blocked ?? null;
 
   return (
@@ -92,13 +88,6 @@ export function InvoiceImportModal({ visible, cardName, plan, onSelectRef, onCon
               ))}
               {rows.length > PREVIEW_LIMIT ? <Text style={styles.previewLine}>… e mais {rows.length - PREVIEW_LIMIT}</Text> : null}
             </View>
-          ) : null}
-
-          {plan.paymentMatch ? (
-            <Text style={styles.match}>
-              O extrato já tem o pagamento dessa fatura ({formatCurrency(plan.paymentMatch.amount)} em {plan.paymentMatch.date}). A fatura será
-              marcada como paga, sem criar outra despesa.
-            </Text>
           ) : null}
 
           <Text style={styles.hint}>

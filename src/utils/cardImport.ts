@@ -1,15 +1,11 @@
-import type { CardPaymentRow, CardPurchaseRow, CreditCardRow, TransactionRow } from "../types";
+import type { CardPaymentRow, CardPurchaseRow, CreditCardRow } from "../types";
 import {
   addMonthsToRef,
   CARD_PAYMENT_CATEGORY,
-  CREDIT_CARD_CATEGORY,
   currentInvoiceRef,
-  invoiceDates,
   invoiceRefFor,
-  listInvoices,
   MAX_INSTALLMENTS,
   purchaseBlockedByPayment,
-  type Invoice,
   type NewPurchase,
 } from "./creditCards";
 import { parseDueDate } from "./dueReminders";
@@ -17,23 +13,13 @@ import type { CsvImportPlan, ImportedTransaction } from "./statements/importCsv"
 import { normalizeText } from "./statements/statementParsing";
 
 /**
- * Leitura da fatura do cartão (PDF, CSV ou planilha) e a conciliação com o extrato da conta, sem lançar nada duas vezes:
+ * Leitura da fatura do cartão (PDF, CSV ou planilha), sem lançar nada duas vezes:
  * - a fatura vira compras no cartão (fora do saldo), e o que já está lançado é ignorado;
- * - o pagamento da fatura que aparece no extrato não vira uma segunda despesa: se o app já registrou o pagamento,
- *   a linha do extrato é descartada; se a fatura ainda estava em aberto, a linha marca a fatura como paga.
+ * - o pagamento da fatura que aparece no extrato da conta NÃO vira despesa: o dinheiro só entra no saldo quando a
+ *   fatura é paga na aba Cartões (ver ignoreCardPayments).
  */
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-// Quantos dias depois do vencimento o débito do pagamento ainda é reconhecido como dessa fatura.
-const PAYMENT_GRACE_DAYS = 20;
-// Diferença máxima, em dias, entre o pagamento anotado no app e o débito no extrato.
-const PAYMENT_MATCH_DAYS = 7;
-
 const cents = (value: number) => Math.round(value * 100);
-
-function dayNumber(date: Date): number {
-  return Math.round(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS);
-}
 
 // ------------------------------------------------------------------ texto da linha
 
@@ -81,9 +67,17 @@ export function isInvoicePaymentLine(description: string): boolean {
   return PAYMENT_LINE.test(text) || BALANCE_LINE.test(text);
 }
 
-/** Descrição do extrato que parece o pagamento de uma fatura de cartão. */
-export function looksLikeCardPayment(description: string): boolean {
-  return /(fatura|cartao)/.test(normalizeText(description));
+// Contas de consumo também têm "fatura" ("pagamento de fatura de energia"): essas são despesas de verdade.
+const UTILITY_WORDS = /(energia|luz|agua|esgoto|gas|telefone|internet|celular|condominio|seguro|escola|plano de saude)/;
+
+/** Descrição do extrato que parece o pagamento da fatura de um cartão de crédito. */
+export function isCardInvoicePayment(description: string): boolean {
+  const text = normalizeText(description);
+  if (UTILITY_WORDS.test(text)) return false;
+  return (
+    /\b(pagamento|pagto|pgto|pag)\b\.?\s*(de\s+|da\s+|do\s+)?(fatura|cartao\s+(de\s+)?credito)/.test(text) ||
+    /\bfatura\s+(do\s+)?(cartao|nubank|inter|itau|santander|bradesco|c6|xp|picpay|mercado\s*pago|neon|next|original|caixa|banco\s+do\s+brasil|bb|will|pan)\b/.test(text)
+  );
 }
 
 // ------------------------------------------------------------------ a fatura vira compras
@@ -113,14 +107,6 @@ export interface CardImportPlan {
   invoiceTotal: number;
   /** Motivo de não poder importar nessa fatura (ex.: já paga); null se pode. */
   blocked: string | null;
-  /** Débito no extrato que já paga essa fatura, se houver um só que combine. */
-  paymentMatch: PaymentMatch | null;
-}
-
-export interface PaymentMatch {
-  transactionId: number;
-  date: string;
-  amount: number;
 }
 
 function purchaseKey(card: { number: number | null; total: number | null }, base: string, amount: number, date: string): string {
@@ -160,35 +146,6 @@ function groupIdFor(cardId: number, base: string, amount: number, total: number)
   return `imp-${cardId}-${slug}-${cents(amount)}-${total}`;
 }
 
-/** Um débito do extrato que paga a fatura: mesmo valor, depois do fechamento e antes de muito depois do vencimento. */
-function findPaymentTransaction(input: {
-  card: CreditCardRow;
-  ref: string;
-  total: number;
-  transactions: TransactionRow[];
-  payments: CardPaymentRow[];
-}): PaymentMatch | null {
-  const { card, ref, total } = input;
-  if (!(total > 0)) return null;
-  const dates = invoiceDates(ref, card);
-  const from = dayNumber(dates.closing);
-  const to = dayNumber(dates.due) + PAYMENT_GRACE_DAYS;
-  const taken = new Set(input.payments.map((payment) => payment.transaction_id).filter((id): id is number => id !== null));
-
-  const matches = input.transactions.filter((transaction) => {
-    if (transaction.type !== "expense" || taken.has(transaction.id)) return false;
-    if (cents(Number(transaction.amount)) !== cents(total)) return false;
-    if (!looksLikeCardPayment(transaction.description ?? "")) return false;
-    const date = parseDueDate(transaction.date);
-    if (!date) return false;
-    const day = dayNumber(date);
-    return day >= from && day <= to;
-  });
-  if (matches.length !== 1) return null;
-  const [found] = matches;
-  return { transactionId: found.id, date: found.date, amount: Number(found.amount) };
-}
-
 /**
  * Monta a importação da fatura de um cartão a partir do que a leitura do arquivo achou (as mesmas linhas de qualquer
  * extrato). Compras entram na fatura escolhida (a detectada, por padrão): todas as linhas da fatura pertencem a ela,
@@ -199,8 +156,6 @@ export function planCardImport(input: {
   card: CreditCardRow;
   purchases: CardPurchaseRow[];
   payments: CardPaymentRow[];
-  /** Transações já no app, para reconhecer um pagamento da fatura que já entrou pelo extrato. */
-  transactions: TransactionRow[];
   today: Date;
   /** Fatura escolhida pelo usuário; sem ela, a detectada. */
   ref?: string;
@@ -272,10 +227,6 @@ export function planCardImport(input: {
   // Total da fatura depois de importar: o que já estava nela mais o novo.
   const alreadyThere = input.purchases.filter((purchase) => purchase.card_id === card.id && purchase.invoice_ref === ref).reduce((sum, purchase) => sum + purchase.amount, 0);
   const invoiceTotal = Math.round((alreadyThere + total) * 100) / 100;
-  const paidAlready = input.payments.some((payment) => payment.card_id === card.id && payment.invoice_ref === ref);
-  const paymentMatch = paidAlready
-    ? null
-    : findPaymentTransaction({ card, ref, total: invoiceTotal, transactions: input.transactions, payments: input.payments });
 
   return {
     ref,
@@ -291,80 +242,24 @@ export function planCardImport(input: {
     total,
     invoiceTotal,
     blocked,
-    paymentMatch,
   };
 }
 
-// ------------------------------------------------------------------ o extrato não duplica o pagamento
-
-export interface CardPaymentContext {
-  cards: CreditCardRow[];
-  purchases: CardPurchaseRow[];
-  payments: CardPaymentRow[];
-  /** Transações já no app. */
-  transactions: TransactionRow[];
-  today: Date;
-}
+// ------------------------------------------------------------------ o extrato não conta o pagamento da fatura
 
 /**
- * Ajusta a importação de um extrato de conta para o pagamento da fatura não entrar duas vezes:
- * - a linha que repete um pagamento que o app já registrou (mesmo valor, datas próximas) é descartada como duplicada;
- * - a linha que paga uma fatura ainda em aberto (mesmo valor do total) entra como despesa "Cartão de crédito" e marca
- *   a fatura como paga. Só quando a fatura é a única que combina; na dúvida entra como uma despesa comum.
+ * Tira do extrato as linhas de pagamento de fatura de cartão: o gasto do cartão só entra no saldo quando a fatura é
+ * paga na aba Cartões, então importá-las também contaria o mesmo dinheiro duas vezes. Só age quando há cartão
+ * cadastrado (sem a aba em uso, o pagamento é uma despesa comum). As linhas descartadas são contadas para a
+ * conferência mostrar o que ficou de fora.
  */
-export function reconcileCardPayments(plan: CsvImportPlan, context: CardPaymentContext): CsvImportPlan {
-  const existingIds = new Set(context.transactions.map((transaction) => transaction.id));
-  const registered = context.payments.filter((payment) => payment.transaction_id !== null && existingIds.has(payment.transaction_id));
-  const usedPayments = new Set<number>();
-
-  const invoices: { card: CreditCardRow; invoice: Invoice }[] = context.cards.flatMap((card) =>
-    listInvoices({ card, purchases: context.purchases, payments: context.payments, today: context.today })
-      .filter((invoice) => invoice.status === "closed" || invoice.status === "overdue")
-      .map((invoice) => ({ card, invoice })),
-  );
-  const claimed = new Set<string>();
-
-  let duplicates = plan.duplicates;
-  let linked = 0;
+export function ignoreCardPayments(plan: CsvImportPlan, hasCards: boolean): CsvImportPlan {
+  if (!hasCards) return plan;
   const toImport: ImportedTransaction[] = [];
-
+  let ignored = 0;
   for (const candidate of plan.toImport) {
-    if (candidate.type !== "expense" || !looksLikeCardPayment(candidate.description)) {
-      toImport.push(candidate);
-      continue;
-    }
-    const date = parseDueDate(candidate.date);
-    if (!date) {
-      toImport.push(candidate);
-      continue;
-    }
-    const day = dayNumber(date);
-
-    const already = registered.find((payment) => {
-      if (usedPayments.has(payment.id) || cents(payment.amount) !== cents(candidate.amount)) return false;
-      const paidOn = parseDueDate(payment.paid_date);
-      return paidOn !== null && Math.abs(dayNumber(paidOn) - day) <= PAYMENT_MATCH_DAYS;
-    });
-    if (already) {
-      usedPayments.add(already.id);
-      duplicates++;
-      continue;
-    }
-
-    const matches = invoices.filter(({ card, invoice }) => {
-      if (claimed.has(`${card.id}-${invoice.ref}`) || cents(invoice.total) !== cents(candidate.amount)) return false;
-      const dates = invoiceDates(invoice.ref, card);
-      return day >= dayNumber(dates.closing) && day <= dayNumber(dates.due) + PAYMENT_GRACE_DAYS;
-    });
-    if (matches.length === 1) {
-      const [{ card, invoice }] = matches;
-      claimed.add(`${card.id}-${invoice.ref}`);
-      linked++;
-      toImport.push({ ...candidate, category: CREDIT_CARD_CATEGORY, cardPayment: { cardId: card.id, ref: invoice.ref } });
-      continue;
-    }
-    toImport.push(candidate);
+    if (candidate.type === "expense" && isCardInvoicePayment(candidate.description)) ignored++;
+    else toImport.push(candidate);
   }
-
-  return { ...plan, toImport, duplicates, cardPaymentsLinked: linked };
+  return ignored === 0 ? plan : { ...plan, toImport, cardPaymentsIgnored: ignored };
 }

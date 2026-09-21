@@ -1,14 +1,13 @@
-import type { CardPaymentRow, CardPurchaseRow, CreditCardRow, TransactionRow } from "../types";
+import type { CardPaymentRow, CardPurchaseRow, CreditCardRow } from "../types";
 import {
   detectInvoiceRef,
   isBalanceLine,
   isInvoicePaymentLine,
   isReceivedPayment,
-  looksLikeCardPayment,
+  isCardInvoicePayment,
+  ignoreCardPayments,
   planCardImport,
-  reconcileCardPayments,
   splitInstallment,
-  type CardPaymentContext,
 } from "./cardImport";
 import { planBankCsvImport } from "./statements/bankCsv";
 import { planPdfImport } from "./statements/bankPdf";
@@ -40,22 +39,8 @@ const purchase = (over: Partial<CardPurchaseRow> = {}): CardPurchaseRow => ({
   ...over,
 });
 
-const transaction = (over: Partial<TransactionRow> = {}): TransactionRow => ({
-  id: 100,
-  amount: 100,
-  date: "05/10/2026",
-  description: "Pagamento de fatura",
-  type: "expense",
-  category_id: "Geral",
-  recurrence_group_id: null,
-  recurrence_type: null,
-  installment_number: null,
-  installment_total: null,
-  ...over,
-});
-
 const plan = (candidates: ImportedTransaction[], over: Partial<Parameters<typeof planCardImport>[0]> = {}) =>
-  planCardImport({ candidates, card: CARD, purchases: [], payments: [], transactions: [], today: TODAY, ...over });
+  planCardImport({ candidates, card: CARD, purchases: [], payments: [], today: TODAY, ...over });
 
 describe("splitInstallment", () => {
   it.each([
@@ -94,10 +79,25 @@ describe("linhas de pagamento", () => {
     expect(isBalanceLine("Pagamento recebido")).toBe(false);
   });
 
-  it("reconhece o pagamento de fatura no extrato", () => {
-    expect(looksLikeCardPayment("PAGAMENTO FATURA NUBANK")).toBe(true);
-    expect(looksLikeCardPayment("Pgto Cartão de Crédito")).toBe(true);
-    expect(looksLikeCardPayment("Pix Maria")).toBe(false);
+  it.each([
+    "PAGAMENTO FATURA NUBANK",
+    "Pagamento da fatura",
+    "Pagamento de fatura - Nubank",
+    "PAG FATURA CARTAO",
+    "Pgto Cartão de Crédito",
+    "Fatura cartão Inter",
+  ])("reconhece o pagamento de fatura no extrato: %s", (text) => {
+    expect(isCardInvoicePayment(text)).toBe(true);
+  });
+
+  it.each([
+    "Pix Maria",
+    "Compra no cartão de débito - Padaria",
+    "Pagamento de fatura de energia",
+    "Fatura Vivo internet",
+    "Compra no débito - Padaria",
+  ])("não confunde com outras despesas: %s", (text) => {
+    expect(isCardInvoicePayment(text)).toBe(false);
   });
 });
 
@@ -196,16 +196,6 @@ describe("planCardImport: a fatura vira compras", () => {
     expect(again.duplicates).toBe(1);
   });
 
-  it("o débito do extrato é reconhecido pelo total já descontado do pagamento antecipado", () => {
-    const result = plan(
-      [line({ amount: 100 }), line({ type: "income", description: "Pagamento recebido", amount: 40, date: "15/09/2026" })],
-      { transactions: [transaction({ amount: 60 })] },
-    );
-
-    expect(result.invoiceTotal).toBe(60);
-    expect(result.paymentMatch?.transactionId).toBe(100);
-  });
-
   it("ignora linhas com data ou valor inválidos", () => {
     const result = plan([line({ date: "31/02/2026" }), line({ amount: 0 }), line()]);
 
@@ -292,135 +282,38 @@ describe("planCardImport: a fatura vira compras", () => {
   });
 });
 
-describe("planCardImport: o pagamento já está no extrato", () => {
-  const candidates = [line({ amount: 100, description: "Mercado" })];
-
-  it("acha o débito do pagamento que fecha com o total da fatura", () => {
-    const result = plan(candidates, { transactions: [transaction({ amount: 100 })] });
-
-    expect(result.paymentMatch).toEqual({ transactionId: 100, date: "05/10/2026", amount: 100 });
-  });
-
-  it("conta o que a fatura já tinha antes de importar", () => {
-    const result = plan([line({ amount: 60 })], {
-      purchases: [purchase({ id: 9, description: "Antiga", amount: 40, date: "01/09/2026" })],
-      transactions: [transaction({ amount: 100 })],
-    });
-
-    expect(result.paymentMatch?.transactionId).toBe(100);
-  });
-
-  it.each([
-    ["valor diferente", transaction({ amount: 99.99 })],
-    ["descrição sem relação com cartão", transaction({ description: "Pix Maria" })],
-    ["receita", transaction({ type: "income" })],
-    ["antes do fechamento", transaction({ date: "20/09/2026" })],
-    ["muito depois do vencimento", transaction({ date: "10/11/2026" })],
-  ])("não liga com %s", (_name, other) => {
-    expect(plan(candidates, { transactions: [other] }).paymentMatch).toBeNull();
-  });
-
-  it("na dúvida (dois débitos iguais) não liga, e um débito já ligado a outra fatura não serve", () => {
-    expect(plan(candidates, { transactions: [transaction(), transaction({ id: 101 })] }).paymentMatch).toBeNull();
-
-    const taken: CardPaymentRow[] = [{ id: 1, card_id: 1, invoice_ref: "2026-09", paid_date: "05/10/2026", amount: 100, transaction_id: 100 }];
-    expect(plan(candidates, { transactions: [transaction()], payments: taken }).paymentMatch).toBeNull();
-  });
-
-  it("fatura já paga não procura pagamento", () => {
-    const paid: CardPaymentRow[] = [{ id: 1, card_id: 1, invoice_ref: "2026-10", paid_date: "05/10/2026", amount: 100, transaction_id: null }];
-
-    expect(plan(candidates, { transactions: [transaction()], payments: paid }).paymentMatch).toBeNull();
-  });
-});
-
-describe("reconcileCardPayments: o extrato não duplica o pagamento", () => {
+describe("ignoreCardPayments: o extrato não conta o pagamento da fatura", () => {
   const statement = (rows: ImportedTransaction[]): CsvImportPlan => ({ source: "pdf", toImport: rows, totalRows: rows.length, duplicates: 0, invalid: 0 });
-  const debit = (over: Partial<ImportedTransaction> = {}) => line({ description: "PAGAMENTO FATURA NUBANK", amount: 100, date: "06/10/2026", category: "Geral", ...over });
+  const debit = (over: Partial<ImportedTransaction> = {}) => line({ description: "Pagamento de fatura Nubank", amount: 100, date: "06/10/2026", category: "Geral", ...over });
 
-  const context = (over: Partial<CardPaymentContext> = {}): CardPaymentContext => ({
-    cards: [CARD],
-    purchases: [],
-    payments: [],
-    transactions: [],
-    today: TODAY,
-    ...over,
+  it("com cartão cadastrado, a linha de pagamento de fatura fica de fora e é contada", () => {
+    const pix = line({ description: "Pix Ana", amount: 10 });
+
+    const result = ignoreCardPayments(statement([debit(), pix, debit({ amount: 250, date: "07/10/2026" })]), true);
+
+    expect(result.toImport).toEqual([pix]);
+    expect(result.cardPaymentsIgnored).toBe(2);
   });
 
-  it("descarta a linha que repete um pagamento que o app já registrou", () => {
-    const registered: CardPaymentRow = { id: 1, card_id: 1, invoice_ref: "2026-10", paid_date: "05/10/2026", amount: 100, transaction_id: 100 };
+  it("sem cartão cadastrado, o pagamento entra como uma despesa comum", () => {
+    const plan = statement([debit()]);
 
-    const result = reconcileCardPayments(statement([debit(), line({ description: "Pix Ana", amount: 10 })]), context({ payments: [registered], transactions: [transaction()] }));
-
-    expect(result.toImport.map((row) => row.description)).toEqual(["Pix Ana"]);
-    expect(result.duplicates).toBe(1);
+    expect(ignoreCardPayments(plan, false)).toBe(plan);
   });
 
-  it("cada pagamento do app cobre uma só linha do extrato", () => {
-    const registered: CardPaymentRow = { id: 1, card_id: 1, invoice_ref: "2026-10", paid_date: "05/10/2026", amount: 100, transaction_id: 100 };
+  it("receita e despesas comuns passam direto, sem marcar nada como ignorado", () => {
+    const plan = statement([line({ description: "Pagamento de fatura estornado", type: "income" }), line({ description: "Mercado" })]);
 
-    const result = reconcileCardPayments(statement([debit(), debit({ date: "07/10/2026" })]), context({ payments: [registered], transactions: [transaction()] }));
+    const result = ignoreCardPayments(plan, true);
 
-    expect(result.toImport).toHaveLength(1);
-    expect(result.duplicates).toBe(1);
+    expect(result.toImport).toHaveLength(2);
+    expect(result.cardPaymentsIgnored).toBeUndefined();
   });
 
-  it("se a despesa do pagamento foi apagada à mão, a linha do extrato entra", () => {
-    const registered: CardPaymentRow = { id: 1, card_id: 1, invoice_ref: "2026-10", paid_date: "05/10/2026", amount: 100, transaction_id: 100 };
+  it("conta de consumo com 'fatura' no nome continua sendo despesa", () => {
+    const plan = statement([line({ description: "Pagamento de fatura energia" }), line({ description: "Pgto fatura internet" })]);
 
-    const result = reconcileCardPayments(statement([debit()]), context({ payments: [registered], transactions: [] }));
-
-    expect(result.toImport).toHaveLength(1);
-  });
-
-  it("datas distantes demais não são o mesmo pagamento", () => {
-    const registered: CardPaymentRow = { id: 1, card_id: 1, invoice_ref: "2026-10", paid_date: "05/09/2026", amount: 100, transaction_id: 100 };
-
-    const result = reconcileCardPayments(statement([debit()]), context({ payments: [registered], transactions: [transaction()] }));
-
-    expect(result.toImport).toHaveLength(1);
-  });
-
-  it("o pagamento de uma fatura em aberto entra como 'Cartão de crédito' e marca a fatura como paga", () => {
-    const purchases = [purchase({ amount: 100 })];
-
-    const result = reconcileCardPayments(statement([debit()]), context({ purchases }));
-
-    expect(result.toImport).toEqual([expect.objectContaining({ category: "Cartão de crédito", cardPayment: { cardId: 1, ref: "2026-10" } })]);
-    expect(result.cardPaymentsLinked).toBe(1);
-    expect(result.duplicates).toBe(0);
-  });
-
-  it("fatura ainda aberta ou de outro valor não é ligada: a linha entra como despesa comum", () => {
-    expect(reconcileCardPayments(statement([debit()]), context({ purchases: [purchase({ amount: 99 })] })).toImport[0].cardPayment).toBeUndefined();
-    // Compra em 10/10 cai na fatura de novembro, que ainda está aberta.
-    const open = purchase({ amount: 100, date: "10/10/2026", invoice_ref: "2026-11" });
-    expect(reconcileCardPayments(statement([debit({ date: "20/11/2026" })]), context({ purchases: [open] })).toImport[0].cardPayment).toBeUndefined();
-  });
-
-  it("duas faturas com o mesmo total na mesma época (dois cartões): não adivinha", () => {
-    const other: CreditCardRow = { ...CARD, id: 2, name: "Inter" };
-    const purchases = [purchase({ id: 1, amount: 100 }), purchase({ id: 2, card_id: 2, amount: 100 })];
-
-    const result = reconcileCardPayments(statement([debit({ date: "05/10/2026" })]), context({ cards: [CARD, other], purchases }));
-
-    expect(result.toImport[0].cardPayment).toBeUndefined();
-    expect(result.cardPaymentsLinked).toBe(0);
-  });
-
-  it("cada fatura é ligada a uma linha só", () => {
-    const result = reconcileCardPayments(statement([debit(), debit({ date: "07/10/2026" })]), context({ purchases: [purchase({ amount: 100 })] }));
-
-    expect(result.toImport.filter((row) => row.cardPayment)).toHaveLength(1);
-  });
-
-  it("o que não parece pagamento de cartão passa direto, mesmo com o mesmo valor", () => {
-    const other = line({ description: "Pix Maria", amount: 100, date: "06/10/2026" });
-
-    const result = reconcileCardPayments(statement([other]), context({ purchases: [purchase({ amount: 100 })] }));
-
-    expect(result.toImport).toEqual([other]);
-    expect(result.cardPaymentsLinked).toBe(0);
+    expect(ignoreCardPayments(plan, true).toImport).toHaveLength(2);
   });
 });
 

@@ -18,10 +18,9 @@ import {
   updateCreditCard,
   type CreditCardInput,
 } from "../database/creditCards";
-import { getAllTransactions } from "../database/transactions";
 import { notifyCardsChanged } from "../services/cardsEvents";
 import { pickFileBytes } from "../services/pickFileBytes";
-import type { CardPaymentRow, CardPurchaseRow, CreditCardRow, TransactionRow } from "../types";
+import type { CardPaymentRow, CardPurchaseRow, CreditCardRow } from "../types";
 import type { CardImportPlan } from "../utils/cardImport";
 import {
   cardUsage,
@@ -65,7 +64,7 @@ export interface PurchaseFormData {
 export type InvoiceFileRead =
   | { status: "cancelled" }
   | { status: "error"; error: string }
-  | { status: "ready"; candidates: ImportedTransaction[]; transactions: TransactionRow[] };
+  | { status: "ready"; candidates: ImportedTransaction[] };
 
 interface Loaded {
   cards: CreditCardRow[];
@@ -258,26 +257,18 @@ export function useCreditCards() {
       if (result.plan.toImport.length === 0) {
         return { status: "error", error: "Não encontrei nenhuma compra nesse arquivo. Confira se é a fatura do cartão (PDF ou CSV)." };
       }
-      return { status: "ready", candidates: result.plan.toImport, transactions: await getAllTransactions() };
+      return { status: "ready", candidates: result.plan.toImport };
     } catch (error) {
       logError("Erro ao ler o arquivo da fatura:", error);
       return { status: "error", error: "Não foi possível ler o arquivo selecionado." };
     }
   };
 
-  /** Grava o que a leitura montou (ver planCardImport); se um débito do extrato já pagou a fatura, marca-a como paga. */
+  /** Grava o que a leitura montou (ver planCardImport). */
   const importInvoice = async (card: CreditCardRow, plan: CardImportPlan): Promise<ActionResult> => {
     if (plan.blocked) return fail(plan.blocked);
-    if (plan.rows.length === 0 && plan.paymentMatch === null) return fail("Não há compras novas para importar.");
-    const match = plan.paymentMatch;
-    return perform(
-      () =>
-        importCardPurchases(
-          plan.rows,
-          match ? { cardId: card.id, ref: plan.ref, transactionId: match.transactionId, paidDate: match.date, amount: match.amount } : null,
-        ),
-      "Não foi possível importar a fatura.",
-    );
+    if (plan.rows.length === 0) return fail("Não há compras novas para importar.");
+    return perform(() => importCardPurchases(plan.rows), "Não foi possível importar a fatura.");
   };
 
   return {
