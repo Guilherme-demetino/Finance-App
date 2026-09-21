@@ -86,10 +86,9 @@ function findColumnMap(rows: string[][]): { map: ColumnMap; headerIndex: number 
       .filter((i) => i !== -1)
       .slice(0, 2);
 
-    const isNubankCard =
-      headers.includes("category") &&
-      headers.includes("title") &&
-      headers.includes("amount");
+    // Fatura do cartão Nubank: "date,category,title,amount" (a coluna de categoria pode faltar: "date,title,amount").
+    // O extrato da conta do Nubank usa "Data,Valor,Identificador,Descrição", sem "title".
+    const isNubankCard = headers.includes("title") && headers.includes("amount");
 
     return {
       headerIndex: index,

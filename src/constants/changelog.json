@@ -264,5 +264,14 @@
       "Nada é lançado duas vezes: compras que já estão no cartão (mesma data, descrição e valor, ou a mesma parcela) são ignoradas. Importar o mesmo arquivo de novo não muda nada.",
       "O pagamento da fatura não duplica com o extrato: se você já pagou pelo app, a linha do extrato é descartada; se a fatura ainda estava em aberto, a linha do extrato marca a fatura como paga, sem criar outra despesa. Vale também na ordem inversa (extrato primeiro, fatura depois)."
     ]
+  },
+  {
+    "id": 28,
+    "date": "21/09/2026",
+    "title": "Fatura Nubank sem coluna de categoria",
+    "items": [
+      "A importação da fatura do cartão Nubank em CSV agora lê também o arquivo com as colunas “date, title, amount” (sem a coluna de categoria). Antes, as compras eram lidas como se fossem entradas.",
+      "As linhas “Pagamento recebido” e “Fatura anterior” continuam de fora: só as compras entram na fatura."
+    ]
   }
 ]

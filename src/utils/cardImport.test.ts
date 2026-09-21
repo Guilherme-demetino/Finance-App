@@ -8,6 +8,7 @@ import {
   splitInstallment,
   type CardPaymentContext,
 } from "./cardImport";
+import { planBankCsvImport } from "./statements/bankCsv";
 import { planPdfImport } from "./statements/bankPdf";
 import type { CsvImportPlan, ImportedTransaction } from "./statements/importCsv";
 
@@ -384,5 +385,70 @@ describe("fatura em PDF (linhas de texto do arquivo)", () => {
     ]);
     expect(result.ref).toBe("2026-10");
     expect(result.total).toBe(250.5);
+  });
+});
+
+describe("fatura CSV do Nubank (exemplo real: date,title,amount, sem categoria)", () => {
+  const CSV = [
+    "date,title,amount",
+    "2026-08-03,Uber,18.90",
+    "2026-08-03,iFood,47.50",
+    "2026-08-04,Supermercado Extra,215.37",
+    "2026-08-05,Netflix,39.90",
+    "2026-08-06,Posto Ipiranga,120.00",
+    "2026-08-08,Farmácia São João,58.20",
+    "2026-08-10,Amazon,89.99",
+    "2026-08-12,Spotify,21.90",
+    "2026-08-14,Restaurante Sabor Caseiro,64.80",
+    "2026-08-15,Pagamento recebido,-450.00",
+    "2026-08-18,Academia SmartFit,99.90",
+    "2026-08-20,Shopee,32.45",
+    "2026-08-22,Cinemark,45.00",
+    "2026-08-25,Padaria Pão Quente,12.50",
+    "2026-08-28,Uber,22.30",
+    "2026-08-30,Fatura anterior,-1200.00",
+  ].join("\n");
+
+  const read = () => {
+    const csv = planBankCsvImport(CSV, []);
+    if (!csv.ok) throw new Error(csv.error);
+    return csv.plan.toImport;
+  };
+
+  it("as 14 compras são despesas e as duas linhas negativas são créditos", () => {
+    const lines = read();
+
+    expect(lines.filter((line) => line.type === "expense")).toHaveLength(14);
+    expect(lines.filter((line) => line.type === "income").map((line) => line.description)).toEqual(["Pagamento recebido", "Fatura anterior"]);
+  });
+
+  it("importa as 14 compras numa fatura só, com a soma certa e sem os créditos", () => {
+    const result = plan(read());
+
+    expect(result.rows).toHaveLength(14);
+    expect(result.total).toBe(888.71);
+    expect(result.ignoredCredits).toBe(2);
+    expect(result.ref).toBe("2026-09"); // fecha dia 28: compras até 28/08 caem na fatura que vence em 05/09
+    expect(result.rows.map((row) => row.description)).toEqual(
+      expect.arrayContaining(["Uber", "iFood", "Supermercado Extra", "Farmácia São João", "Padaria Pão Quente"]),
+    );
+    expect(result.rows.find((row) => row.description === "Netflix")).toMatchObject({ date: "05/08/2026", amount: 39.9, category: "Lazer" });
+  });
+
+  it("as duas compras da Uber (datas e valores diferentes) não são tratadas como duplicadas", () => {
+    const result = plan(read());
+
+    expect(result.rows.filter((row) => row.description === "Uber").map((row) => row.amount)).toEqual([18.9, 22.3]);
+    expect(result.duplicates).toBe(0);
+  });
+
+  it("importar de novo não lança nada", () => {
+    const first = plan(read());
+    const stored = first.rows.map((row, index) => ({ ...row, id: index + 1 }));
+
+    const again = plan(read(), { purchases: stored });
+
+    expect(again.rows).toEqual([]);
+    expect(again.duplicates).toBe(14);
   });
 });
