@@ -3,14 +3,18 @@ import { useState } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 
 import { CardFormModal } from "../../components/cards/CardFormModal";
+import { InvoiceImportModal } from "../../components/cards/InvoiceImportModal";
 import { InvoiceSection } from "../../components/cards/InvoiceSection";
 import { PurchaseFormModal } from "../../components/cards/PurchaseFormModal";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import type { CreditCardInput } from "../../database/creditCards";
 import { useCreditCards, type ActionResult, type CardView, type PurchaseFormData } from "../../hooks/useCreditCards";
 import { makeStyles, Text, useTheme } from "../../theme";
-import type { CardPurchaseRow, CreditCardRow } from "../../types";
+import type { CardPurchaseRow, CreditCardRow, TransactionRow } from "../../types";
+import { planCardImport } from "../../utils/cardImport";
+import type { ImportedTransaction } from "../../utils/statements/importCsv";
 import type { Invoice } from "../../utils/creditCards";
+import { formatRef } from "../../utils/creditCards";
 import { formatCurrency } from "../../utils/currency";
 
 type Confirmation =
@@ -21,6 +25,8 @@ type Confirmation =
 
 type CardFormState = { card: CreditCardRow | null };
 type PurchaseFormState = { card: CreditCardRow; purchase: CardPurchaseRow | null };
+/** Fatura lida de um arquivo, esperando a conferência do usuário. `ref` é a fatura que ele escolheu (senão, a detectada). */
+type ImportDraft = { card: CreditCardRow; candidates: ImportedTransaction[]; transactions: TransactionRow[]; ref: string | null };
 
 function confirmationText(confirmation: Confirmation): { title: string; message: string; confirmLabel: string; destructive: boolean } {
   switch (confirmation.kind) {
@@ -68,6 +74,8 @@ export default function CardsScreen() {
   const [cardForm, setCardForm] = useState<CardFormState | null>(null);
   const [purchaseForm, setPurchaseForm] = useState<PurchaseFormState | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const [importDraft, setImportDraft] = useState<ImportDraft | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showPaid, setShowPaid] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -103,6 +111,50 @@ export default function CardsScreen() {
     const { card, purchase } = purchaseForm;
     const result = purchase ? await cards.editPurchase(purchase, card, form) : await cards.addPurchase(card, form);
     finishForm(result, () => setPurchaseForm(null), purchase ? "Compra atualizada." : "Compra lançada.");
+  };
+
+  const importPlan = importDraft
+    ? planCardImport({
+        candidates: importDraft.candidates,
+        card: importDraft.card,
+        purchases: cards.purchases,
+        payments: cards.payments,
+        transactions: importDraft.transactions,
+        today: new Date(),
+        ref: importDraft.ref ?? undefined,
+      })
+    : null;
+
+  const handleStartImport = async (card: CreditCardRow) => {
+    setNotice(null);
+    setFormError(null);
+    const read = await cards.readInvoiceFile();
+    if (read.status === "cancelled") return;
+    if (read.status === "error") {
+      setNotice(read.error);
+      return;
+    }
+    setImportDraft({ card, candidates: read.candidates, transactions: read.transactions, ref: null });
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importDraft || !importPlan) return;
+    setIsImporting(true);
+    const result = await cards.importInvoice(importDraft.card, importPlan);
+    setIsImporting(false);
+    if (!result.ok) {
+      setFormError(result.error);
+      return;
+    }
+    const { purchasesCount, paymentsCount } = importPlan;
+    const parts = [
+      purchasesCount > 0 ? `${purchasesCount} ${purchasesCount === 1 ? "compra" : "compras"}` : null,
+      paymentsCount > 0 ? `${paymentsCount} ${paymentsCount === 1 ? "pagamento antecipado" : "pagamentos antecipados"}` : null,
+    ].filter((part) => part !== null);
+    const imported = parts.length > 0 ? `Importado na fatura de ${formatRef(importPlan.ref)}: ${parts.join(" e ")}.` : "";
+    const paid = importPlan.paymentMatch ? " A fatura foi marcada como paga pelo pagamento que já estava no extrato." : "";
+    setImportDraft(null);
+    setNotice(`${imported}${paid}`.trim());
   };
 
   const handleConfirm = async () => {
@@ -228,6 +280,14 @@ export default function CardsScreen() {
               >
                 <Text style={styles.primaryText}>Nova compra</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleStartImport(card)}
+                style={[styles.secondaryButton, styles.importButton]}
+                accessibilityRole="button"
+                accessibilityLabel={`Importar fatura do ${card.name}`}
+              >
+                <Text style={styles.secondaryText}>Importar fatura (PDF ou CSV)</Text>
+              </TouchableOpacity>
 
               {invoices.map((invoice) => {
                 const key = `${card.id}-${invoice.ref}`;
@@ -270,6 +330,16 @@ export default function CardsScreen() {
         categoryOptions={cards.categoryOptions}
         onClose={() => setPurchaseForm(null)}
         onSave={handleSavePurchase}
+        errorMessage={formError}
+      />
+      <InvoiceImportModal
+        visible={importDraft !== null}
+        cardName={importDraft?.card.name ?? ""}
+        plan={importPlan}
+        onSelectRef={(ref) => setImportDraft((draft) => (draft ? { ...draft, ref } : draft))}
+        onConfirm={handleConfirmImport}
+        onClose={() => setImportDraft(null)}
+        isBusy={isImporting}
         errorMessage={formError}
       />
       <ConfirmModal
@@ -345,4 +415,5 @@ const useStyles = makeStyles(({ colors }) => ({
     borderColor: colors.border,
   },
   secondaryText: { color: colors.textPrimary, fontSize: 15, fontWeight: "600" },
+  importButton: { marginTop: 10 },
 }));

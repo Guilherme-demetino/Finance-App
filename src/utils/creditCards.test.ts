@@ -444,3 +444,44 @@ describe("faturas a pagar (avisos e lembretes)", () => {
     expect(unpaidInvoiceDues({ cards, purchases: [], payments: [], today })).toEqual([]);
   });
 });
+
+describe("pagamentos antecipados (valor negativo na fatura)", () => {
+  const TODAY_AFTER_CLOSING = new Date(2026, 9, 1);
+  const invoice = (rows: CardPurchaseRow[], payments: CardPaymentRow[] = []) =>
+    buildInvoice({ card: card(), ref: "2026-10", purchases: rows, payments, today: TODAY_AFTER_CLOSING });
+
+  it("descontam do total, e o total por categoria fica só com as compras", () => {
+    const result = invoice([
+      purchase({ amount: 300, category: "Lazer" }),
+      purchase({ amount: 100, category: "Alimentação" }),
+      purchase({ description: "Pagamento recebido", amount: -150, category: "Pagamento" }),
+    ]);
+
+    expect(result.total).toBe(250);
+    expect(result.status).toBe("closed");
+    expect(result.byCategory).toEqual([
+      { category: "Lazer", total: 300 },
+      { category: "Alimentação", total: 100 },
+    ]);
+  });
+
+  it("pagamentos que cobrem tudo deixam a fatura quitada, sem nada a pagar nem aviso", () => {
+    const rows = [purchase({ amount: 100 }), purchase({ amount: -100, category: "Pagamento" })];
+
+    const result = invoice(rows);
+
+    expect(result.total).toBe(0);
+    expect(result.status).toBe("settled");
+    expect(unpaidInvoiceDues({ cards: [card()], purchases: rows, payments: [], today: TODAY_AFTER_CLOSING })).toEqual([]);
+  });
+
+  it("uma fatura sem lançamento nenhum segue 'sem compras'", () => {
+    expect(invoice([]).status).toBe("empty");
+  });
+
+  it("liberam o limite do cartão", () => {
+    const rows = [purchase({ amount: 500 }), purchase({ amount: -200, category: "Pagamento" })];
+
+    expect(cardUsage(card({ credit_limit: 1000 }), rows, []).used).toBe(300);
+  });
+});

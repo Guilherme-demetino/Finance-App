@@ -84,6 +84,22 @@ describe("planBankCsvImport", () => {
     ]);
   });
 
+  it("fatura do cartão Nubank sem a coluna de categoria (date,title,amount) também inverte o sinal", () => {
+    const csv = [
+      "date,title,amount",
+      "2026-08-03,Uber,18.90",
+      "2026-08-15,Pagamento recebido,-450.00",
+      "2026-08-30,Fatura anterior,-1200.00",
+    ].join("\n");
+
+    const p = plan(csv);
+    expect(p.toImport.map((t) => [t.date, t.description, t.type, t.amount])).toEqual([
+      ["03/08/2026", "Uber", "expense", 18.9],
+      ["15/08/2026", "Pagamento recebido", "income", 450],
+      ["30/08/2026", "Fatura anterior", "income", 1200],
+    ]);
+  });
+
   it("lê colunas separadas de débito e crédito", () => {
     const csv = [
       "Data;Histórico;Débito;Crédito;Saldo",

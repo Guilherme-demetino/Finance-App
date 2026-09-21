@@ -263,5 +263,17 @@
       "As compras ficam fora do seu saldo até você pagar a fatura. Ao pagar (depois do fechamento), uma despesa “Cartão de crédito” entra no saldo com a data de hoje. Dá para desfazer o pagamento.",
       "Faturas por pagar aparecem nos avisos do Início e nos lembretes de vencimento. Cartões, compras e pagamentos também entram no backup (backups antigos continuam funcionando)."
     ]
+  },
+  {
+    "id": 32,
+    "date": "21/09/2026",
+    "title": "Importar fatura do cartão por PDF ou CSV",
+    "items": [
+      "Na aba Cartões, cada cartão tem o botão “Importar fatura (PDF ou CSV)”. O app lê o arquivo, mostra a conferência (compras novas, já lançadas, prévia) e só grava quando você confirma. Lê também o CSV da fatura do Nubank, com ou sem a coluna de categoria.",
+      "As compras entram no cartão, na fatura certa, com as parcelas reconhecidas (por exemplo “Notebook 2/5”). Se o app escolher a fatura errada, você troca antes de importar.",
+      "Linhas “Pagamento recebido” (pagas antes do fechamento) entram como pagamento antecipado e descontam do total da fatura. “Fatura anterior” e estornos ficam de fora.",
+      "Nada é lançado duas vezes: o que já está no cartão é ignorado, e importar o mesmo arquivo de novo não muda nada.",
+      "O pagamento da fatura não duplica com o extrato: se você já pagou pelo app, a linha do extrato é descartada; se a fatura ainda estava em aberto, a linha do extrato marca a fatura como paga, sem criar outra despesa. Vale também na ordem inversa."
+    ]
   }
 ]

@@ -8,8 +8,10 @@ import CardsScreen from "../app/dashboard/cards";
 
 // Banco de verdade em memória: a tela, o hook e o SQL rodam juntos.
 const mockState: { db: unknown } = { db: null };
+const mockPick: { bytes: Uint8Array | null } = { bytes: null };
 
 jest.mock("expo-sqlite", () => ({ openDatabaseSync: () => mockState.db }));
+jest.mock("../services/pickFileBytes", () => ({ pickFileBytes: async () => mockPick.bytes }));
 jest.mock("@expo/vector-icons", () => ({ Ionicons: () => null }));
 jest.mock("react-native-reanimated", () => jest.requireActual("../test/reanimatedMock").createReanimatedMock());
 // O calendário tem testes próprios.
@@ -90,6 +92,7 @@ beforeEach(async () => {
   mockState.db = await createSqlJsDatabase();
   const { resetDatabase } = jest.requireActual<typeof import("../database/sqlite")>("../database/sqlite");
   await resetDatabase();
+  mockPick.bytes = null;
   jest.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -269,5 +272,121 @@ describe("pagar a fatura pela tela", () => {
     expect(textOf(tree)).toContain("Cartão excluído.");
     expect(await cards.getAllCreditCards()).toEqual([]);
     expect(await cards.getAllCardPurchases()).toEqual([]);
+  });
+});
+
+describe("importar a fatura pela tela", () => {
+  const bytesOf = (text: string) => new TextEncoder().encode(text);
+  const iso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const csv = () =>
+    [
+      "date,category,title,amount",
+      `${iso(daysAgo(90))},alimentação,Mercado,60.00`,
+      `${iso(daysAgo(90))},casa,Notebook - Parcela 2/5,40.00`,
+      `${iso(daysAgo(90))},estorno,Estorno Loja,-15.00`,
+    ].join("\n");
+
+  async function seedCard() {
+    const { cards } = await database();
+    await cards.createCreditCard({ name: "Inter", closingDay: 10, dueDay: 20, limit: null });
+    return cards;
+  }
+
+  const confirmButton = (tree: ReactTestRenderer, label: string) => button(tree, label);
+
+  it("mostra a conferência, importa as compras e avisa em qual fatura entraram", async () => {
+    const cards = await seedCard();
+    const tree = await mount();
+    mockPick.bytes = bytesOf(csv());
+
+    await press(tree, "Importar fatura do Inter");
+
+    expect(textOf(tree)).toContain("Importar fatura do Inter");
+    expect(textOf(tree)).toContain("2 compras novas (R$ 100,00)");
+    expect(textOf(tree)).toContain("Ignoradas: 1 estorno/saldo");
+    expect(textOf(tree)).toContain("Notebook (2/5)");
+    expect(await cards.getAllCardPurchases()).toEqual([]); // nada gravado antes de confirmar
+
+    await press(tree, "Importar 2 compras");
+
+    expect(textOf(tree)).toMatch(/Importado na fatura de [A-Z]{3}\/\d{4}: 2 compras\./);
+    expect(await cards.getAllCardPurchases()).toHaveLength(2);
+  });
+
+  it("pagamento recebido aparece como pagamento antecipado e desconta do total da fatura", async () => {
+    const cards = await seedCard();
+    const tree = await mount();
+    mockPick.bytes = bytesOf(`${csv()}
+${iso(daysAgo(90))},pagamento,Pagamento recebido,-30.00`);
+
+    await press(tree, "Importar fatura do Inter");
+
+    expect(textOf(tree)).toContain("2 compras novas (R$ 100,00)");
+    expect(textOf(tree)).toContain("1 pagamento antecipado (− R$ 30,00)");
+    expect(textOf(tree)).toContain("a fatura fica em R$ 70,00");
+    await press(tree, "Importar 2 compras e 1 pagamento");
+
+    expect(textOf(tree)).toMatch(/Importado na fatura de [A-Z]{3}\/\d{4}: 2 compras e 1 pagamento antecipado\./);
+    expect((await cards.getAllCardPurchases()).map((row) => row.amount).sort((a, b) => a - b)).toEqual([-30, 40, 60]);
+    // A fatura mostra o total já descontado.
+    expect(buttonStartingWith(tree, "Fatura Inter").props.accessibilityLabel).toContain("R$ 70,00");
+  });
+
+  it("dá para trocar a fatura escolhida antes de importar", async () => {
+    const cards = await seedCard();
+    const tree = await mount();
+    mockPick.bytes = bytesOf(csv());
+    await press(tree, "Importar fatura do Inter");
+    const options = tree.root
+      .findAllByType(TouchableOpacity)
+      .filter((node) => node.props.accessibilityRole === "radio")
+      .map((node) => ({ label: node.props.accessibilityLabel as string, selected: node.props.accessibilityState.selected as boolean }));
+    expect(options).toHaveLength(3);
+    expect(options.map((option) => option.selected)).toEqual([false, true, false]);
+
+    await press(tree, options[2].label);
+    const after = tree.root.findAllByType(TouchableOpacity).filter((node) => node.props.accessibilityRole === "radio");
+    expect(after.map((node) => node.props.accessibilityState.selected)).toEqual([false, false, true]);
+    await press(tree, "Importar 2 compras");
+
+    const refs = new Set((await cards.getAllCardPurchases()).map((row) => row.invoice_ref));
+    expect([...refs]).toEqual([expect.stringMatching(/^\d{4}-\d{2}$/)]);
+    const chosen = options[2].label.replace("Fatura ", "");
+    expect(textOf(tree)).toContain(chosen);
+  });
+
+  it("o mesmo arquivo de novo não tem nada novo: mostra as já lançadas e o botão fica desligado", async () => {
+    await seedCard();
+    const tree = await mount();
+    mockPick.bytes = bytesOf(csv());
+    await press(tree, "Importar fatura do Inter");
+    await press(tree, "Importar 2 compras");
+
+    await press(tree, "Importar fatura do Inter");
+
+    expect(textOf(tree)).toContain("0 compras novas (R$ 0,00)");
+    expect(textOf(tree)).toContain("2 já lançadas");
+    expect(confirmButton(tree, "Nada novo para importar").props.disabled).toBe(true);
+  });
+
+  it("arquivo que não é fatura só avisa", async () => {
+    const cards = await seedCard();
+    const tree = await mount();
+    mockPick.bytes = bytesOf("isso não é uma fatura");
+
+    await press(tree, "Importar fatura do Inter");
+
+    expect(textOf(tree)).not.toContain("Importar fatura do Inter |");
+    expect(textOf(tree)).toContain("Não consegui identificar");
+    expect(await cards.getAllCardPurchases()).toEqual([]);
+  });
+
+  it("desistir do seletor não abre nada", async () => {
+    await seedCard();
+    const tree = await mount();
+
+    await press(tree, "Importar fatura do Inter");
+
+    expect(textOf(tree)).not.toContain("compras novas");
   });
 });

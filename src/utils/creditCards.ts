@@ -14,6 +14,11 @@ import { parseDueDate } from "./dueReminders";
  */
 
 export const CREDIT_CARD_CATEGORY = "Cartão de crédito";
+/**
+ * Categoria dos pagamentos recebidos que a fatura traz (pagos antes do fechamento). Entram como uma "compra" de valor
+ * negativo, então o total da fatura já sai descontado.
+ */
+export const CARD_PAYMENT_CATEGORY = "Pagamento";
 export const MAX_INSTALLMENTS = 48;
 
 export type CardDays = Pick<CreditCardRow, "closing_day" | "due_day">;
@@ -89,13 +94,14 @@ export function invoiceDates(ref: string, card: CardDays): InvoiceDates {
 
 /**
  * "open": ainda recebe compras (até o dia do fechamento, inclusive). "closed": fechou e ainda não
- * venceu. "overdue": venceu sem pagar. "paid": paga. "empty": sem compras (nada a pagar).
+ * venceu. "overdue": venceu sem pagar. "paid": paga. "empty": sem compras (nada a pagar). "settled": tem lançamentos,
+ * mas os pagamentos antecipados já cobriram tudo (nada a pagar).
  */
-export type InvoiceStatus = "open" | "closed" | "overdue" | "paid" | "empty";
+export type InvoiceStatus = "open" | "closed" | "overdue" | "paid" | "empty" | "settled";
 
-export function invoiceStatus(input: { dates: InvoiceDates; total: number; paid: boolean; today: Date }): InvoiceStatus {
+export function invoiceStatus(input: { dates: InvoiceDates; total: number; paid: boolean; today: Date; hasEntries?: boolean }): InvoiceStatus {
   if (input.paid) return "paid";
-  if (input.total <= 0) return "empty";
+  if (input.total <= 0) return input.hasEntries ? "settled" : "empty";
   const today = startOfDay(input.today);
   if (today <= input.dates.closing) return "open";
   return today <= input.dates.due ? "closed" : "overdue";
@@ -107,6 +113,7 @@ export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
   overdue: "Vencida",
   paid: "Paga",
   empty: "Sem compras",
+  settled: "Quitada",
 };
 
 // -------------------------------------------------------------------- montando as faturas
@@ -149,7 +156,10 @@ export function buildInvoice(input: {
   const total = round2(purchases.reduce((sum, purchase) => sum + purchase.amount, 0));
 
   const perCategory = new Map<string, number>();
-  for (const purchase of purchases) perCategory.set(purchase.category, (perCategory.get(purchase.category) ?? 0) + purchase.amount);
+  // O total por categoria é só de compras: os pagamentos antecipados (valor negativo) descontam do total, não de uma categoria.
+  for (const purchase of purchases) {
+    if (purchase.amount > 0) perCategory.set(purchase.category, (perCategory.get(purchase.category) ?? 0) + purchase.amount);
+  }
 
   return {
     cardId: card.id,
@@ -159,7 +169,7 @@ export function buildInvoice(input: {
     closingDate: formatDateToString(dates.closing),
     dueDate: formatDateToString(dates.due),
     total,
-    status: invoiceStatus({ dates, total, paid: payment !== null, today }),
+    status: invoiceStatus({ dates, total, paid: payment !== null, today, hasEntries: purchases.length > 0 }),
     purchases,
     byCategory: [...perCategory.entries()].map(([category, value]) => ({ category, total: round2(value) })).sort((a, b) => b.total - a.total),
     payment,
@@ -295,7 +305,7 @@ export function unpaidInvoiceDues(input: {
   const dues: InvoiceDue[] = [];
   for (const card of input.cards) {
     for (const invoice of listInvoices({ card, purchases: input.purchases, payments: input.payments, today: input.today })) {
-      if (invoice.status === "paid" || invoice.status === "empty") continue;
+      if (invoice.status === "paid" || invoice.status === "empty" || invoice.status === "settled") continue;
       dues.push({
         id: `invoice-${card.id}-${invoice.ref}`,
         cardId: card.id,
