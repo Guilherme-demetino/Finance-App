@@ -28,7 +28,8 @@ export async function createSqlJsDatabase() {
   const db = {
     runSync(sql: string, ...args: unknown[]) {
       raw.run(sql, toParams(args));
-      return { changes: raw.getRowsModified() };
+      const [{ values }] = raw.exec("SELECT last_insert_rowid()");
+      return { changes: raw.getRowsModified(), lastInsertRowId: Number(values[0][0]) };
     },
     async runAsync(sql: string, ...args: unknown[]) {
       return db.runSync(sql, ...args);

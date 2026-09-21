@@ -108,6 +108,10 @@ export function ProfileMenuContainer({
           onCloseMenu();
           router.push("/reminders");
         }}
+        onOpenCards={() => {
+          onCloseMenu();
+          router.push("/cards");
+        }}
         onChangePIN={() => {
           onCloseMenu();
           handleChangePIN();

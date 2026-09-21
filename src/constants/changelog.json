@@ -241,5 +241,17 @@
       "Metas por Categoria: o botão de editar agora tem o texto “Editar” (antes era só um lápis pequeno). Salvar um valor vazio passou a avisar em vez de fechar em silêncio.",
       "Metas por Categoria: novo “Remover meta”, dentro da edição, com confirmação. A categoria e os gastos continuam; só a meta daquele mês some."
     ]
+  },
+  {
+    "id": 26,
+    "date": "21/09/2026",
+    "title": "Cartões de crédito e faturas",
+    "items": [
+      "Novo menu “Cartões e Faturas”: cadastre seus cartões com o dia de fechamento, o dia de vencimento e o limite (opcional).",
+      "Lance compras no cartão, à vista ou parceladas: cada parcela cai na fatura certa. Compras feitas até o dia do fechamento entram na fatura daquele mês; as seguintes, na do mês seguinte.",
+      "Cada fatura mostra o período, as compras, o total por categoria e o estado: aberta, fechada, vencida ou paga. O cartão mostra o limite usado (com as parcelas futuras) e quanto ainda está disponível.",
+      "As compras ficam fora do seu saldo até você pagar a fatura. Ao pagar (depois do fechamento), uma despesa “Cartão de crédito” entra no saldo com a data de hoje, sem contar o mesmo gasto duas vezes. Dá para desfazer o pagamento.",
+      "Faturas por pagar aparecem nos avisos do Início e nos lembretes de vencimento. Cartões, compras e pagamentos também entram no backup e na restauração (backups antigos continuam funcionando)."
+    ]
   }
 ]

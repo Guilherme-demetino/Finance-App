@@ -2,8 +2,10 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
 import { getMeta, setMeta } from "../database/appMeta";
+import { getAllCardPayments, getAllCardPurchases, getAllCreditCards } from "../database/creditCards";
 import { getAllDebts } from "../database/debts";
 import { getRecurringExpenses } from "../database/transactions";
+import { unpaidInvoiceDues } from "../utils/creditCards";
 import type { DueReminderDeps, ReminderPermission, ReminderScheduler } from "./dueReminders";
 
 const CHANNEL_ID = "due-reminders";
@@ -63,6 +65,10 @@ export const realDueReminderDeps: DueReminderDeps = {
   setMeta,
   readDebts: getAllDebts,
   readRecurringExpenses: getRecurringExpenses,
+  async readInvoices() {
+    const [cards, purchases, payments] = await Promise.all([getAllCreditCards(), getAllCardPurchases(), getAllCardPayments()]);
+    return unpaidInvoiceDues({ cards, purchases, payments, today: new Date() });
+  },
   scheduler,
   now: () => new Date(),
 };

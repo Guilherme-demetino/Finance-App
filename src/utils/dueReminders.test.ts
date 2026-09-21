@@ -1,4 +1,5 @@
 import type { DebtRow, TransactionRow } from "../types";
+import type { InvoiceDue } from "./creditCards";
 import {
   collectDueItems,
   DEFAULT_REMINDER_SETTINGS,
@@ -156,6 +157,46 @@ describe("collectDueItems", () => {
     );
 
     expect(items.map((i) => i.id)).toEqual(["transaction-5"]);
+  });
+});
+
+describe("faturas de cartão nos vencimentos", () => {
+  const invoice = (over: Partial<InvoiceDue> = {}): InvoiceDue => ({
+    id: "invoice-1-2026-10",
+    cardId: 1,
+    cardName: "Nubank",
+    ref: "2026-10",
+    amount: 1250.5,
+    dueDate: "05/10/2026",
+    status: "closed",
+    ...over,
+  });
+  const collect = (invoices: InvoiceDue[]) => collectDueItems({ debts: [], transactions: [], invoices, today: NOW });
+
+  it("a fatura por pagar entra como uma conta a pagar, no dia do vencimento", () => {
+    expect(collect([invoice()])).toEqual([
+      { id: "invoice-1-2026-10", label: "Fatura Nubank", amount: 1250.5, due: new Date(2026, 9, 5), kind: "pay" },
+    ]);
+  });
+
+  it("fatura vencida ou com data ruim fica de fora, como o resto", () => {
+    expect(collect([invoice({ dueDate: "18/09/2026" }), invoice({ dueDate: "lixo" })])).toEqual([]);
+  });
+
+  it("vence hoje ainda entra", () => {
+    expect(collect([invoice({ dueDate: "19/09/2026" })])).toHaveLength(1);
+  });
+
+  it("sem informar faturas nada muda", () => {
+    expect(collectDueItems({ debts: [], transactions: [], today: NOW })).toEqual([]);
+  });
+
+  it("vira um aviso normal, com valor e data (o horário de antes já passou: avisa no dia)", () => {
+    const planned = planReminders({ items: collect([invoice({ dueDate: "20/09/2026" })]), settings: settings({ daysBefore: 1 }), now: NOW });
+
+    expect(planned).toHaveLength(1);
+    expect(planned[0].title).toBe("Fatura Nubank vence hoje");
+    expect(planned[0].body).toContain("20/09/2026");
   });
 });
 

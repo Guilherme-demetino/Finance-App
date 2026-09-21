@@ -51,6 +51,22 @@ const DATA: BackupData = {
       created_date: "01/09/2026",
     },
   ],
+  creditCards: [{ id: 1, name: "Nubank", closing_day: 28, due_day: 5, credit_limit: 5000 }],
+  cardPurchases: [
+    {
+      id: 1,
+      card_id: 1,
+      description: "Notebook (1/2)",
+      amount: 1500,
+      date: "10/09/2026",
+      category: "Outros",
+      invoice_ref: "2026-10",
+      installment_group_id: "g1",
+      installment_number: 1,
+      installment_total: 2,
+    },
+  ],
+  cardPayments: [{ id: 1, card_id: 1, invoice_ref: "2026-09", paid_date: "05/09/2026", amount: 300, transaction_id: null }],
 };
 
 const NOW = new Date(2026, 8, 19, 20, 30);
@@ -112,6 +128,16 @@ describe("parseBackup", () => {
     ["dívida com situação estranha", (f: any) => (f.data.debts[0].status = "paga")],
     ["meta com valor inválido", (f: any) => (f.data.savingsGoals[0].target_amount = null)],
     ["nome de usuário inválido", (f: any) => (f.data.userName = 5)],
+    ["cartão com dia de fechamento 0", (f: any) => (f.data.creditCards[0].closing_day = 0)],
+    ["cartão com dia de vencimento 32", (f: any) => (f.data.creditCards[0].due_day = 32)],
+    ["cartão sem nome", (f: any) => (f.data.creditCards[0].name = " ")],
+    ["cartão com limite inválido", (f: any) => (f.data.creditCards[0].credit_limit = "5000")],
+    ["compra de um cartão que não existe", (f: any) => (f.data.cardPurchases[0].card_id = 99)],
+    ["compra com fatura mal escrita", (f: any) => (f.data.cardPurchases[0].invoice_ref = "2026-13")],
+    ["compra com data fora do formato", (f: any) => (f.data.cardPurchases[0].date = "2026-09-10")],
+    ["pagamento de um cartão que não existe", (f: any) => (f.data.cardPayments[0].card_id = 99)],
+    ["a mesma fatura paga duas vezes", (f: any) => f.data.cardPayments.push({ ...f.data.cardPayments[0], id: 2 })],
+    ["lista de cartões que não é lista", (f: any) => (f.data.creditCards = {})],
   ])("recusa %s", (_name, mutate) => {
     const file = raw();
     mutate(file);
@@ -127,6 +153,23 @@ describe("parseBackup", () => {
       ok: false,
       error: "Backup inválido: dívidas, item 1 (valor).",
     });
+  });
+
+  it("aceita backup da versão 1, sem cartões: as listas de cartão leem como vazias", () => {
+    const file = raw();
+    file.version = 1;
+    delete file.data.creditCards;
+    delete file.data.cardPurchases;
+    delete file.data.cardPayments;
+
+    const result = parse(file);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.backup.data.creditCards).toEqual([]);
+      expect(result.backup.data.cardPurchases).toEqual([]);
+      expect(result.backup.data.cardPayments).toEqual([]);
+    }
   });
 
   it("aceita backup sem nome (null) e listas vazias", () => {
@@ -156,16 +199,20 @@ describe("nome do arquivo e textos", () => {
       categoryBudgets: 1,
       debts: 1,
       savingsGoals: 1,
+      creditCards: 1,
+      cardPurchases: 1,
     });
   });
 
   it("describeRestore compara o backup com o que há no app e avisa que substitui", () => {
     const text = describeRestore(
-      { transactions: 2, categories: 0, budgets: 0, categoryBudgets: 0, debts: 0, savingsGoals: 3 },
+      { transactions: 2, categories: 0, budgets: 0, categoryBudgets: 0, debts: 0, savingsGoals: 3, creditCards: 0, cardPurchases: 0 },
       buildBackupFile(DATA, NOW),
     );
-    expect(text).toContain("Backup de 19/09/2026: 1 transação, 1 dívida, 1 meta de economia, 1 categoria própria.");
+    expect(text).toContain("Backup de 19/09/2026: 1 transação, 1 dívida, 1 meta de economia, 1 categoria própria, 1 cartão, 1 compra no cartão.");
     expect(text).toContain("Agora no app: 2 transações, 0 dívidas, 3 metas de economia, 0 categorias próprias.");
+    // Quem não usa cartão não vê o assunto no texto.
+    expect(text).not.toContain("0 cartões");
     expect(text).toContain("SUBSTITUI");
   });
 });

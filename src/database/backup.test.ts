@@ -76,6 +76,34 @@ const SAMPLE: BackupData = {
       created_date: "01/09/2026",
     },
   ],
+  creditCards: [{ id: 7, name: "Nubank", closing_day: 28, due_day: 5, credit_limit: 5000 }],
+  cardPurchases: [
+    {
+      id: 20,
+      card_id: 7,
+      description: "TV (1/2)",
+      amount: 900,
+      date: "10/09/2026",
+      category: "Outros",
+      invoice_ref: "2026-10",
+      installment_group_id: "g1",
+      installment_number: 1,
+      installment_total: 2,
+    },
+    {
+      id: 21,
+      card_id: 7,
+      description: "Mercado",
+      amount: 80.5,
+      date: "11/09/2026",
+      category: "Alimentação",
+      invoice_ref: "2026-10",
+      installment_group_id: null,
+      installment_number: null,
+      installment_total: null,
+    },
+  ],
+  cardPayments: [{ id: 30, card_id: 7, invoice_ref: "2026-09", paid_date: "05/09/2026", amount: 300, transaction_id: 11 }],
 };
 
 describe("backup do banco", () => {
@@ -106,6 +134,44 @@ describe("backup do banco", () => {
       "Salário",
       "Notebook 2/3",
     ]);
+  });
+
+  it("restaurar troca também os cartões, e um backup sem cartões (versão 1) deixa o app sem cartões", async () => {
+    const { backup, sqlite } = await loadModules();
+    await sqlite.getDatabase();
+    await backup.replaceAllData(SAMPLE);
+
+    await backup.replaceAllData({ ...SAMPLE, creditCards: undefined, cardPurchases: undefined, cardPayments: undefined });
+
+    const data = await backup.readBackupData();
+    expect(data.creditCards).toEqual([]);
+    expect(data.cardPurchases).toEqual([]);
+    expect(data.cardPayments).toEqual([]);
+  });
+
+  it("depois de restaurar, novos cartões continuam com ids novos, sem colidir", async () => {
+    const { backup, sqlite } = await loadModules();
+    await sqlite.getDatabase();
+    await backup.replaceAllData(SAMPLE);
+    const cards = jest.requireActual<typeof import("./creditCards")>("./creditCards");
+
+    const id = await cards.createCreditCard({ name: "Inter", closingDay: 1, dueDay: 8, limit: null });
+
+    expect(id).toBeGreaterThan(7);
+  });
+
+  it("uma falha nos cartões também desfaz a restauração inteira", async () => {
+    const { backup, sqlite, transactions } = await loadModules();
+    await sqlite.getDatabase();
+    await transactions.createTransaction({ amount: 7, date: "02/02/2026", description: "Continua aqui", type: "expense", category: "Geral" });
+    const before = await backup.readBackupData();
+
+    // Dois cartões com o mesmo id: a segunda gravação estoura a chave primária, já no fim.
+    const broken: BackupData = { ...SAMPLE, creditCards: [...SAMPLE.creditCards!, { ...SAMPLE.creditCards![0] }] };
+
+    await expect(backup.replaceAllData(broken)).rejects.toThrow();
+
+    await expect(backup.readBackupData()).resolves.toEqual(before);
   });
 
   it("se uma gravação falhar no meio, nada muda (rollback)", async () => {

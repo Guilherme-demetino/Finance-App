@@ -12,6 +12,7 @@ import { SummaryCards } from "../../components/overview/SummaryCards";
 import { FinancialHealthContainer } from "../../components/dashboard/FinancialHealthContainer";
 
 import { useBudgetData } from "../../context/BudgetContext";
+import { useCardsContext } from "../../context/CardsContext";
 import { useDebtsContext } from "../../context/DebtsContext";
 import { usePanorama, useScrollY } from "../../context/DashboardUiContext";
 import { usePeriod } from "../../context/PeriodContext";
@@ -34,6 +35,7 @@ export default function DashboardHomeScreen() {
   const { budget, categoryBudgets, comparison, isLoadingComparison } =
     useBudgetData();
   const { pendingDebts } = useDebtsContext();
+  const { invoiceDues } = useCardsContext();
   const { openLandscapePanorama } = usePanorama();
   const scrollY = useScrollY();
 
@@ -52,6 +54,7 @@ export default function DashboardHomeScreen() {
     totalExpense,
     categories: categoryBudgets,
     pendingDebts,
+    invoices: invoiceDues,
     includeSpendingAlerts: isCurrentPeriod,
   });
   const projection = isCurrentPeriod
