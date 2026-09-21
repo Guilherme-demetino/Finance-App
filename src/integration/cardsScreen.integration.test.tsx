@@ -4,7 +4,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
 import { createSqlJsDatabase } from "../test/sqliteFake";
 import { planPurchase } from "../utils/creditCards";
-import CardsScreen from "./cards";
+import CardsScreen from "../app/cards";
 
 // Banco de verdade em memória: a tela, o hook e o SQL rodam juntos.
 const mockState: { db: unknown } = { db: null };
