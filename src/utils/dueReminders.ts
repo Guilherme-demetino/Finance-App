@@ -1,7 +1,5 @@
 import type { DebtRow, TransactionRow } from "../types";
 import { formatCurrency } from "./currency";
-// Só o tipo: creditCards.ts importa parseDueDate daqui, um import de valor faria um ciclo.
-import type { InvoiceDue } from "./creditCards";
 
 /** Preferências dos lembretes de vencimento (guardadas em app_meta). */
 export interface ReminderSettings {
@@ -53,7 +51,7 @@ export function parseReminderSettings(raw: {
   };
 }
 
-/** Uma conta a vencer: dívida a pagar/cobrar, parcela, despesa recorrente ou fatura de cartão. */
+/** Uma conta a vencer: dívida a pagar/cobrar, parcela ou despesa recorrente. */
 export interface DueItem {
   id: string;
   label: string;
@@ -113,15 +111,13 @@ function formatDay(date: Date): string {
 }
 
 /**
- * Tudo o que ainda vai vencer: dívidas pendentes com data combinada, as faturas de
- * cartão por pagar e, entre as transações, as despesas parceladas ou recorrentes de hoje em diante. Já vencido
+ * Tudo o que ainda vai vencer: dívidas pendentes com data combinada e, entre as
+ * transações, as despesas parceladas ou recorrentes de hoje em diante. Já vencido
  * fica de fora (os avisos do Início cuidam disso; lembrar de novo seria ruído).
  */
 export function collectDueItems(params: {
   debts: DebtRow[];
   transactions: TransactionRow[];
-  /** Faturas de cartão ainda por pagar (ver unpaidInvoiceDues). */
-  invoices?: InvoiceDue[];
   today?: Date;
 }): DueItem[] {
   const today = startOfDay(params.today ?? new Date());
@@ -156,18 +152,6 @@ export function collectDueItems(params: {
       id: `transaction-${row.id}`,
       label: `${name}${installment}`,
       amount: row.amount,
-      due,
-      kind: "pay",
-    });
-  }
-
-  for (const invoice of params.invoices ?? []) {
-    const due = parseDueDate(invoice.dueDate);
-    if (!due || due < today) continue;
-    items.push({
-      id: invoice.id,
-      label: `Fatura ${invoice.cardName}`,
-      amount: invoice.amount,
       due,
       kind: "pay",
     });

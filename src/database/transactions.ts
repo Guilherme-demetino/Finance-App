@@ -193,20 +193,14 @@ export async function createRecurringTransactions(
   });
 }
 
-/** Uma transação importada que é o pagamento de uma fatura de cartão: marca a fatura como paga por ela. */
-export type ImportedRow = TransactionInput & {
-  cardPayment?: { cardId: number; ref: string };
-};
-
-/**
- * Grava várias transações de uma vez (importação de backup ou extrato), numa única transação do banco.
- * Uma linha que paga uma fatura de cartão também anota o pagamento (a fatura que já estava paga fica como está).
- */
-export async function importTransactions(rows: ImportedRow[]): Promise<void> {
+/** Grava várias transações de uma vez (importação de backup), numa única transação do banco. */
+export async function importTransactions(
+  rows: TransactionInput[],
+): Promise<void> {
   const db = await getDatabase();
   db.withTransactionSync(() => {
     for (const row of rows) {
-      const inserted = db.runSync(
+      db.runSync(
         "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, ?, ?)",
         row.amount,
         row.date,
@@ -214,16 +208,6 @@ export async function importTransactions(rows: ImportedRow[]): Promise<void> {
         row.type,
         row.category,
       );
-      if (row.cardPayment) {
-        db.runSync(
-          "INSERT OR IGNORE INTO card_invoice_payments (card_id, invoice_ref, paid_date, amount, transaction_id) VALUES (?, ?, ?, ?, ?)",
-          row.cardPayment.cardId,
-          row.cardPayment.ref,
-          row.date,
-          row.amount,
-          inserted.lastInsertRowId,
-        );
-      }
     }
   });
 }

@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 
-import { useCardsContext } from "../../context/CardsContext";
 import { useDebtsContext } from "../../context/DebtsContext";
 import { useTransactionsData } from "../../context/TransactionsContext";
 import { syncDueReminders } from "../../services/dueReminders";
@@ -12,13 +11,12 @@ const SYNC_DELAY_MS = 1500;
 
 /**
  * Mantém os lembretes de vencimento agendados iguais aos dados: roda quando o painel
- * abre e de novo sempre que dívidas, faturas de cartão ou transações mudam. Não desenha nada, e o serviço
+ * abre e de novo sempre que dívidas ou transações mudam. Não desenha nada, e o serviço
  * lê o banco por conta própria (os dados do contexto só avisam que algo mudou).
  */
 export function DueRemindersRunner() {
   const { pendingDebts } = useDebtsContext();
   const { transactions } = useTransactionsData();
-  const { invoiceDues } = useCardsContext();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -27,7 +25,7 @@ export function DueRemindersRunner() {
       );
     }, SYNC_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [pendingDebts, transactions, invoiceDues]);
+  }, [pendingDebts, transactions]);
 
   return null;
 }

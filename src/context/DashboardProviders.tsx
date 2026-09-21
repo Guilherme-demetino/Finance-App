@@ -8,7 +8,6 @@ import {
 
 import { AlertProvider } from "./AlertContext";
 import { BudgetProvider } from "./BudgetContext";
-import { CardsProvider } from "./CardsContext";
 import { DashboardUiProvider } from "./DashboardUiContext";
 import { DebtsProvider } from "./DebtsContext";
 import { PeriodProvider } from "./PeriodContext";
@@ -22,7 +21,7 @@ const ReloadContext = createContext<(() => void) | null>(null);
 /**
  * Estado do dashboard dividido por domínio. A ordem importa: cada provider
  * só lê os de fora dele (alerta → período → transações → orçamento/dívidas/
- * faturas de cartão/metas/perfil → formulário). Assim uma mudança num domínio só re-renderiza
+ * metas/perfil → formulário). Assim uma mudança num domínio só re-renderiza
  * quem consome aquele domínio.
  */
 export function DashboardProviders({ children }: { children: ReactNode }) {
@@ -38,17 +37,15 @@ export function DashboardProviders({ children }: { children: ReactNode }) {
           <TransactionsProvider>
             <BudgetProvider>
               <DebtsProvider>
-                <CardsProvider>
-                  <SavingsProvider>
-                    <ProfileProvider>
-                      <DashboardUiProvider>
-                        <TransactionFormProvider>
-                          {children}
-                        </TransactionFormProvider>
-                      </DashboardUiProvider>
-                    </ProfileProvider>
-                  </SavingsProvider>
-                </CardsProvider>
+                <SavingsProvider>
+                  <ProfileProvider>
+                    <DashboardUiProvider>
+                      <TransactionFormProvider>
+                        {children}
+                      </TransactionFormProvider>
+                    </DashboardUiProvider>
+                  </ProfileProvider>
+                </SavingsProvider>
               </DebtsProvider>
             </BudgetProvider>
           </TransactionsProvider>

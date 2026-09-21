@@ -241,48 +241,5 @@
       "Metas por Categoria: o botão de editar agora tem o texto “Editar” (antes era só um lápis pequeno). Salvar um valor vazio passou a avisar em vez de fechar em silêncio.",
       "Metas por Categoria: novo “Remover meta”, dentro da edição, com confirmação. A categoria e os gastos continuam; só a meta daquele mês some."
     ]
-  },
-  {
-    "id": 26,
-    "date": "21/09/2026",
-    "title": "Cartões de crédito e faturas",
-    "items": [
-      "Novo menu “Cartões e Faturas”: cadastre seus cartões com o dia de fechamento, o dia de vencimento e o limite (opcional).",
-      "Lance compras no cartão, à vista ou parceladas: cada parcela cai na fatura certa. Compras feitas até o dia do fechamento entram na fatura daquele mês; as seguintes, na do mês seguinte.",
-      "Cada fatura mostra o período, as compras, o total por categoria e o estado: aberta, fechada, vencida ou paga. O cartão mostra o limite usado (com as parcelas futuras) e quanto ainda está disponível.",
-      "As compras ficam fora do seu saldo até você pagar a fatura. Ao pagar (depois do fechamento), uma despesa “Cartão de crédito” entra no saldo com a data de hoje, sem contar o mesmo gasto duas vezes. Dá para desfazer o pagamento.",
-      "Faturas por pagar aparecem nos avisos do Início e nos lembretes de vencimento. Cartões, compras e pagamentos também entram no backup e na restauração (backups antigos continuam funcionando)."
-    ]
-  },
-  {
-    "id": 27,
-    "date": "21/09/2026",
-    "title": "Fatura do cartão por PDF ou CSV",
-    "items": [
-      "Em Cartões e Faturas, cada cartão tem o botão “Importar fatura (PDF ou CSV)”. O app lê o arquivo, mostra a conferência e só grava quando você confirma.",
-      "As compras entram no cartão, na fatura certa, com as parcelas reconhecidas (por exemplo “Notebook 2/5”). Créditos, estornos e o pagamento da fatura anterior são ignorados. Se o app escolher a fatura errada, você troca antes de importar.",
-      "Nada é lançado duas vezes: compras que já estão no cartão (mesma data, descrição e valor, ou a mesma parcela) são ignoradas. Importar o mesmo arquivo de novo não muda nada.",
-      "O pagamento da fatura não duplica com o extrato: se você já pagou pelo app, a linha do extrato é descartada; se a fatura ainda estava em aberto, a linha do extrato marca a fatura como paga, sem criar outra despesa. Vale também na ordem inversa (extrato primeiro, fatura depois)."
-    ]
-  },
-  {
-    "id": 28,
-    "date": "21/09/2026",
-    "title": "Fatura Nubank sem coluna de categoria",
-    "items": [
-      "A importação da fatura do cartão Nubank em CSV agora lê também o arquivo com as colunas “date, title, amount” (sem a coluna de categoria). Antes, as compras eram lidas como se fossem entradas.",
-      "As linhas “Pagamento recebido” e “Fatura anterior” continuam de fora: só as compras entram na fatura."
-    ]
-  },
-  {
-    "id": 29,
-    "date": "21/09/2026",
-    "title": "Pagamentos antecipados descontam da fatura",
-    "items": [
-      "Ao importar a fatura do cartão, as linhas “Pagamento recebido” (pagos antes do fechamento) agora entram como pagamento antecipado e descontam do total da fatura. Antes eram ignoradas.",
-      "A conferência mostra as compras, o pagamento antecipado e quanto a fatura fica depois do desconto. Na fatura, o pagamento aparece em negativo e uma linha explica a conta (compras − pagamentos = a pagar).",
-      "Se os pagamentos cobrirem tudo, a fatura fica “Quitada”, sem nada a pagar e sem aviso. Pagar a fatura tira do saldo só o que falta, e o pagamento antecipado também libera o limite do cartão.",
-      "“Fatura anterior” e estornos continuam de fora."
-    ]
   }
 ]

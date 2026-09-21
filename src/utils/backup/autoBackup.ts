@@ -39,9 +39,7 @@ export function isBackupEmpty(counts: BackupCounts): boolean {
     counts.budgets === 0 &&
     counts.categoryBudgets === 0 &&
     counts.debts === 0 &&
-    counts.savingsGoals === 0 &&
-    counts.creditCards === 0 &&
-    counts.cardPurchases === 0
+    counts.savingsGoals === 0
   );
 }
 

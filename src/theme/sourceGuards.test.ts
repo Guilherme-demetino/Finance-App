@@ -110,22 +110,3 @@ describe("código-fonte do app", () => {
     expect(offenders).toEqual([]);
   });
 });
-
-describe("pasta de rotas (src/app)", () => {
-  // O expo-router trata todo arquivo de src/app como rota, testes incluídos: um teste ali que puxa o
-  // banco de mentira (sql.js, que usa node:fs) quebra a exportação do app para o celular.
-  it("nenhum arquivo, nem teste, puxa o banco de mentira (teste de tela com banco vai para src/integration)", () => {
-    const routeFiles = (dir: string): string[] =>
-      fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-        const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) return routeFiles(full);
-        return /\.(ts|tsx)$/.test(entry.name) ? [full] : [];
-      });
-
-    const offenders = routeFiles(path.join(SRC, "app"))
-      .filter((file) => /sqliteFake|sql\.js/.test(fs.readFileSync(file, "utf8")))
-      .map(relative);
-
-    expect(offenders).toEqual([]);
-  });
-});

@@ -1,6 +1,5 @@
 import type { DebtRow } from "../types";
 import { formatCurrency } from "./currency";
-import type { InvoiceDue } from "./creditCards";
 import { parseDateString } from "./dates";
 
 type AlertLevel = "warning" | "danger";
@@ -35,7 +34,7 @@ function daysUntil(dueDate: string, today: Date): number {
 
 /**
  * Monta os avisos do Início: orçamento e metas por categoria estourando ou
- * perto disso, e dívidas e faturas de cartão vencidas ou perto de vencer. Os mais graves vêm
+ * perto disso, e dívidas vencidas ou perto de vencer. Os mais graves vêm
  * primeiro. `includeSpendingAlerts` deve ser false ao olhar meses que não
  * são o atual, onde falar de "orçamento estourando" não faz sentido.
  */
@@ -44,8 +43,6 @@ export function buildAlerts(params: {
   totalExpense: number;
   categories: CategoryUsage[];
   pendingDebts: DebtRow[];
-  /** Faturas de cartão por pagar (ver unpaidInvoiceDues). */
-  invoices?: InvoiceDue[];
   today?: Date;
   includeSpendingAlerts?: boolean;
 }): AppAlert[] {
@@ -54,7 +51,6 @@ export function buildAlerts(params: {
     totalExpense,
     categories,
     pendingDebts,
-    invoices = [],
     today = new Date(),
     includeSpendingAlerts = true,
   } = params;
@@ -116,27 +112,6 @@ export function buildAlerts(params: {
         id: `debt-${debt.id}`,
         level: "warning",
         message: `${action} ${debt.person}: ${value} ${when}.`,
-      });
-    }
-  });
-
-  invoices.forEach((invoice) => {
-    const days = daysUntil(invoice.dueDate, today);
-    const value = formatCurrency(invoice.amount);
-
-    if (days < 0) {
-      alerts.push({
-        id: invoice.id,
-        level: "danger",
-        message: `Fatura ${invoice.cardName}: ${value} venceu em ${invoice.dueDate}.`,
-      });
-    } else if (days <= DEBT_DUE_SOON_DAYS) {
-      const when =
-        days === 0 ? "vence hoje" : `vence em ${days} ${days === 1 ? "dia" : "dias"}`;
-      alerts.push({
-        id: invoice.id,
-        level: "warning",
-        message: `Fatura ${invoice.cardName}: ${value} ${when}.`,
       });
     }
   });

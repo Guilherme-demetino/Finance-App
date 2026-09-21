@@ -29,16 +29,9 @@ import { syncDueReminders } from "../services/dueReminders";
 import { realDueReminderDeps } from "../services/dueRemindersDeps";
 import { readBackupData, replaceAllData } from "../database/backup";
 import {
-  getAllCardPayments,
-  getAllCardPurchases,
-  getAllCreditCards,
-} from "../database/creditCards";
-import {
   getAllTransactions,
   importTransactions,
 } from "../database/transactions";
-import { notifyCardsChanged } from "../services/cardsEvents";
-import { reconcileCardPayments } from "../utils/cardImport";
 import {
   backupFileName,
   BACKUP_FORMAT,
@@ -330,19 +323,7 @@ export function useDataTransfer() {
         return;
       }
 
-      // O pagamento da fatura do cartão não pode entrar duas vezes: uma vez pelo app e outra pelo extrato.
-      const [cards, purchases, payments] = await Promise.all([
-        getAllCreditCards(),
-        getAllCardPurchases(),
-        getAllCardPayments(),
-      ]);
-      const plan = reconcileCardPayments(result.plan, {
-        cards,
-        purchases,
-        payments,
-        transactions: existing,
-        today: new Date(),
-      });
+      const { plan } = result;
       if (plan.toImport.length === 0) {
         showAlert(
           "Nada para importar",
@@ -372,8 +353,6 @@ export function useDataTransfer() {
     try {
       await importTransactions(plan.toImport);
       await refreshTransactions();
-      // Um pagamento de fatura reconhecido no extrato muda o estado das faturas.
-      notifyCardsChanged();
       showAlert(
         "Sucesso",
         `${plan.toImport.length} ${plan.toImport.length === 1 ? "transação importada" : "transações importadas"} com sucesso.`,

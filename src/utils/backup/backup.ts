@@ -1,10 +1,7 @@
 import type {
   BudgetRow,
-  CardPaymentRow,
-  CardPurchaseRow,
   CategoryBudgetRow,
   CategoryRow,
-  CreditCardRow,
   DebtRow,
   SavingsGoalRow,
   TransactionRow,
@@ -18,8 +15,7 @@ import type {
  */
 
 export const BACKUP_FORMAT = "meu-financeiro-backup";
-// 2: entraram os cartões de crédito, as compras e os pagamentos de fatura. Arquivos da versão 1 seguem aceitos.
-export const BACKUP_VERSION = 2;
+export const BACKUP_VERSION = 1;
 
 export interface BackupData {
   userName: string | null;
@@ -29,10 +25,6 @@ export interface BackupData {
   categoryBudgets: CategoryBudgetRow[];
   debts: DebtRow[];
   savingsGoals: SavingsGoalRow[];
-  /** Cartões de crédito e o que é deles (backups da versão 1 não têm: leem como vazio). */
-  creditCards?: CreditCardRow[];
-  cardPurchases?: CardPurchaseRow[];
-  cardPayments?: CardPaymentRow[];
 }
 
 export interface BackupFile {
@@ -54,8 +46,6 @@ export interface BackupCounts {
   categoryBudgets: number;
   debts: number;
   savingsGoals: number;
-  creditCards: number;
-  cardPurchases: number;
 }
 
 export function buildBackupFile(data: BackupData, now: Date): BackupFile {
@@ -90,8 +80,6 @@ export function countBackup(data: BackupData): BackupCounts {
     categoryBudgets: data.categoryBudgets.length,
     debts: data.debts.length,
     savingsGoals: data.savingsGoals.length,
-    creditCards: data.creditCards?.length ?? 0,
-    cardPurchases: data.cardPurchases?.length ?? 0,
   };
 }
 
@@ -225,52 +213,6 @@ function readData(raw: unknown): BackupData {
     return null;
   });
 
-  const creditCards = raw.creditCards === undefined
-    ? []
-    : readRows<CreditCardRow>(raw.creditCards, "cartões", (r) => {
-        if (!isInteger(r.id)) return "id";
-        if (!isString(r.name) || r.name.trim() === "") return "nome";
-        if (!isInteger(r.closing_day) || r.closing_day < 1 || r.closing_day > 31) return "dia de fechamento";
-        if (!isInteger(r.due_day) || r.due_day < 1 || r.due_day > 31) return "dia de vencimento";
-        if (r.credit_limit != null && !isNumber(r.credit_limit)) return "limite";
-        return null;
-      });
-  const cardIds = new Set(creditCards.map((card) => card.id));
-  const isRef = (value: unknown) => isString(value) && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
-
-  const cardPurchases = raw.cardPurchases === undefined
-    ? []
-    : readRows<CardPurchaseRow>(raw.cardPurchases, "compras no cartão", (r) => {
-        if (!isInteger(r.id)) return "id";
-        if (!isInteger(r.card_id) || !cardIds.has(r.card_id)) return "cartão inexistente";
-        if (!isString(r.description)) return "descrição";
-        if (!isNumber(r.amount)) return "valor";
-        if (!isDate(r.date)) return "data";
-        if (!isString(r.category)) return "categoria";
-        if (!isRef(r.invoice_ref)) return "fatura";
-        if (r.installment_group_id != null && !isString(r.installment_group_id)) return "série";
-        if (r.installment_number != null && !isInteger(r.installment_number)) return "parcela";
-        if (r.installment_total != null && !isInteger(r.installment_total)) return "total de parcelas";
-        return null;
-      });
-
-  const cardPayments = raw.cardPayments === undefined
-    ? []
-    : readRows<CardPaymentRow>(
-        raw.cardPayments,
-        "pagamentos de fatura",
-        (r) => {
-          if (!isInteger(r.id)) return "id";
-          if (!isInteger(r.card_id) || !cardIds.has(r.card_id)) return "cartão inexistente";
-          if (!isRef(r.invoice_ref)) return "fatura";
-          if (!isDate(r.paid_date)) return "data do pagamento";
-          if (!isNumber(r.amount)) return "valor";
-          if (r.transaction_id != null && !isInteger(r.transaction_id)) return "despesa";
-          return null;
-        },
-        (r) => `${r.card_id}/${r.invoice_ref}`,
-      );
-
   return {
     userName: raw.userName as string | null,
     categories,
@@ -279,9 +221,6 @@ function readData(raw: unknown): BackupData {
     categoryBudgets,
     debts,
     savingsGoals,
-    creditCards,
-    cardPurchases,
-    cardPayments,
   };
 }
 
@@ -333,17 +272,12 @@ function plural(count: number, one: string, many: string): string {
 }
 
 function describeCounts(counts: BackupCounts): string {
-  const parts = [
+  return [
     plural(counts.transactions, "transação", "transações"),
     plural(counts.debts, "dívida", "dívidas"),
     plural(counts.savingsGoals, "meta de economia", "metas de economia"),
     plural(counts.categories, "categoria própria", "categorias próprias"),
-  ];
-  // Só aparece quando há cartão, para não poluir o texto de quem não usa.
-  if (counts.creditCards > 0 || counts.cardPurchases > 0) {
-    parts.push(plural(counts.creditCards, "cartão", "cartões"), plural(counts.cardPurchases, "compra no cartão", "compras no cartão"));
-  }
-  return parts.join(", ");
+  ].join(", ");
 }
 
 /** "19/09/2026" (data local do aparelho). */

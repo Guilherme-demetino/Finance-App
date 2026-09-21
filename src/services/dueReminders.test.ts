@@ -61,26 +61,6 @@ function setup(scheduler = createFakeScheduler(), initial: { debts?: DebtRow[]; 
 
 const ON = { [REMINDER_META.enabled]: "1" };
 
-describe("faturas de cartão", () => {
-  it("uma fatura por pagar entra no agendamento junto com as outras contas", async () => {
-    const t = setup(undefined, { meta: ON });
-    t.deps.readInvoices = async () => [
-      { id: "invoice-1-2026-10", cardId: 1, cardName: "Nubank", ref: "2026-10", amount: 800, dueDate: "05/10/2026", status: "closed" },
-    ];
-
-    await expect(syncDueReminders(t.deps)).resolves.toEqual({ status: "scheduled", count: 1 });
-
-    const [reminder] = [...t.state.scheduled.values()];
-    expect(reminder.title).toContain("Fatura Nubank");
-  });
-
-  it("sem a leitura de faturas o serviço segue como antes", async () => {
-    const t = setup(undefined, { meta: ON, debts: [debt()] });
-
-    await expect(syncDueReminders(t.deps)).resolves.toEqual({ status: "scheduled", count: 1 });
-  });
-});
-
 describe("syncDueReminders", () => {
   it("desligado: não agenda nada e cancela o que sobrou, sem mexer em notificações de outra origem", async () => {
     const t = setup(undefined, { debts: [debt()] });

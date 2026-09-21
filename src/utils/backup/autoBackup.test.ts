@@ -38,13 +38,11 @@ describe("isBackupDue", () => {
 });
 
 describe("isBackupEmpty", () => {
-  const zero = { transactions: 0, categories: 0, budgets: 0, categoryBudgets: 0, debts: 0, savingsGoals: 0, creditCards: 0, cardPurchases: 0 };
+  const zero = { transactions: 0, categories: 0, budgets: 0, categoryBudgets: 0, debts: 0, savingsGoals: 0 };
   it("só é vazio sem nenhum dado", () => {
     expect(isBackupEmpty(zero)).toBe(true);
     expect(isBackupEmpty({ ...zero, savingsGoals: 1 })).toBe(false);
     expect(isBackupEmpty({ ...zero, transactions: 3 })).toBe(false);
-    expect(isBackupEmpty({ ...zero, creditCards: 1 })).toBe(false);
-    expect(isBackupEmpty({ ...zero, cardPurchases: 2 })).toBe(false);
   });
 });
 

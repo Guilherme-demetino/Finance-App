@@ -93,48 +93,6 @@ function createTables(db: SQLite.SQLiteDatabase) {
       );
     `);
 
-    // Cartões de crédito: as compras ficam fora do saldo até a fatura ser paga (o pagamento vira uma despesa).
-    db.runSync(`
-      CREATE TABLE IF NOT EXISTS credit_cards (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        closing_day INTEGER NOT NULL,
-        due_day INTEGER NOT NULL,
-        credit_limit REAL
-      );
-    `);
-
-    db.runSync(`
-      CREATE TABLE IF NOT EXISTS card_purchases (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        card_id INTEGER NOT NULL,
-        description TEXT NOT NULL,
-        amount REAL NOT NULL,
-        date TEXT NOT NULL,
-        category TEXT NOT NULL,
-        invoice_ref TEXT NOT NULL,
-        installment_group_id TEXT,
-        installment_number INTEGER,
-        installment_total INTEGER
-      );
-    `);
-
-    db.runSync(`
-      CREATE TABLE IF NOT EXISTS card_invoice_payments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        card_id INTEGER NOT NULL,
-        invoice_ref TEXT NOT NULL,
-        paid_date TEXT NOT NULL,
-        amount REAL NOT NULL,
-        transaction_id INTEGER,
-        UNIQUE(card_id, invoice_ref)
-      );
-    `);
-
-    db.runSync(
-      "CREATE INDEX IF NOT EXISTS idx_card_purchases_card ON card_purchases(card_id, invoice_ref);",
-    );
-
     // Guarda avisos do próprio app (ex: qual novidade o usuário já viu).
     // Fica fora do resetDatabase de propósito: não é dado financeiro.
     db.runSync(`
@@ -223,9 +181,6 @@ export async function resetDatabase(): Promise<void> {
     db.runSync("DROP TABLE IF EXISTS category_budgets");
     db.runSync("DROP TABLE IF EXISTS debts");
     db.runSync("DROP TABLE IF EXISTS savings_goals");
-    db.runSync("DROP TABLE IF EXISTS credit_cards");
-    db.runSync("DROP TABLE IF EXISTS card_purchases");
-    db.runSync("DROP TABLE IF EXISTS card_invoice_payments");
     db.runSync("DROP TABLE IF EXISTS users");
     db.runSync("DROP TABLE IF EXISTS security");
   });
