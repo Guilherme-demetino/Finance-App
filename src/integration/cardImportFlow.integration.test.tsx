@@ -277,42 +277,40 @@ describe("importar a fatura do cartão (CSV)", () => {
 });
 
 describe("pagamento recebido na fatura", () => {
-  it("desconta do total, e pagar a fatura tira da conta só o que falta", async () => {
+  const withPayment = () => [invoiceCsv(), `${iso(PURCHASE_DAY)},pagamento,Pagamento recebido,-30.00`].join("\n");
+
+  it("não desconta do total: a fatura mostra o gasto do período e pagar tira da conta o valor cheio", async () => {
     await mountApp();
     const card = await addCard();
-    const withPayment = `${invoiceCsv()}
-${iso(PURCHASE_DAY)},pagamento,Pagamento recebido,-30.00`;
 
-    const { plan, result } = await importInvoiceFile(card, withPayment);
+    const { plan, result } = await importInvoiceFile(card, withPayment());
 
     expect(result).toEqual({ ok: true });
-    expect(plan!.paymentsCount).toBe(1);
+    expect(plan!.ignoredCredits).toBe(2); // estorno e pagamento recebido
     const stored = await getAllCardPurchases();
-    expect(stored.map((row) => row.amount).sort((a, b) => a - b)).toEqual([-30, 40, 60]);
+    expect(stored.map((row) => row.amount).sort((a, b) => a - b)).toEqual([40, 60]);
     const invoice = seen.cards.views[0].invoices.find((item) => item.total !== 0)!;
-    expect(invoice.total).toBe(70);
-    expect(seen.cards.views[0].usage.used).toBe(70);
+    expect(invoice.total).toBe(100);
+    expect(seen.cards.views[0].usage.used).toBe(100);
 
     await act(async () => {
       await seen.cards.payInvoice(card, invoice);
     });
     await settle();
 
-    expect((await getAllTransactions())[0]).toMatchObject({ amount: 70, category_id: "Cartão de crédito" });
+    expect((await getAllTransactions())[0]).toMatchObject({ amount: 100, category_id: "Cartão de crédito" });
   });
 
-  it("importar de novo o mesmo arquivo com o pagamento não repete nada", async () => {
+  it("importar de novo o mesmo arquivo não repete nada", async () => {
     await mountApp();
     const card = await addCard();
-    const withPayment = `${invoiceCsv()}
-${iso(PURCHASE_DAY)},pagamento,Pagamento recebido,-30.00`;
-    await importInvoiceFile(card, withPayment);
+    await importInvoiceFile(card, withPayment());
 
-    const { plan } = await importInvoiceFile(card, withPayment);
+    const { plan } = await importInvoiceFile(card, withPayment());
 
     expect(plan!.rows).toEqual([]);
-    expect(plan!.duplicates).toBe(3);
-    expect(await getAllCardPurchases()).toHaveLength(3);
+    expect(plan!.duplicates).toBe(2);
+    expect(await getAllCardPurchases()).toHaveLength(2);
   });
 });
 

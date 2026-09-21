@@ -1,9 +1,7 @@
 import type { CardPaymentRow, CardPurchaseRow, CreditCardRow } from "../types";
 import {
   detectInvoiceRef,
-  isBalanceLine,
   isInvoicePaymentLine,
-  isReceivedPayment,
   isCardInvoicePayment,
   ignoreCardPayments,
   planCardImport,
@@ -68,15 +66,6 @@ describe("linhas de pagamento", () => {
     expect(isInvoicePaymentLine("Pagamento em 05 OUT")).toBe(true);
     expect(isInvoicePaymentLine("Mercado Pague Menos")).toBe(false);
     expect(isInvoicePaymentLine("Pag*Padaria")).toBe(false);
-  });
-
-  it("separa o pagamento recebido (desconta) do saldo da fatura anterior (ignorado)", () => {
-    expect(isReceivedPayment("Pagamento recebido")).toBe(true);
-    expect(isReceivedPayment("PAGAMENTO DE FATURA")).toBe(true);
-    expect(isReceivedPayment("Pgto fatura anterior")).toBe(false);
-    expect(isReceivedPayment("Fatura anterior")).toBe(false);
-    expect(isBalanceLine("Fatura anterior")).toBe(true);
-    expect(isBalanceLine("Pagamento recebido")).toBe(false);
   });
 
   it.each([
@@ -155,45 +144,22 @@ describe("planCardImport: a fatura vira compras", () => {
     expect(result.ignoredCredits).toBe(3);
   });
 
-  it("pagamento recebido é um pagamento antecipado: entra com valor negativo e desconta do total da fatura", () => {
+  it("pagamento recebido não desconta do total: a fatura é o gasto do período", () => {
     const result = plan([
       line({ amount: 100 }),
       line({ description: "Uber", amount: 50, date: "12/09/2026" }),
       line({ type: "income", description: "Pagamento recebido", amount: 120, date: "15/09/2026" }),
+      line({ type: "expense", description: "Pagamento recebido", amount: 20, date: "05/11/2026" }),
     ]);
 
-    expect(result.rows.map((row) => [row.description, row.amount, row.category])).toEqual([
-      ["Mercado", 100, "Alimentação"],
-      ["Uber", 50, "Alimentação"],
-      ["Pagamento recebido", -120, "Pagamento"],
+    expect(result.rows.map((row) => [row.description, row.amount])).toEqual([
+      ["Mercado", 100],
+      ["Uber", 50],
     ]);
-    expect(result.purchasesCount).toBe(2);
-    expect(result.purchasesTotal).toBe(150);
-    expect(result.paymentsCount).toBe(1);
-    expect(result.paymentsTotal).toBe(120);
-    expect(result.total).toBe(30);
-    expect(result.invoiceTotal).toBe(30);
-    expect(result.ignoredCredits).toBe(0);
-  });
-
-  it("o pagamento recebido também vale quando o leitor o marca como despesa (PDF sem sinal), e não vota na fatura", () => {
-    const result = plan([line({ date: "10/09/2026" }), line({ description: "Pagamento recebido", type: "expense", amount: 20, date: "05/11/2026" })]);
-
-    expect(result.rows.map((row) => row.amount)).toEqual([50, -20]);
-    expect(result.ref).toBe("2026-10");
-  });
-
-  it("o pagamento entra em fatura já aberta somando ao que ela tinha, e reimportar não repete", () => {
-    const stored = [purchase({ id: 1, amount: 80 })];
-    const first = plan([line({ type: "income", description: "Pagamento recebido", amount: 30 })], { purchases: stored, ref: "2026-10" });
-    expect(first.invoiceTotal).toBe(50);
-
-    const again = plan([line({ type: "income", description: "Pagamento recebido", amount: 30 })], {
-      purchases: [...stored, { ...purchase({ id: 2, description: "Pagamento recebido", amount: -30, category: "Pagamento" }) }],
-      ref: "2026-10",
-    });
-    expect(again.rows).toEqual([]);
-    expect(again.duplicates).toBe(1);
+    expect(result.total).toBe(150);
+    expect(result.ignoredCredits).toBe(2);
+    expect(result.rows.every((row) => row.amount > 0)).toBe(true);
+    expect(result.ref).toBe("2026-10"); // o pagamento (05/11) não vota na fatura
   });
 
   it("ignora linhas com data ou valor inválidos", () => {
@@ -328,7 +294,7 @@ describe("fatura em PDF (linhas de texto do arquivo)", () => {
     "03 OUT Pagamento recebido R$ 100,00",
   ];
 
-  it("as linhas do PDF viram compras da fatura, o pagamento recebido desconta e o total impresso fica de fora", () => {
+  it("as linhas do PDF viram compras da fatura; o pagamento recebido e o total impresso ficam de fora", () => {
     const pdf = planPdfImport(LINES, [], TODAY);
     if (!pdf.ok) throw new Error(pdf.error);
 
@@ -338,11 +304,10 @@ describe("fatura em PDF (linhas de texto do arquivo)", () => {
       ["Mercado Extra", 60, null],
       ["Uber *Trip", 20.5, null],
       ["Notebook", 170, 2],
-      ["Pagamento recebido", -100, null],
     ]);
     expect(result.ref).toBe("2026-10");
-    expect(result.purchasesTotal).toBe(250.5);
-    expect(result.total).toBe(150.5);
+    expect(result.total).toBe(250.5);
+    expect(result.ignoredCredits).toBe(1);
   });
 });
 
@@ -380,18 +345,13 @@ describe("fatura CSV do Nubank (exemplo real: date,title,amount, sem categoria)"
     expect(lines.filter((line) => line.type === "income").map((line) => line.description)).toEqual(["Pagamento recebido", "Fatura anterior"]);
   });
 
-  it("importa as 14 compras numa fatura só; o pagamento recebido desconta do total e 'Fatura anterior' fica de fora", () => {
+  it("importa as 14 compras numa fatura só, sem descontar o pagamento recebido nem a fatura anterior", () => {
     const result = plan(read());
 
-    expect(result.rows).toHaveLength(15);
-    expect(result.purchasesCount).toBe(14);
-    expect(result.purchasesTotal).toBe(888.71);
-    expect(result.paymentsCount).toBe(1);
-    expect(result.paymentsTotal).toBe(450);
-    expect(result.total).toBe(438.71);
-    expect(result.invoiceTotal).toBe(438.71);
-    expect(result.rows.find((row) => row.description === "Pagamento recebido")).toMatchObject({ amount: -450, date: "15/08/2026", category: "Pagamento" });
-    expect(result.ignoredCredits).toBe(1);
+    expect(result.rows).toHaveLength(14);
+    expect(result.total).toBe(888.71);
+    expect(result.ignoredCredits).toBe(2);
+    expect(result.rows.some((row) => row.amount < 0)).toBe(false);
     expect(result.ref).toBe("2026-09"); // fecha dia 28: compras até 28/08 caem na fatura que vence em 05/09
     expect(result.rows.map((row) => row.description)).toEqual(
       expect.arrayContaining(["Uber", "iFood", "Supermercado Extra", "Farmácia São João", "Padaria Pão Quente"]),
@@ -413,6 +373,6 @@ describe("fatura CSV do Nubank (exemplo real: date,title,amount, sem categoria)"
     const again = plan(read(), { purchases: stored });
 
     expect(again.rows).toEqual([]);
-    expect(again.duplicates).toBe(15);
+    expect(again.duplicates).toBe(14);
   });
 });

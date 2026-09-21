@@ -160,6 +160,16 @@ describe("backup do banco", () => {
     expect(id).toBeGreaterThan(7);
   });
 
+  it("backup de uma versão que lançava o pagamento recebido como compra negativa: esse lançamento não é restaurado", async () => {
+    const { backup, sqlite } = await loadModules();
+    await sqlite.getDatabase();
+    const negative = { ...SAMPLE.cardPurchases![0], id: 99, description: "Pagamento recebido", amount: -450, category: "Pagamento" };
+
+    await backup.replaceAllData({ ...SAMPLE, cardPurchases: [...SAMPLE.cardPurchases!, negative] });
+
+    expect((await backup.readBackupData()).cardPurchases).toEqual(SAMPLE.cardPurchases);
+  });
+
   it("uma falha nos cartões também desfaz a restauração inteira", async () => {
     const { backup, sqlite, transactions } = await loadModules();
     await sqlite.getDatabase();

@@ -149,14 +149,9 @@ export default function CardsScreen() {
       setFormError(result.error);
       return;
     }
-    const { purchasesCount, paymentsCount } = importPlan;
-    const parts = [
-      purchasesCount > 0 ? `${purchasesCount} ${purchasesCount === 1 ? "compra" : "compras"}` : null,
-      paymentsCount > 0 ? `${paymentsCount} ${paymentsCount === 1 ? "pagamento antecipado" : "pagamentos antecipados"}` : null,
-    ].filter((part) => part !== null);
-    const imported = parts.length > 0 ? `Importado na fatura de ${formatRef(importPlan.ref)}: ${parts.join(" e ")}.` : "";
+    const count = importPlan.rows.length;
     setImportDraft(null);
-    setNotice(imported);
+    setNotice(`Importado na fatura de ${formatRef(importPlan.ref)}: ${count} ${count === 1 ? "compra" : "compras"}.`);
   };
 
   const handleConfirm = async () => {

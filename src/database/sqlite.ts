@@ -135,6 +135,10 @@ function createTables(db: SQLite.SQLiteDatabase) {
       "CREATE INDEX IF NOT EXISTS idx_card_purchases_card ON card_purchases(card_id, invoice_ref);",
     );
 
+    // Uma versão anterior lançava o "Pagamento recebido" da fatura como compra de valor negativo. O pagamento recebido
+    // não conta mais (o total é o gasto do período), e compra de verdade nunca é negativa: tira esses lançamentos.
+    db.runSync("DELETE FROM card_purchases WHERE amount < 0");
+
     // Guarda avisos do próprio app (ex: qual novidade o usuário já viu).
     // Fica fora do resetDatabase de propósito: não é dado financeiro.
     db.runSync(`

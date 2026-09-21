@@ -182,6 +182,32 @@ describe("pagar a fatura", () => {
   });
 });
 
+describe("limpeza dos pagamentos recebidos lançados por uma versão anterior", () => {
+  it("ao abrir o banco, apaga compras de valor negativo e mantém as normais", async () => {
+    const m = await load();
+    const card = await newCard(m);
+    await m.cards.addCardPurchases(planPurchase({ card, description: "Mercado", totalAmount: 50, date: new Date(2026, 8, 1), category: "Outros", installments: 1, groupId: "x" }));
+    const db = mockState.db as { runSync: (sql: string, ...params: unknown[]) => unknown };
+    db.runSync(
+      "INSERT INTO card_purchases (card_id, description, amount, date, category, invoice_ref) VALUES (?, ?, ?, ?, ?, ?)",
+      card.id,
+      "Pagamento recebido",
+      -450,
+      "15/08/2026",
+      "Pagamento",
+      "2026-09",
+    );
+    expect(await m.cards.getAllCardPurchases()).toHaveLength(2);
+
+    // Reabre o app: o banco é o mesmo, os módulos são novos.
+    jest.resetModules();
+    await jest.requireActual<typeof import("./sqlite")>("./sqlite").getDatabase();
+    const reopened = jest.requireActual<typeof import("./creditCards")>("./creditCards");
+
+    expect((await reopened.getAllCardPurchases()).map((p) => p.description)).toEqual(["Mercado"]);
+  });
+});
+
 describe("apagar cartão e zerar", () => {
   it("apaga o cartão, as compras e os pagamentos dele, mas a despesa do pagamento fica no saldo", async () => {
     const m = await load();

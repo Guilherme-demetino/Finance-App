@@ -1,7 +1,6 @@
 import type { CardPaymentRow, CardPurchaseRow, CreditCardRow } from "../types";
 import {
   addMonthsToRef,
-  CARD_PAYMENT_CATEGORY,
   currentInvoiceRef,
   invoiceRefFor,
   MAX_INSTALLMENTS,
@@ -50,18 +49,7 @@ export function splitInstallment(description: string): SplitDescription {
 const PAYMENT_LINE = /(pagamento|pgto|pag\.?)\s*(de\s*)?(fatura|recebido|efetuado|on-?line|em\s+\d)/;
 const BALANCE_LINE = /fatura anterior|saldo (anterior|restante)|total (da )?fatura/;
 
-/** Linha de saldo ou de total da fatura, que não é compra nem pagamento: fica sempre de fora. */
-export function isBalanceLine(description: string): boolean {
-  return BALANCE_LINE.test(normalizeText(description));
-}
-
-/** Pagamento recebido (feito antes do fechamento): entra na fatura como valor negativo e desconta do total. */
-export function isReceivedPayment(description: string): boolean {
-  const text = normalizeText(description);
-  return PAYMENT_LINE.test(text) && !BALANCE_LINE.test(text);
-}
-
-/** Linha de pagamento ou de saldo da fatura, que aparece na própria fatura e não é compra. */
+/** Linha de pagamento recebido ou de saldo da fatura anterior: aparece na própria fatura, mas não é compra e não é lançada. */
 export function isInvoicePaymentLine(description: string): boolean {
   const text = normalizeText(description);
   return PAYMENT_LINE.test(text) || BALANCE_LINE.test(text);
@@ -87,24 +75,16 @@ export interface CardImportPlan {
   ref: string;
   /** A fatura detectada e as vizinhas, para o usuário trocar se a leitura errou. */
   refOptions: string[];
-  /** Lançamentos novos, prontos para gravar: as compras e os pagamentos antecipados (estes com valor negativo). */
+  /** Compras novas, prontas para gravar. */
   rows: NewPurchase[];
-  /** Quantas compras e quanto somam entre os lançamentos novos. */
-  purchasesCount: number;
-  purchasesTotal: number;
-  /** Quantos pagamentos antecipados ("Pagamento recebido") e quanto somam (positivo); descontam do total da fatura. */
-  paymentsCount: number;
-  paymentsTotal: number;
   /** Compras que já estavam lançadas (mesma data, descrição e valor; ou a mesma parcela). */
   duplicates: number;
-  /** Estornos e saldos da fatura anterior, que a leitura não lança. */
+  /** Pagamentos recebidos, estornos e saldos da fatura anterior, que a leitura não lança como compra. */
   ignoredCredits: number;
-  /** Lançamentos lidos no arquivo (novos + já lançados). */
+  /** Compras lidas no arquivo (novas + já lançadas). */
   totalRows: number;
-  /** Compras novas menos os pagamentos antecipados novos: quanto os lançamentos novos mudam o total da fatura. */
+  /** Soma das compras novas. */
   total: number;
-  /** Total da fatura escolhida depois de importar (o que já estava nela mais os lançamentos novos). */
-  invoiceTotal: number;
   /** Motivo de não poder importar nessa fatura (ex.: já paga); null se pode. */
   blocked: string | null;
 }
@@ -164,23 +144,18 @@ export function planCardImport(input: {
   let ignoredCredits = 0;
 
   const lines = input.candidates.flatMap((candidate) => {
-    if (isBalanceLine(candidate.description)) {
-      ignoredCredits++;
-      return [];
-    }
-    // "Pagamento recebido": foi pago antes do fechamento, então desconta do total (entra como valor negativo).
-    const credit = isReceivedPayment(candidate.description);
-    if (!credit && candidate.type !== "expense") {
+    // Pagamento recebido (feito antes do fechamento), estorno e saldo anterior não são compras: o total da fatura
+    // é o gasto do período, sem descontar o que já foi pago.
+    if (candidate.type !== "expense" || isInvoicePaymentLine(candidate.description)) {
       ignoredCredits++;
       return [];
     }
     if (!parseDueDate(candidate.date) || !(candidate.amount > 0)) return [];
-    const split = credit ? { base: candidate.description.trim(), number: null, total: null } : splitInstallment(candidate.description);
-    return [{ candidate, split, credit }];
+    return [{ candidate, split: splitInstallment(candidate.description) }];
   });
 
   const detected = detectInvoiceRef(
-    lines.filter((line) => !line.credit).map((line) => ({ date: line.candidate.date, installment: line.split.number !== null })),
+    lines.map((line) => ({ date: line.candidate.date, installment: line.split.number !== null })),
     card,
     today,
   );
@@ -196,9 +171,8 @@ export function planCardImport(input: {
 
   const rows: NewPurchase[] = [];
   let duplicates = 0;
-  for (const { candidate, split, credit } of lines) {
-    const amount = credit ? -candidate.amount : candidate.amount;
-    const key = purchaseKey(split, split.base, amount, candidate.date);
+  for (const { candidate, split } of lines) {
+    const key = purchaseKey(split, split.base, candidate.amount, candidate.date);
     const available = remaining.get(key) ?? 0;
     if (available > 0) {
       remaining.set(key, available - 1);
@@ -208,9 +182,9 @@ export function planCardImport(input: {
     rows.push({
       card_id: card.id,
       description: split.base.slice(0, 80),
-      amount,
+      amount: candidate.amount,
       date: candidate.date,
-      category: credit ? CARD_PAYMENT_CATEGORY : candidate.category,
+      category: candidate.category,
       invoice_ref: ref,
       installment_group_id: split.number !== null ? groupIdFor(card.id, split.base, candidate.amount, split.total as number) : null,
       installment_number: split.number,
@@ -218,29 +192,17 @@ export function planCardImport(input: {
     });
   }
 
-  const round2 = (value: number) => Math.round(value * 100) / 100;
-  const total = round2(rows.reduce((sum, row) => sum + row.amount, 0));
-  const purchaseRows = rows.filter((row) => row.amount > 0);
-  const paymentRows = rows.filter((row) => row.amount < 0);
+  const total = Math.round(rows.reduce((sum, row) => sum + row.amount, 0) * 100) / 100;
   const blocked = rows.length > 0 ? purchaseBlockedByPayment([ref], input.payments, card.id) : null;
-
-  // Total da fatura depois de importar: o que já estava nela mais o novo.
-  const alreadyThere = input.purchases.filter((purchase) => purchase.card_id === card.id && purchase.invoice_ref === ref).reduce((sum, purchase) => sum + purchase.amount, 0);
-  const invoiceTotal = Math.round((alreadyThere + total) * 100) / 100;
 
   return {
     ref,
     refOptions,
     rows,
-    purchasesCount: purchaseRows.length,
-    purchasesTotal: round2(purchaseRows.reduce((sum, row) => sum + row.amount, 0)),
-    paymentsCount: paymentRows.length,
-    paymentsTotal: round2(-paymentRows.reduce((sum, row) => sum + row.amount, 0)),
     duplicates,
     ignoredCredits,
     totalRows: rows.length + duplicates,
     total,
-    invoiceTotal,
     blocked,
   };
 }

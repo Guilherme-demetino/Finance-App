@@ -29,16 +29,9 @@ export function InvoiceImportModal({ visible, cardName, plan, onSelectRef, onCon
   const canConfirm = plan !== null && plan.blocked === null && rows.length > 0 && !isBusy;
   const ignored: string[] = [];
   if (plan && plan.duplicates > 0) ignored.push(`${plan.duplicates} já lançada${plan.duplicates === 1 ? "" : "s"}`);
-  if (plan && plan.ignoredCredits > 0) ignored.push(`${plan.ignoredCredits} estorno/saldo`);
+  if (plan && plan.ignoredCredits > 0) ignored.push(`${plan.ignoredCredits} ${plan.ignoredCredits === 1 ? "crédito" : "créditos"} (pagamento recebido, estorno ou saldo)`);
 
-  const purchasesCount = plan?.purchasesCount ?? 0;
-  const paymentsCount = plan?.paymentsCount ?? 0;
-  const purchasesText = `${purchasesCount} ${purchasesCount === 1 ? "compra" : "compras"}`;
-  const paymentsText = `${paymentsCount} ${paymentsCount === 1 ? "pagamento" : "pagamentos"}`;
-  const importText = paymentsCount === 0 ? purchasesText : purchasesCount === 0 ? paymentsText : `${purchasesText} e ${paymentsText}`;
-
-  const confirmLabel =
-    rows.length > 0 ? `Importar ${importText}` : "Nada novo para importar";
+  const confirmLabel = rows.length > 0 ? `Importar ${rows.length} ${rows.length === 1 ? "compra" : "compras"}` : "Nada novo para importar";
   const shownError = errorMessage ?? plan?.blocked ?? null;
 
   return (
@@ -46,17 +39,9 @@ export function InvoiceImportModal({ visible, cardName, plan, onSelectRef, onCon
       {plan ? (
         <>
           <Text style={styles.summary}>
-            {purchasesCount} {purchasesCount === 1 ? "compra nova" : "compras novas"} ({formatCurrency(plan.purchasesTotal)})
-            {paymentsCount > 0
-              ? `, ${paymentsCount} ${paymentsCount === 1 ? "pagamento antecipado" : "pagamentos antecipados"} (− ${formatCurrency(plan.paymentsTotal)})`
-              : ""}
+            {rows.length} {rows.length === 1 ? "compra nova" : "compras novas"} ({formatCurrency(plan.total)})
             {ignored.length > 0 ? `. Ignoradas: ${ignored.join(", ")}` : ""}.
           </Text>
-          {paymentsCount > 0 ? (
-            <Text style={styles.match}>
-              Os pagamentos recebidos antes do fechamento descontam do total: a fatura fica em {formatCurrency(plan.invoiceTotal)}.
-            </Text>
-          ) : null}
 
           <Text style={styles.label}>Entra na fatura de</Text>
           <View style={styles.chipRow}>
@@ -131,7 +116,6 @@ const useStyles = makeStyles(({ colors }) => ({
   hint: { color: colors.textMuted, fontSize: 12, lineHeight: 17, marginBottom: 14 },
   preview: { backgroundColor: colors.surfaceAlt, borderRadius: 12, padding: 12, marginBottom: 14 },
   previewLine: { color: colors.textSecondary, fontSize: 13, lineHeight: 20 },
-  match: { color: colors.textPrimary, fontSize: 13, lineHeight: 19, marginBottom: 14 },
   error: { color: colors.expense, fontSize: 13, marginBottom: 12 },
   confirmButton: {
     backgroundColor: colors.surfaceAlt,

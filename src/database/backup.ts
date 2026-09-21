@@ -161,7 +161,8 @@ export async function replaceAllData(data: BackupData): Promise<void> {
         c.credit_limit ?? null,
       );
     }
-    for (const p of data.cardPurchases ?? []) {
+    // Backup feito por uma versão que lançava o pagamento recebido como compra negativa: esses lançamentos não valem mais.
+    for (const p of (data.cardPurchases ?? []).filter((purchase) => purchase.amount > 0)) {
       db.runSync(
         "INSERT INTO card_purchases (id, card_id, description, amount, date, category, invoice_ref, installment_group_id, installment_number, installment_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         p.id,
