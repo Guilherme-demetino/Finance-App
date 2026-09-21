@@ -241,5 +241,15 @@
       "Metas por Categoria: o botão de editar agora tem o texto “Editar” (antes era só um lápis pequeno). Salvar um valor vazio passou a avisar em vez de fechar em silêncio.",
       "Metas por Categoria: novo “Remover meta”, dentro da edição, com confirmação. A categoria e os gastos continuam; só a meta daquele mês some."
     ]
+  },
+  {
+    "id": 30,
+    "date": "21/09/2026",
+    "title": "Cartões de crédito removidos",
+    "items": [
+      "O app voltou à versão de antes dos cartões de crédito: o menu “Cartões e Faturas”, a importação de fatura por PDF/CSV e os avisos de fatura foram retirados.",
+      "Seus saldos, transações, dívidas, metas e orçamentos não mudam. Se você pagou alguma fatura pelo app, a despesa “Cartão de crédito” continua no Histórico como qualquer outra despesa.",
+      "Um backup feito enquanto os cartões existiam pode não ser aceito na restauração. Gere um backup novo agora."
+    ]
   }
 ]
