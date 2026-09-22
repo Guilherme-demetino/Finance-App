@@ -56,6 +56,8 @@ interface TransactionsHistoryListProps {
   onDeleteAll: () => void;
   onDeleteSeriesFromHere: (groupId: string, fromId: number) => void;
   onDeleteSeries: (groupId: string) => void;
+  /** Apaga as duas pontas de uma transferência entre contas de uma vez. */
+  onDeleteTransferGroup: (transferGroupId: string) => void;
 }
 
 export function TransactionsHistoryList({
@@ -71,6 +73,7 @@ export function TransactionsHistoryList({
   onDeleteAll,
   onDeleteSeriesFromHere,
   onDeleteSeries,
+  onDeleteTransferGroup,
 }: TransactionsHistoryListProps) {
   const { colors } = useTheme();
   const [filter, setFilter] = useState<TypeFilter>("all");
@@ -342,9 +345,11 @@ export function TransactionsHistoryList({
               >
                 <Ionicons
                   name={
-                    item.type === "income"
-                      ? "arrow-down-outline"
-                      : "arrow-up-outline"
+                    item.transferGroupId
+                      ? "swap-horizontal-outline"
+                      : item.type === "income"
+                        ? "arrow-down-outline"
+                        : "arrow-up-outline"
                   }
                   size={20}
                   color={item.color}
@@ -394,24 +399,31 @@ export function TransactionsHistoryList({
               </Text>
 
               <View style={{ flexDirection: "row", gap: 8 }}>
-                <TouchableOpacity
-                  onPress={() => onEditTransaction(item)}
-                  style={{
-                    backgroundColor: colors.surfaceAlt,
-                    borderWidth: 1,
-                    borderColor: colors.textPrimary,
-                    borderRadius: 8,
-                    width: 34,
-                    height: 34,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Ionicons name="pencil-outline" size={16} color={colors.textPrimary} />
-                </TouchableOpacity>
+                {/* Transferência não tem edição própria (mexeria só numa das pontas): só dá para apagar as duas juntas. */}
+                {!item.transferGroupId && (
+                  <TouchableOpacity
+                    onPress={() => onEditTransaction(item)}
+                    style={{
+                      backgroundColor: colors.surfaceAlt,
+                      borderWidth: 1,
+                      borderColor: colors.textPrimary,
+                      borderRadius: 8,
+                      width: 34,
+                      height: 34,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons name="pencil-outline" size={16} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
-                  onPress={() => onDeleteTransaction(item.id)}
+                  onPress={() =>
+                    item.transferGroupId
+                      ? onDeleteTransferGroup(item.transferGroupId)
+                      : onDeleteTransaction(item.id)
+                  }
                   style={{
                     backgroundColor: colors.surfaceAlt,
                     borderWidth: 1,

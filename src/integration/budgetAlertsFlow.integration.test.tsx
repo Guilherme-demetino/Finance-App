@@ -9,6 +9,7 @@ import { useTransactionActions, useTransactionForm } from "../context/Transactio
 import { useTransactionsData } from "../context/TransactionsContext";
 import { getMeta } from "../database/appMeta";
 import { resetDatabase } from "../database/sqlite";
+import { createTransfer } from "../database/transfers";
 import { useDataTransfer } from "../hooks/useDataTransfer";
 import { BUDGET_ALERT_META, enableBudgetAlerts } from "../services/budgetAlerts";
 import { realBudgetAlertDeps } from "../services/budgetAlertsDeps";
@@ -116,6 +117,12 @@ const setGoal = async (category: string, amount: number, repeat = false) => {
 /** Títulos das notificações mostradas até agora, na ordem. */
 const shown = () => notify.mock.calls.map(([request]) => request.content.title as string);
 
+const pad = (n: number) => String(n).padStart(2, "0");
+const today = () => {
+  const d = new Date();
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+};
+
 beforeAll(async () => {
   mockState.db = await createSqlJsDatabase();
 });
@@ -192,6 +199,23 @@ describe("alertas de orçamento (painel + banco + serviço)", () => {
 
     expect(shown()).toEqual(["2 alertas de orçamento"]);
     expect(notify.mock.calls[0][0].content.body).toBe("• Orçamento do mês: 90% usado\n• Alimentação: 90% usado");
+  });
+
+  it("transferência entre contas não conta como gasto: não dispara nada", async () => {
+    await mountApp();
+    await setGoal("Alimentação", 1000);
+    await act(async () => {
+      await seen.budget.updateBudget(1000);
+    });
+    await enableBudgetAlerts(realBudgetAlertDeps);
+
+    await act(async () => {
+      await createTransfer({ amount: 900, date: today(), fromAccount: "Carteira", toAccount: "Poupança" });
+    });
+    await settle();
+    await waitForCheck();
+
+    expect(shown()).toEqual([]);
   });
 
   it("apagar o gasto e cruzar de novo avisa de novo", async () => {

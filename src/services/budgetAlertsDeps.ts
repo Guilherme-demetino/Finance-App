@@ -57,7 +57,8 @@ export const realBudgetAlertDeps: BudgetAlertDeps = {
       getBudget(month, year),
     ]);
     return {
-      expenses: transactions.filter((row) => row.type === "expense"),
+      // Transferência entre contas não é gasto de verdade: fora do alerta de orçamento.
+      expenses: transactions.filter((row) => row.type === "expense" && !row.transfer_group_id),
       goals,
       budget,
     };

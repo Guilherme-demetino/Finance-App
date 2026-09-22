@@ -71,9 +71,10 @@ async function buildComparison(
     }
   });
 
-  const currentExpenses = currentMonthRows.filter((t) => t.type === "expense");
+  // Transferência entre contas não é gasto de verdade: fica de fora do comparativo.
+  const currentExpenses = currentMonthRows.filter((t) => t.type === "expense" && !t.transfer_group_id);
   const previousExpenses = previousMonthRows.filter(
-    (t) => t.type === "expense",
+    (t) => t.type === "expense" && !t.transfer_group_id,
   );
 
   const currentTotal = currentExpenses.reduce((sum, t) => sum + t.amount, 0);

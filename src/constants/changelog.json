@@ -443,5 +443,15 @@
       "Ao importar um extrato, escolhe em qual conta entram as transações do arquivo inteiro, antes de confirmar.",
       "Filtros avançados do Histórico ganham \"Contas\": marque quantas quiser para ver só as transações delas, independente da conta escolhida no topo do painel."
     ]
+  },
+  {
+    "id": 49,
+    "date": "22/09/2026",
+    "title": "Transferência entre contas",
+    "items": [
+      "Nova opção \"Transferir entre contas\" na tela Contas: escolha o valor, a data, a conta de origem e a de destino.",
+      "A transferência sai como saída de uma conta e entra como entrada na outra, ajustando o saldo das duas — mas não conta como receita nem despesa de verdade: fica de fora do Resumo, do Saldo Atual, da saúde financeira, do orçamento por categoria, dos alertas de orçamento e do comparativo com o mês anterior.",
+      "Aparece no Histórico com um ícone próprio e a descrição \"Transferência para/de X\"; não tem edição (mexeria só numa das pontas), só exclusão, que apaga as duas de uma vez (com o mesmo prazo de desfazer da Lixeira)."
+    ]
   }
 ]

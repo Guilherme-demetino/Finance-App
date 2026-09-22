@@ -19,6 +19,8 @@ export interface TransactionRow {
   deleted_at?: string | null;
   /** Conta/carteira dona da transação (texto livre, como category_id — ver database/accounts). Ausente = conta padrão. */
   account?: string;
+  /** As duas pontas (saída e entrada) de uma transferência entre contas compartilham este id. Null = transação comum (ver database/transfers). */
+  transfer_group_id?: string | null;
 }
 
 /** Linha crua da tabela `accounts` — uma conta/carteira (para separar o saldo). */
@@ -222,4 +224,5 @@ export interface DisplayTransaction {
   installmentNumber?: number | null;
   installmentTotal?: number | null;
   account?: string;
+  transferGroupId?: string | null;
 }

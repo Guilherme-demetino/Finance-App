@@ -38,6 +38,7 @@ const SAMPLE: BackupData = {
       installment_number: null,
       installment_total: null,
       account: "Conta principal",
+      transfer_group_id: null,
     },
     {
       id: 11,
@@ -51,6 +52,7 @@ const SAMPLE: BackupData = {
       installment_number: 2,
       installment_total: 3,
       account: "Poupança",
+      transfer_group_id: null,
     },
   ],
   budgets: [{ id: 1, month: "09", year: "2026", amount: 3000 }],

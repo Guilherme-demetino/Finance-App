@@ -43,7 +43,7 @@ async function buildCategoryBudgets(
   const spentByCategory: Record<string, number> = {};
   const displayNameByKey: Record<string, string> = {};
   transactions.forEach((item) => {
-    if (item.type !== "expense") return;
+    if (item.type !== "expense" || item.transfer_group_id) return; // transferência não é gasto de verdade
     const raw = (item.category_id || "").trim();
     if (!raw) return;
     const key = raw.toLowerCase();

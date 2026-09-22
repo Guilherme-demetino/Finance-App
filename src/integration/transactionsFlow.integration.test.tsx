@@ -13,7 +13,10 @@ import {
 import { useTransactionsData } from "../context/TransactionsContext";
 import { readBackupData } from "../database/backup";
 import { resetDatabase } from "../database/sqlite";
+import { createTransfer } from "../database/transfers";
+import { notifyCardsChanged } from "../services/cardsEvents";
 import { createSqlJsDatabase } from "../test/sqliteFake";
+import { groupBalancesByAccount } from "../utils/accountBalances";
 
 /**
  * Integração: providers, hooks de dados e banco de verdade (SQLite em memória),
@@ -331,6 +334,64 @@ describe("alternar entre contas/carteiras", () => {
 
     expect(seen.transactions.totalIncome).toBe(1500);
     expect(seen.transactions.transactions).toHaveLength(3);
+  });
+});
+
+describe("transferência entre contas", () => {
+  it("não conta como receita nem despesa, mas ajusta o saldo de cada conta envolvida", async () => {
+    await mountApp();
+    await fillAndSave({ title: "Salário", amount: "1000,00", type: "income", account: "Carteira" });
+
+    await act(async () => {
+      await createTransfer({ amount: 300, date: today(), fromAccount: "Carteira", toAccount: "Poupança" });
+      notifyCardsChanged();
+    });
+    await settle();
+
+    // Fora dos totais "de verdade" (Resumo/Saldo Atual/saúde financeira não inflam com a transferência).
+    expect(seen.transactions.totalIncome).toBe(1000);
+    expect(seen.transactions.totalExpense).toBe(0);
+    // Mas aparece na lista bruta, e o saldo por conta reflete o dinheiro se movendo.
+    expect(seen.transactions.transactions).toHaveLength(3);
+    const balances = groupBalancesByAccount(seen.transactions.transactions);
+    expect(balances.find((b) => b.account === "Carteira")?.balance).toBe(700);
+    expect(balances.find((b) => b.account === "Poupança")?.balance).toBe(300);
+
+    const descriptions = seen.transactions.formattedTransactions.map((t) => t.description).sort();
+    expect(descriptions).toEqual(["Salário", "Transferência de Carteira", "Transferência para Poupança"]);
+  });
+
+  it("excluir a transferência tira as duas pontas de uma vez", async () => {
+    await mountApp();
+    await act(async () => {
+      await createTransfer({ amount: 300, date: today(), fromAccount: "Carteira", toAccount: "Poupança" });
+      notifyCardsChanged();
+    });
+    await settle();
+    const groupId = seen.transactions.transactions[0].transfer_group_id!;
+
+    await act(async () => {
+      await seen.transactions.handleDeleteTransferGroup(groupId);
+    });
+    await settle();
+
+    expect(seen.transactions.transactions).toEqual([]);
+  });
+
+  it("fica fora do orçamento por categoria e do comparativo com o mês anterior", async () => {
+    await mountApp();
+    await act(async () => {
+      await createTransfer({ amount: 300, date: today(), fromAccount: "Carteira", toAccount: "Poupança" });
+      notifyCardsChanged();
+    });
+    await settle();
+
+    // Nenhuma categoria "Transferência entre contas" aparece com gasto no Orçamento.
+    const transferCategory = seen.budget.categoryBudgets.find((c) => c.category === "Transferência entre contas");
+    expect(transferCategory).toBeUndefined();
+
+    // O comparativo do mês (gasto de verdade) não conta a saída da transferência.
+    expect(seen.budget.comparison?.currentTotal).toBe(0);
   });
 });
 

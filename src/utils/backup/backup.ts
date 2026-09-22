@@ -179,6 +179,8 @@ function readData(raw: unknown): BackupData {
     if (r.installment_total != null && !isInteger(r.installment_total)) return "total de parcelas";
     // Backups antigos não têm a conta (o app só tinha uma).
     if (r.account != null && (!isString(r.account) || r.account.trim() === "")) return "conta";
+    // Backups antigos não têm transferência entre contas.
+    if (r.transfer_group_id != null && (!isString(r.transfer_group_id) || r.transfer_group_id.trim() === "")) return "transferência";
     return null;
   });
 

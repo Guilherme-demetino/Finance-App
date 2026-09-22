@@ -11,11 +11,12 @@ export function toDisplayTransaction(item: EnrichedTransaction): DisplayTransact
     date: item.date,
     category: item.category_id,
     color: item.color || CATEGORY_COLORS.categoryNeutral,
-    icon: item.type === "income" ? "cash-outline" : "cart-outline",
+    icon: item.transfer_group_id ? "swap-horizontal-outline" : item.type === "income" ? "cash-outline" : "cart-outline",
     recurrenceType: item.recurrence_type,
     recurrenceGroupId: item.recurrence_group_id,
     installmentNumber: item.installment_number,
     installmentTotal: item.installment_total,
     account: item.account,
+    transferGroupId: item.transfer_group_id,
   };
 }

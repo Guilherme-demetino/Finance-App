@@ -6,7 +6,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AccountModal } from "../components/forms/AccountModal";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { TransferModal } from "../components/TransferModal";
 import { useAccounts } from "../hooks/useAccounts";
+import { notifyCardsChanged } from "../services/cardsEvents";
 import { makeStyles, Text, useTheme } from "../theme";
 import type { AccountRow } from "../types";
 
@@ -17,6 +19,7 @@ export default function AccountsScreen() {
   const { colors } = useTheme();
   const { accounts, isLoading, remove, refresh } = useAccounts();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<AccountRow | null>(null);
 
   const goBack = () => {
@@ -89,6 +92,15 @@ export default function AccountsScreen() {
           <Ionicons name="add" size={18} color={colors.textPrimary} />
           <Text style={styles.addText}>Nova conta</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.addButton, styles.transferButton]}
+          onPress={() => setIsTransferOpen(true)}
+          accessibilityRole="button"
+        >
+          <Ionicons name="swap-horizontal-outline" size={18} color={colors.accent} />
+          <Text style={[styles.addText, { color: colors.accent }]}>Transferir entre contas</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       <AccountModal
@@ -97,6 +109,16 @@ export default function AccountsScreen() {
         onSave={() => {
           setIsCreateOpen(false);
           refresh();
+        }}
+      />
+
+      <TransferModal
+        visible={isTransferOpen}
+        onClose={() => setIsTransferOpen(false)}
+        onDone={() => {
+          setIsTransferOpen(false);
+          // A tela de contas fica fora do painel (como a Lixeira): avisa para o painel reler as transações.
+          notifyCardsChanged();
         }}
       />
 
@@ -157,5 +179,6 @@ const useStyles = makeStyles(({ colors }) => ({
     backgroundColor: colors.surfaceAlt,
     marginTop: 8,
   },
+  transferButton: { borderColor: colors.accent, marginTop: 12 },
   addText: { color: colors.textPrimary, fontSize: 15, fontWeight: "700" },
 }));

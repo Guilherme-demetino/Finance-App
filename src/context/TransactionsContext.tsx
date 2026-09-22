@@ -1,6 +1,7 @@
 import { createContext, useEffect, useMemo, type ReactNode } from "react";
 
 import { purgeExpiredDeletedTransactions } from "../database/transactions";
+import { deleteTransferGroup } from "../database/transfers";
 import { useStableCallback } from "../hooks/useStableCallback";
 import { useTransactions } from "../hooks/useTransactions";
 import type { DisplayTransaction } from "../types";
@@ -26,6 +27,7 @@ interface TransactionsData {
   handleDeleteAllTransactions: () => Promise<void>;
   handleDeleteSeriesFromId: (groupId: string, fromId: number) => Promise<void>;
   handleDeleteSeries: (groupId: string) => Promise<void>;
+  handleDeleteTransferGroup: (transferGroupId: string) => Promise<void>;
   /** A última transação excluída (não série/mês inteiro), enquanto ainda dá pra desfazer. */
   pendingUndo: TransactionsHook["pendingUndo"];
   undoDelete: TransactionsHook["undoDelete"];
@@ -134,6 +136,17 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const handleDeleteTransferGroup = async (transferGroupId: string) => {
+    try {
+      await deleteTransferGroup(transferGroupId);
+      await refresh();
+      showAlert("Sucesso", "Transferência excluída com sucesso.");
+    } catch (error) {
+      logError("Erro ao excluir transferência:", error);
+      showAlert("Erro", "Não foi possível excluir a transferência.");
+    }
+  };
+
   const data: TransactionsData = {
     transactions,
     isLoadingTransactions,
@@ -146,6 +159,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     handleDeleteAllTransactions,
     handleDeleteSeriesFromId,
     handleDeleteSeries,
+    handleDeleteTransferGroup,
     pendingUndo,
     undoDelete,
     dismissUndo,

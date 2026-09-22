@@ -133,14 +133,18 @@ async function loadPeriodData(
   const monthTransactions = yearTransactions.filter((item) =>
     item.date.includes(`/${monthNumber}/${selectedYear}`),
   );
+  // Transferência entre contas não é receita nem despesa de verdade: conta no saldo de cada conta (por
+  // isso continua em "transactions", devolvida sem filtro), mas fica de fora dos totais e do gráfico anual.
   let income = 0;
   let expense = 0;
   monthTransactions.forEach((item) => {
+    if (item.transfer_group_id) return;
     if (item.type === "income") income += item.amount;
     else expense += item.amount;
   });
   const calculatedMonthsData = emptyMonthsData();
   yearTransactions.forEach((item) => {
+    if (item.transfer_group_id) return;
     const parts = item.date.split("/");
     if (parts.length === 3) {
       const idx = MONTH_INDEX_BY_NUMBER[parts[1]];

@@ -38,7 +38,8 @@ function createTables(db: SQLite.SQLiteDatabase) {
         installment_number INTEGER,
         installment_total INTEGER,
         deleted_at TEXT,
-        account TEXT NOT NULL DEFAULT 'Conta principal'
+        account TEXT NOT NULL DEFAULT 'Conta principal',
+        transfer_group_id TEXT
       );
     `);
 
@@ -220,6 +221,10 @@ function createTables(db: SQLite.SQLiteDatabase) {
     // como se sempre tivesse sido assim (ver database/accounts.ts).
     { table: "transactions", column: "account TEXT NOT NULL DEFAULT 'Conta principal'" },
     { table: "credit_cards", column: "account TEXT NOT NULL DEFAULT 'Conta principal'" },
+    // Transferência entre contas: as duas pontas (saída e entrada) compartilham este id, e ficam de fora
+    // das análises por categoria/orçamento/comparativo (não é receita nem despesa de verdade) — ver
+    // database/transfers.ts. Nula em toda transação comum.
+    { table: "transactions", column: "transfer_group_id TEXT" },
   ];
   for (const { table, column } of columnsToMigrate) {
     try {

@@ -10,6 +10,7 @@ interface Transaction {
   type: string;
   category?: string;
   color?: string; // <-- Adicionado para ler a cor que vem do banco
+  transferGroupId?: string | null;
 }
 
 interface GeneralBalanceCardProps {
@@ -67,13 +68,15 @@ export function GeneralBalanceCard({
   const comprometidoPercent =
     totalIncome > 0 ? (totalExpense / totalIncome) * 100 : 0;
 
+  // Transferência entre contas não é receita nem despesa de verdade: fora da análise por categoria.
+  const realTransactions = transactions.filter((t) => !t.transferGroupId);
   const expenseData = groupByCategory(
-    transactions.filter((t) => t.type === "expense"),
+    realTransactions.filter((t) => t.type === "expense"),
     totalIncome,
     colors.textSecondary,
   );
   const incomeData = groupByCategory(
-    transactions.filter((t) => t.type === "income"),
+    realTransactions.filter((t) => t.type === "income"),
     totalIncome,
     colors.textSecondary,
   );

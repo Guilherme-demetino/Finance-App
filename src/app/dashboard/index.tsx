@@ -59,8 +59,9 @@ export default function DashboardHomeScreen() {
     invoices: invoiceDues,
     includeSpendingAlerts: isCurrentPeriod,
   });
+  // Transferência entre contas não é receita nem despesa de verdade: fora da projeção do saldo.
   const projection = isCurrentPeriod
-    ? computeMonthProjection(transactions)
+    ? computeMonthProjection(transactions.filter((item) => !item.transfer_group_id))
     : null;
 
   return (

@@ -35,6 +35,7 @@ export default function DashboardHistoryScreen() {
     handleDeleteAllTransactions,
     handleDeleteSeriesFromId,
     handleDeleteSeries,
+    handleDeleteTransferGroup,
   } = useTransactionsData();
   const scrollY = useScrollY();
   const { selectedAccount } = useAccountFilter();
@@ -121,6 +122,7 @@ export default function DashboardHistoryScreen() {
         onDeleteAll={handleDeleteAllTransactions}
         onDeleteSeriesFromHere={handleDeleteSeriesFromId}
         onDeleteSeries={handleDeleteSeries}
+        onDeleteTransferGroup={handleDeleteTransferGroup}
       />
 
       <AdvancedFiltersModal
