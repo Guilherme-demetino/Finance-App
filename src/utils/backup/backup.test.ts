@@ -69,6 +69,8 @@ const DATA: BackupData = {
     },
   ],
   cardPayments: [{ id: 1, card_id: 1, invoice_ref: "2026-09", paid_date: "05/09/2026", amount: 300, transaction_id: null }],
+  subscriptions: [{ id: 1, name: "Netflix", amount: 39.9, cycle: "monthly", billing_day: 5, billing_month: null, category: "Lazer", match_text: "netflix", active: 1, created_date: "01/08/2026", price_since: "10/09/2026", ignored_amount: null }],
+  subscriptionPriceChanges: [{ id: 1, subscription_id: 1, date: "10/09/2026", old_amount: 34.9, new_amount: 39.9 }],
 };
 
 const NOW = new Date(2026, 8, 19, 20, 30);
@@ -140,6 +142,13 @@ describe("parseBackup", () => {
     ["pagamento de um cartão que não existe", (f: any) => (f.data.cardPayments[0].card_id = 99)],
     ["a mesma fatura paga duas vezes", (f: any) => f.data.cardPayments.push({ ...f.data.cardPayments[0], id: 2 })],
     ["lista de cartões que não é lista", (f: any) => (f.data.creditCards = {})],
+    ["assinatura sem valor", (f: any) => (f.data.subscriptions[0].amount = 0)],
+    ["assinatura com ciclo desconhecido", (f: any) => (f.data.subscriptions[0].cycle = "semanal")],
+    ["assinatura com dia de cobrança 0", (f: any) => (f.data.subscriptions[0].billing_day = 0)],
+    ["assinatura anual sem mês", (f: any) => Object.assign(f.data.subscriptions[0], { cycle: "yearly", billing_month: null })],
+    ["assinatura com situação inválida", (f: any) => (f.data.subscriptions[0].active = 2)],
+    ["reajuste de uma assinatura que não existe", (f: any) => (f.data.subscriptionPriceChanges[0].subscription_id = 99)],
+    ["reajuste com data fora do formato", (f: any) => (f.data.subscriptionPriceChanges[0].date = "2026-09-10")],
   ])("recusa %s", (_name, mutate) => {
     const file = raw();
     mutate(file);
@@ -165,6 +174,21 @@ describe("parseBackup", () => {
     const bad = raw();
     bad.data.savingsGoals[0].start_amount = "muito";
     expect(parse(bad)).toEqual({ ok: false, error: "Backup inválido: metas de economia, item 1 (valor inicial)." });
+  });
+
+  it("aceita backup das versões antigas, sem assinaturas: leem como listas vazias", () => {
+    const file = raw();
+    file.version = 2;
+    delete file.data.subscriptions;
+    delete file.data.subscriptionPriceChanges;
+
+    const result = parse(file);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.backup.data.subscriptions).toEqual([]);
+      expect(result.backup.data.subscriptionPriceChanges).toEqual([]);
+    }
   });
 
   it("aceita backup da versão 1, sem cartões: as listas de cartão leem como vazias", () => {
@@ -213,15 +237,16 @@ describe("nome do arquivo e textos", () => {
       savingsGoals: 1,
       creditCards: 1,
       cardPurchases: 1,
+      subscriptions: 1,
     });
   });
 
   it("describeRestore compara o backup com o que há no app e avisa que substitui", () => {
     const text = describeRestore(
-      { transactions: 2, categories: 0, budgets: 0, categoryBudgets: 0, debts: 0, savingsGoals: 3, creditCards: 0, cardPurchases: 0 },
+      { transactions: 2, categories: 0, budgets: 0, categoryBudgets: 0, debts: 0, savingsGoals: 3, creditCards: 0, cardPurchases: 0, subscriptions: 0 },
       buildBackupFile(DATA, NOW),
     );
-    expect(text).toContain("Backup de 19/09/2026: 1 transação, 1 dívida, 1 meta de economia, 1 categoria própria, 1 cartão, 1 compra no cartão.");
+    expect(text).toContain("Backup de 19/09/2026: 1 transação, 1 dívida, 1 meta de economia, 1 categoria própria, 1 cartão, 1 compra no cartão, 1 assinatura.");
     expect(text).toContain("Agora no app: 2 transações, 0 dívidas, 3 metas de economia, 0 categorias próprias.");
     // Quem não usa cartão não vê o assunto no texto.
     expect(text).not.toContain("0 cartões");

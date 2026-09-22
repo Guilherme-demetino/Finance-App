@@ -5,6 +5,8 @@ import type {
   CategoryBudgetRow,
   CategoryRow,
   CreditCardRow,
+  SubscriptionPriceChangeRow,
+  SubscriptionRow,
   DebtRow,
   SavingsGoalRow,
   TransactionRow,
@@ -18,8 +20,8 @@ import type {
  */
 
 export const BACKUP_FORMAT = "meu-financeiro-backup";
-// 2: entraram os cartões de crédito, as compras e os pagamentos de fatura. Arquivos da versão 1 seguem aceitos.
-export const BACKUP_VERSION = 2;
+// 2: entraram os cartões de crédito, as compras e os pagamentos de fatura. 3: as assinaturas recorrentes. Arquivos das versões antigas seguem aceitos.
+export const BACKUP_VERSION = 3;
 
 export interface BackupData {
   userName: string | null;
@@ -33,6 +35,9 @@ export interface BackupData {
   creditCards?: CreditCardRow[];
   cardPurchases?: CardPurchaseRow[];
   cardPayments?: CardPaymentRow[];
+  /** Assinaturas recorrentes e o histórico de reajustes (backups antigos não têm: leem como vazio). */
+  subscriptions?: SubscriptionRow[];
+  subscriptionPriceChanges?: SubscriptionPriceChangeRow[];
 }
 
 export interface BackupFile {
@@ -56,6 +61,7 @@ export interface BackupCounts {
   savingsGoals: number;
   creditCards: number;
   cardPurchases: number;
+  subscriptions: number;
 }
 
 export function buildBackupFile(data: BackupData, now: Date): BackupFile {
@@ -92,6 +98,7 @@ export function countBackup(data: BackupData): BackupCounts {
     savingsGoals: data.savingsGoals.length,
     creditCards: data.creditCards?.length ?? 0,
     cardPurchases: data.cardPurchases?.length ?? 0,
+    subscriptions: data.subscriptions?.length ?? 0,
   };
 }
 
@@ -274,6 +281,37 @@ function readData(raw: unknown): BackupData {
         (r) => `${r.card_id}/${r.invoice_ref}`,
       );
 
+  const subscriptions = raw.subscriptions === undefined
+    ? []
+    : readRows<SubscriptionRow>(raw.subscriptions, "assinaturas", (r) => {
+        if (!isInteger(r.id)) return "id";
+        if (!isString(r.name) || r.name.trim() === "") return "nome";
+        if (!isNumber(r.amount) || r.amount <= 0) return "valor";
+        if (r.cycle !== "monthly" && r.cycle !== "yearly") return "ciclo";
+        if (!isInteger(r.billing_day) || r.billing_day < 1 || r.billing_day > 31) return "dia da cobrança";
+        if (r.billing_month != null && (!isInteger(r.billing_month) || r.billing_month < 1 || r.billing_month > 12)) return "mês da cobrança";
+        if (r.cycle === "yearly" && r.billing_month == null) return "mês da cobrança";
+        if (!isString(r.category)) return "categoria";
+        if (!isNullableString(r.match_text)) return "texto da cobrança";
+        if (r.active !== 0 && r.active !== 1) return "situação";
+        if (!isDate(r.created_date)) return "data de criação";
+        if (!isDate(r.price_since)) return "início do valor";
+        if (r.ignored_amount != null && !isNumber(r.ignored_amount)) return "cobrança ignorada";
+        return null;
+      });
+  const subscriptionIds = new Set(subscriptions.map((subscription) => subscription.id));
+
+  const subscriptionPriceChanges = raw.subscriptionPriceChanges === undefined
+    ? []
+    : readRows<SubscriptionPriceChangeRow>(raw.subscriptionPriceChanges, "reajustes de assinaturas", (r) => {
+        if (!isInteger(r.id)) return "id";
+        if (!isInteger(r.subscription_id) || !subscriptionIds.has(r.subscription_id)) return "assinatura inexistente";
+        if (!isDate(r.date)) return "data";
+        if (!isNumber(r.old_amount)) return "valor antigo";
+        if (!isNumber(r.new_amount)) return "valor novo";
+        return null;
+      });
+
   return {
     userName: raw.userName as string | null,
     categories,
@@ -285,6 +323,8 @@ function readData(raw: unknown): BackupData {
     creditCards,
     cardPurchases,
     cardPayments,
+    subscriptions,
+    subscriptionPriceChanges,
   };
 }
 
@@ -346,6 +386,7 @@ function describeCounts(counts: BackupCounts): string {
   if (counts.creditCards > 0 || counts.cardPurchases > 0) {
     parts.push(plural(counts.creditCards, "cartão", "cartões"), plural(counts.cardPurchases, "compra no cartão", "compras no cartão"));
   }
+  if (counts.subscriptions > 0) parts.push(plural(counts.subscriptions, "assinatura", "assinaturas"));
   return parts.join(", ");
 }
 

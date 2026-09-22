@@ -10,6 +10,7 @@ import { MonthComparisonCard } from "../../components/overview/MonthComparisonCa
 import { MonthProjectionCard } from "../../components/overview/MonthProjectionCard";
 import { SummaryCards } from "../../components/overview/SummaryCards";
 import { FinancialHealthContainer } from "../../components/dashboard/FinancialHealthContainer";
+import { SubscriptionsCard } from "../../components/subscriptions/SubscriptionsCard";
 
 import { useBudgetData } from "../../context/BudgetContext";
 import { useCardsContext } from "../../context/CardsContext";
@@ -78,6 +79,8 @@ export default function DashboardHomeScreen() {
       <SummaryCards totalIncome={totalIncome} totalExpense={totalExpense} />
 
       <FinancialHealthContainer />
+
+      <SubscriptionsCard />
 
       {projection ? <MonthProjectionCard projection={projection} /> : null}
 

@@ -377,5 +377,17 @@
       "Na barra de progresso há uma marca com onde você deveria estar hoje para chegar no prazo em linha reta, para ver de relance se está adiantado ou atrasado. Com duas ou mais metas, aparece também uma barra com o total de todas juntas.",
       "O valor que já estava guardado quando a meta foi criada não conta como ritmo. Metas criadas antes desta versão consideram o valor inicial como 0, então se você já começou com dinheiro guardado a projeção pode ficar otimista: ela corrige sozinha conforme o tempo passa."
     ]
+  },
+  {
+    "id": 43,
+    "date": "21/09/2026",
+    "title": "Assinaturas recorrentes",
+    "items": [
+      "Nova tela de Assinaturas, aberta pelo cartão “Assinaturas” no Início: cadastre streaming, academia, software e o que mais você paga todo mês (ou todo ano) com valor, dia da cobrança e categoria.",
+      "No topo, o quanto você paga por mês no total (uma assinatura anual entra dividida por 12) e por ano. Cada assinatura mostra a próxima cobrança, dá para pausar (sai do total), editar e excluir.",
+      "Alerta de reajuste: o app compara o valor cadastrado com a cobrança mais recente que aparece nas suas despesas (cartão ou extrato) com o nome da assinatura, ou com o texto que você definir em “Como aparece na cobrança”. Se veio diferente, o alerta mostra de quanto para quanto, o percentual e o impacto por mês, com “Atualizar valor” ou “Ignorar”. O alerta também aparece no cartão do Início.",
+      "Toda mudança de valor fica no histórico e aparece na assinatura (“Reajustada em …: de R$ X para R$ Y”). As assinaturas entram no backup.",
+      "É só o controle do que você paga: as assinaturas não criam despesas (elas já entram pelo cartão ou pelo extrato), então nada é contado em dobro."
+    ]
   }
 ]

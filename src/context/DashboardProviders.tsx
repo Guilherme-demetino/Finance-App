@@ -14,6 +14,7 @@ import { DebtsProvider } from "./DebtsContext";
 import { PeriodProvider } from "./PeriodContext";
 import { ProfileProvider } from "./ProfileContext";
 import { SavingsProvider } from "./SavingsContext";
+import { SubscriptionsProvider } from "./SubscriptionsContext";
 import { TransactionFormProvider } from "./TransactionFormContext";
 import { TransactionsProvider } from "./TransactionsContext";
 
@@ -39,15 +40,17 @@ export function DashboardProviders({ children }: { children: ReactNode }) {
             <BudgetProvider>
               <DebtsProvider>
                 <CardsProvider>
-                  <SavingsProvider>
-                    <ProfileProvider>
-                      <DashboardUiProvider>
-                        <TransactionFormProvider>
-                          {children}
-                        </TransactionFormProvider>
-                      </DashboardUiProvider>
-                    </ProfileProvider>
-                  </SavingsProvider>
+                  <SubscriptionsProvider>
+                    <SavingsProvider>
+                      <ProfileProvider>
+                        <DashboardUiProvider>
+                          <TransactionFormProvider>
+                            {children}
+                          </TransactionFormProvider>
+                        </DashboardUiProvider>
+                      </ProfileProvider>
+                    </SavingsProvider>
+                  </SubscriptionsProvider>
                 </CardsProvider>
               </DebtsProvider>
             </BudgetProvider>

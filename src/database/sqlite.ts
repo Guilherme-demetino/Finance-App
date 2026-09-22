@@ -137,6 +137,34 @@ function createTables(db: SQLite.SQLiteDatabase) {
       "CREATE INDEX IF NOT EXISTS idx_card_purchases_card ON card_purchases(card_id, invoice_ref);",
     );
 
+    // Assinaturas recorrentes: controle do que se paga (não geram despesas) e o histórico de reajustes de valor.
+    db.runSync(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        amount REAL NOT NULL,
+        cycle TEXT NOT NULL DEFAULT 'monthly',
+        billing_day INTEGER NOT NULL,
+        billing_month INTEGER,
+        category TEXT NOT NULL,
+        match_text TEXT,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_date TEXT NOT NULL,
+        price_since TEXT NOT NULL,
+        ignored_amount REAL
+      );
+    `);
+
+    db.runSync(`
+      CREATE TABLE IF NOT EXISTS subscription_price_changes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subscription_id INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        old_amount REAL NOT NULL,
+        new_amount REAL NOT NULL
+      );
+    `);
+
     // Metas criadas antes da projeção não têm o valor inicial (começam em 0).
     try {
       db.runSync("ALTER TABLE savings_goals ADD COLUMN start_amount REAL NOT NULL DEFAULT 0");
@@ -242,6 +270,8 @@ export async function resetDatabase(): Promise<void> {
     db.runSync("DROP TABLE IF EXISTS credit_cards");
     db.runSync("DROP TABLE IF EXISTS card_purchases");
     db.runSync("DROP TABLE IF EXISTS card_invoice_payments");
+    db.runSync("DROP TABLE IF EXISTS subscriptions");
+    db.runSync("DROP TABLE IF EXISTS subscription_price_changes");
     db.runSync("DROP TABLE IF EXISTS users");
     db.runSync("DROP TABLE IF EXISTS security");
   });

@@ -6,6 +6,8 @@ import type {
   CategoryRow,
   CreditCardRow,
   DebtRow,
+  SubscriptionPriceChangeRow,
+  SubscriptionRow,
   SavingsGoalRow,
   TransactionRow,
 } from "../types";
@@ -48,6 +50,13 @@ export async function readBackupData(): Promise<BackupData> {
     "SELECT id, card_id, invoice_ref, paid_date, amount, transaction_id FROM card_invoice_payments ORDER BY id",
   );
 
+  const subscriptions = await db.getAllAsync<SubscriptionRow>(
+    "SELECT id, name, amount, cycle, billing_day, billing_month, category, match_text, active, created_date, price_since, ignored_amount FROM subscriptions ORDER BY id",
+  );
+  const subscriptionPriceChanges = await db.getAllAsync<SubscriptionPriceChangeRow>(
+    "SELECT id, subscription_id, date, old_amount, new_amount FROM subscription_price_changes ORDER BY id",
+  );
+
   return {
     userName: user?.name ?? null,
     categories,
@@ -59,6 +68,8 @@ export async function readBackupData(): Promise<BackupData> {
     creditCards,
     cardPurchases,
     cardPayments,
+    subscriptions,
+    subscriptionPriceChanges,
   };
 }
 
@@ -81,6 +92,8 @@ export async function replaceAllData(data: BackupData): Promise<void> {
     db.runSync("DELETE FROM credit_cards");
     db.runSync("DELETE FROM card_purchases");
     db.runSync("DELETE FROM card_invoice_payments");
+    db.runSync("DELETE FROM subscriptions");
+    db.runSync("DELETE FROM subscription_price_changes");
 
     for (const c of data.categories) {
       db.runSync(
@@ -187,6 +200,34 @@ export async function replaceAllData(data: BackupData): Promise<void> {
         p.paid_date,
         p.amount,
         p.transaction_id ?? null,
+      );
+    }
+
+    for (const s of data.subscriptions ?? []) {
+      db.runSync(
+        "INSERT INTO subscriptions (id, name, amount, cycle, billing_day, billing_month, category, match_text, active, created_date, price_since, ignored_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        s.id,
+        s.name,
+        s.amount,
+        s.cycle,
+        s.billing_day,
+        s.billing_month ?? null,
+        s.category,
+        s.match_text ?? null,
+        s.active,
+        s.created_date,
+        s.price_since,
+        s.ignored_amount ?? null,
+      );
+    }
+    for (const c of data.subscriptionPriceChanges ?? []) {
+      db.runSync(
+        "INSERT INTO subscription_price_changes (id, subscription_id, date, old_amount, new_amount) VALUES (?, ?, ?, ?, ?)",
+        c.id,
+        c.subscription_id,
+        c.date,
+        c.old_amount,
+        c.new_amount,
       );
     }
 

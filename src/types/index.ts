@@ -118,6 +118,39 @@ export interface SavingsGoalRow {
   start_amount: number;
 }
 
+export type SubscriptionCycle = "monthly" | "yearly";
+
+/**
+ * Linha crua da tabela `subscriptions` — uma assinatura recorrente (streaming, academia, software...). É só o controle do
+ * que você paga: não cria despesas (as cobranças entram pelo cartão ou pelo extrato).
+ */
+export interface SubscriptionRow {
+  id: number;
+  name: string;
+  amount: number;
+  cycle: SubscriptionCycle;
+  billing_day: number; // 1–31
+  billing_month: number | null; // 1–12, só nas anuais
+  category: string;
+  /** Texto que aparece nas cobranças (ex.: "netflix"); sem ele vale o nome. Serve para achar reajustes. */
+  match_text: string | null;
+  active: number; // 1 = ativa, 0 = pausada/cancelada
+  created_date: string; // DD/MM/AAAA
+  /** Desde quando o valor atual vale (a criação ou o último reajuste): só cobranças a partir daí contam para o alerta. */
+  price_since: string; // DD/MM/AAAA
+  /** Valor de uma cobrança diferente que o usuário mandou ignorar. */
+  ignored_amount: number | null;
+}
+
+/** Linha crua da tabela `subscription_price_changes` — cada vez que o valor de uma assinatura mudou. */
+export interface SubscriptionPriceChangeRow {
+  id: number;
+  subscription_id: number;
+  date: string; // DD/MM/AAAA
+  old_amount: number;
+  new_amount: number;
+}
+
 /** Rascunhos do onboarding — ficam só em memória até o usuário concluir. */
 export interface RecurringDraft {
   id: string;

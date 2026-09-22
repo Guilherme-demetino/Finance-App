@@ -121,6 +121,8 @@ function DashboardChrome() {
             ),
           }}
         />
+        {/* Aberta pelo cartão "Assinaturas" do Início: fica fora da barra de baixo. */}
+        <Tabs.Screen name="subscriptions" options={{ href: null }} />
         <Tabs.Screen
           name="history"
           options={{
