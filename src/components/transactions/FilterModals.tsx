@@ -142,6 +142,89 @@ export function YearModal({
   );
 }
 
+export interface AccountSwitchOption {
+  name: string;
+  color: string;
+}
+
+interface AccountSwitchModalProps {
+  visible: boolean;
+  onClose: () => void;
+  options: AccountSwitchOption[];
+  /** null = todas as contas juntas. */
+  selectedAccount: string | null;
+  onSelect: (account: string | null) => void;
+}
+
+const ALL_ACCOUNTS_LABEL = "Todas as contas";
+
+/** Alterna qual conta o painel mostra (Início, Orçamento e Histórico) — ou todas juntas. */
+export function AccountSwitchModal({
+  visible,
+  onClose,
+  options,
+  selectedAccount,
+  onSelect,
+}: AccountSwitchModalProps) {
+  const { colors } = useTheme();
+  const menuStyles = useMenuStyles();
+  const items: (AccountSwitchOption | null)[] = [null, ...options];
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={menuStyles.modalContainer}>
+        <View style={[menuStyles.modalContent, { maxHeight: "60%" }]}>
+          <Text style={menuStyles.modalTitle}>Ver conta</Text>
+          <ScrollView>
+            {items.map((item) => {
+              const isSelected = (item?.name ?? null) === selectedAccount;
+              return (
+                <TouchableOpacity
+                  key={item?.name ?? "__all__"}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    paddingVertical: 14,
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.border,
+                  }}
+                  onPress={() => {
+                    onSelect(item?.name ?? null);
+                    onClose();
+                  }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isSelected }}
+                >
+                  {item === null ? (
+                    <Ionicons name="layers-outline" size={18} color={isSelected ? colors.income : colors.textSecondary} />
+                  ) : (
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.color }} />
+                  )}
+                  <Text
+                    style={{
+                      flex: 1,
+                      color: isSelected ? colors.income : colors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: isSelected ? "bold" : "normal",
+                    }}
+                  >
+                    {item?.name ?? ALL_ACCOUNTS_LABEL}
+                  </Text>
+                  {isSelected && <Ionicons name="checkmark" size={20} color={colors.income} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          <TouchableOpacity style={[menuStyles.closeButton, { marginTop: 16 }]} onPress={onClose}>
+            <Text style={menuStyles.closeButtonText}>Fechar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export interface SortOption<T extends string = string> {
   key: T;
   label: string;

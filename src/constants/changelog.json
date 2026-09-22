@@ -422,5 +422,15 @@
       "No Histórico, a conta aparece junto da data de cada transação.",
       "Dívidas quitadas, extratos importados e transações de antes desta versão entram/ficam na \"Conta principal\". Ainda não dá para transferir dinheiro entre contas nem escolher a conta ao quitar uma dívida ou importar um extrato — se fizer falta, é só pedir."
     ]
+  },
+  {
+    "id": 47,
+    "date": "22/09/2026",
+    "title": "Alternar entre carteiras",
+    "items": [
+      "Novo seletor de conta no topo do painel (junto do mês/ano), que aparece assim que você tem mais de uma conta cadastrada.",
+      "Escolher uma conta ali passa a valer no painel inteiro: saldo, resumo, projeção do mês, gráfico anual, gastos por categoria no Orçamento, comparativo com o mês anterior e a lista do Histórico (incluindo período personalizado) mostram só aquela conta.",
+      "\"Todas as contas\" continua disponível para ver tudo somado, como era antes."
+    ]
   }
 ]

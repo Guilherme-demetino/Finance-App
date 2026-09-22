@@ -5,6 +5,7 @@ import { useBudget } from "../hooks/useBudget";
 import { useCategoryBudgets } from "../hooks/useCategoryBudgets";
 import { useMonthComparison } from "../hooks/useMonthComparison";
 import { logError } from "../utils/logger";
+import { useAccountFilter } from "./AccountFilterContext";
 import { useAlert } from "./AlertContext";
 import { usePeriod } from "./PeriodContext";
 import { useTransactionsData } from "./TransactionsContext";
@@ -37,6 +38,7 @@ const BudgetActionsContext = createContext<BudgetActions | null>(null);
 
 export function BudgetProvider({ children }: { children: ReactNode }) {
   const { selectedMonth, selectedYear } = usePeriod();
+  const { selectedAccount } = useAccountFilter();
   const { transactions } = useTransactionsData();
   const { showAlert } = useAlert();
 
@@ -55,6 +57,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     selectedMonth,
     selectedYear,
     transactions,
+    selectedAccount,
   );
 
   const handleDeleteCategory = useStableCallback(async (id: number) => {

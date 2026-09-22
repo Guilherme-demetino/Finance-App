@@ -8,6 +8,7 @@ import { HistoryFiltersBar } from "../../components/transactions/HistoryFiltersB
 import { TransactionsHistoryList } from "../../components/transactions/TransactionsHistoryList";
 
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../../constants/categories";
+import { useAccountFilter } from "../../context/AccountFilterContext";
 import { useScrollY } from "../../context/DashboardUiContext";
 import { useTransactionsData } from "../../context/TransactionsContext";
 import { useTransactionActions } from "../../context/TransactionFormContext";
@@ -35,6 +36,7 @@ export default function DashboardHistoryScreen() {
     handleDeleteSeries,
   } = useTransactionsData();
   const scrollY = useScrollY();
+  const { selectedAccount } = useAccountFilter();
   const { handleOpenEditTransaction } = useTransactionActions();
 
   // A busca e os filtros só afetam esta tela; guardar o estado aqui evita re-renderizar o resto do dashboard a cada tecla.
@@ -43,9 +45,13 @@ export default function DashboardHistoryScreen() {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Com período personalizado a lista vem do banco (pode atravessar meses e anos); sem ele, é o mês do painel.
+  // O período personalizado busca direto no banco (todas as contas): a conta em foco é aplicada aqui.
   const range = useHistoryRange(filters.period, transactions);
   const registeredCategories = useCategoryNames(transactions);
-  const source = filters.period ? range.items : formattedTransactions;
+  const periodSource = filters.period ? range.items : formattedTransactions;
+  const source = selectedAccount
+    ? periodSource.filter((item) => item.account === selectedAccount)
+    : periodSource;
 
   const searchLower = searchText.toLowerCase();
   const visibleTransactions = applyHistoryFilters(

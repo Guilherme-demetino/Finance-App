@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { AccountFilterProvider } from "./AccountFilterContext";
 import { AlertProvider } from "./AlertContext";
 import { BudgetProvider } from "./BudgetContext";
 import { CardsProvider } from "./CardsContext";
@@ -22,9 +23,9 @@ const ReloadContext = createContext<(() => void) | null>(null);
 
 /**
  * Estado do dashboard dividido por domínio. A ordem importa: cada provider
- * só lê os de fora dele (alerta → período → transações → orçamento/dívidas/
- * faturas de cartão/metas/perfil → formulário). Assim uma mudança num domínio só re-renderiza
- * quem consome aquele domínio.
+ * só lê os de fora dele (alerta → período → conta em foco → transações →
+ * orçamento/dívidas/faturas de cartão/metas/perfil → formulário). Assim uma
+ * mudança num domínio só re-renderiza quem consome aquele domínio.
  */
 export function DashboardProviders({ children }: { children: ReactNode }) {
   // Trocar a chave desmonta e remonta tudo abaixo do aviso, então todos os
@@ -36,25 +37,27 @@ export function DashboardProviders({ children }: { children: ReactNode }) {
     <AlertProvider>
       <ReloadContext.Provider value={reload}>
         <PeriodProvider key={epoch}>
-          <TransactionsProvider>
-            <BudgetProvider>
-              <DebtsProvider>
-                <CardsProvider>
-                  <SubscriptionsProvider>
-                    <SavingsProvider>
-                      <ProfileProvider>
-                        <DashboardUiProvider>
-                          <TransactionFormProvider>
-                            {children}
-                          </TransactionFormProvider>
-                        </DashboardUiProvider>
-                      </ProfileProvider>
-                    </SavingsProvider>
-                  </SubscriptionsProvider>
-                </CardsProvider>
-              </DebtsProvider>
-            </BudgetProvider>
-          </TransactionsProvider>
+          <AccountFilterProvider key={epoch}>
+            <TransactionsProvider>
+              <BudgetProvider>
+                <DebtsProvider>
+                  <CardsProvider>
+                    <SubscriptionsProvider>
+                      <SavingsProvider>
+                        <ProfileProvider>
+                          <DashboardUiProvider>
+                            <TransactionFormProvider>
+                              {children}
+                            </TransactionFormProvider>
+                          </DashboardUiProvider>
+                        </ProfileProvider>
+                      </SavingsProvider>
+                    </SubscriptionsProvider>
+                  </CardsProvider>
+                </DebtsProvider>
+              </BudgetProvider>
+            </TransactionsProvider>
+          </AccountFilterProvider>
         </PeriodProvider>
       </ReloadContext.Provider>
     </AlertProvider>

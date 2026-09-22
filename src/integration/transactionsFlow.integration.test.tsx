@@ -1,6 +1,7 @@
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
+import { useAccountFilter } from "../context/AccountFilterContext";
 import { useAlertState } from "../context/AlertContext";
 import { useBudgetData } from "../context/BudgetContext";
 import { DashboardProviders } from "../context/DashboardProviders";
@@ -43,6 +44,7 @@ type Seen = {
   alert: ReturnType<typeof useAlertState>;
   debts: ReturnType<typeof useDebtsContext>;
   budget: ReturnType<typeof useBudgetData>;
+  accountFilter: ReturnType<typeof useAccountFilter>;
 };
 
 function createApp() {
@@ -54,6 +56,7 @@ function createApp() {
     seen.alert = useAlertState();
     seen.debts = useDebtsContext();
     seen.budget = useBudgetData();
+    seen.accountFilter = useAccountFilter();
     return null;
   }
   return { seen, Probe };
@@ -93,6 +96,7 @@ async function fillAndSave(fields: {
   amount: string;
   type?: "income" | "expense";
   category?: string;
+  account?: string;
   recurringMonths?: number;
   installments?: number;
 }) {
@@ -104,6 +108,7 @@ async function fillAndSave(fields: {
     seen.form.setTransactionAmount(fields.amount);
     if (fields.type) seen.form.setTransactionType(fields.type);
     if (fields.category) seen.form.setTransactionCategory(fields.category);
+    if (fields.account) seen.form.setTransactionAccount(fields.account);
     if (fields.recurringMonths) {
       seen.form.setIsRecurring(true);
       seen.form.setRecurringMonths(fields.recurringMonths);
@@ -297,6 +302,35 @@ describe("fluxo de transações (interface + dados + banco)", () => {
     expect(seen.transactions.formattedTransactions).toHaveLength(1);
     expect(seen.transactions.pendingUndo).toBeNull();
     expect((await readBackupData()).transactions).toHaveLength(1);
+  });
+});
+
+describe("alternar entre contas/carteiras", () => {
+  it("com uma conta em foco, o saldo e a lista mostram só ela; 'todas as contas' junta tudo de novo", async () => {
+    await mountApp();
+    await fillAndSave({ title: "Salário", amount: "1000,00", type: "income", account: "Carteira" });
+    await fillAndSave({ title: "Mercado", amount: "100,00", type: "expense", account: "Carteira" });
+    await fillAndSave({ title: "Freela", amount: "500,00", type: "income", account: "Poupança" });
+
+    expect(seen.transactions.totalIncome).toBe(1500);
+    expect(seen.transactions.transactions).toHaveLength(3);
+
+    await act(async () => {
+      seen.accountFilter.setSelectedAccount("Carteira");
+    });
+    await settle();
+
+    expect(seen.transactions.totalIncome).toBe(1000);
+    expect(seen.transactions.totalExpense).toBe(100);
+    expect(seen.transactions.formattedTransactions.map((t) => t.description).sort()).toEqual(["Mercado", "Salário"]);
+
+    await act(async () => {
+      seen.accountFilter.setSelectedAccount(null);
+    });
+    await settle();
+
+    expect(seen.transactions.totalIncome).toBe(1500);
+    expect(seen.transactions.transactions).toHaveLength(3);
   });
 });
 

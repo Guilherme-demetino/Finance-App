@@ -6,6 +6,7 @@ import { useTransactions } from "../hooks/useTransactions";
 import type { DisplayTransaction } from "../types";
 import { logError } from "../utils/logger";
 import { toDisplayTransaction } from "../utils/transactionDisplay";
+import { useAccountFilter } from "./AccountFilterContext";
 import { useAlert } from "./AlertContext";
 import { usePeriod } from "./PeriodContext";
 import { useRequiredContext } from "./useRequiredContext";
@@ -43,6 +44,7 @@ const TransactionsMutationsContext =
 
 export function TransactionsProvider({ children }: { children: ReactNode }) {
   const { selectedMonth, selectedYear } = usePeriod();
+  const { selectedAccount } = useAccountFilter();
   const { showAlert } = useAlert();
 
   const {
@@ -60,7 +62,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     pendingUndo,
     undoDelete,
     dismissUndo,
-  } = useTransactions(selectedMonth, selectedYear);
+  } = useTransactions(selectedMonth, selectedYear, selectedAccount);
   const totalBalance = totalIncome - totalExpense;
 
   // Uma vez por sessão (ao abrir o painel): limpa da Lixeira quem já passou do prazo. Não precisa relêr nada — são

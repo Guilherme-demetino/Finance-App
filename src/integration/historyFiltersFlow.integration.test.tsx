@@ -2,6 +2,7 @@ import React from "react";
 import { Text as RNText, TextInput, TouchableOpacity } from "react-native";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
+import { useAccountFilter } from "../context/AccountFilterContext";
 import { DashboardProviders } from "../context/DashboardProviders";
 import { useTransactionsData } from "../context/TransactionsContext";
 import DashboardHistoryScreen from "../app/dashboard/history";
@@ -65,9 +66,9 @@ async function seed() {
   await add("Viagem", 1500, "expense", "Lazer", lastYear);
 }
 
-const seen = {} as { data: ReturnType<typeof useTransactionsData> };
+const seen = {} as { data: ReturnType<typeof useTransactionsData>; accountFilter: ReturnType<typeof useAccountFilter> };
 function Probe() {
-  Object.assign(seen, { data: useTransactionsData() });
+  Object.assign(seen, { data: useTransactionsData(), accountFilter: useAccountFilter() });
   return null;
 }
 
@@ -186,6 +187,28 @@ describe("histórico com filtros avançados (tela + banco)", () => {
     expect(listed()).toEqual(["Mercado", "Cinema", "Salário", "Aluguel", "Pizza"]);
     expect(listed()).not.toContain("Viagem");
     expect(screenText()).toContain("5 transações");
+  });
+
+  it("período personalizado também respeita a conta em foco", async () => {
+    await act(async () => {
+      await createTransaction({ description: "Financiamento", amount: 900, type: "expense", category: "Moradia", date: previousMonth, account: "Poupança" });
+    });
+    await settle();
+
+    await openFilters();
+    await press("Período: Personalizado");
+    await press("Usar Últimos 90 dias");
+    await apply();
+    expect(screenText()).toContain("Financiamento");
+    expect(listed()).toEqual(["Mercado", "Cinema", "Salário", "Aluguel", "Pizza"]);
+
+    await act(async () => {
+      seen.accountFilter.setSelectedAccount("Poupança");
+    });
+    await settle();
+
+    expect(screenText()).toContain("Financiamento");
+    expect(listed()).toEqual([]);
   });
 
   it("os três filtros juntos: período, categoria e valor", async () => {

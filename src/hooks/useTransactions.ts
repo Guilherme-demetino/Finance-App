@@ -114,6 +114,7 @@ export function enrichTransactions(
 async function loadPeriodData(
   selectedMonth: string,
   selectedYear: string,
+  selectedAccount: string | null,
 ): Promise<PeriodData> {
   const [rawTransactions, rawCategories] = await Promise.all([
     getTransactionsByYear(selectedYear),
@@ -122,8 +123,11 @@ async function loadPeriodData(
 
   const enriched = enrichTransactions(rawTransactions, rawCategories);
 
-  // A consulta já traz só o ano selecionado.
-  const yearTransactions = enriched;
+  // A consulta já traz só o ano selecionado. Com uma conta em foco, o resto do painel (saldo, gráfico
+  // anual, gastos por categoria) já enxerga só ela — sem precisar mexer em cada lugar separado.
+  const yearTransactions = selectedAccount
+    ? enriched.filter((item) => item.account === selectedAccount)
+    : enriched;
 
   const monthNumber = getMonthNumber(selectedMonth);
   const monthTransactions = yearTransactions.filter((item) =>
@@ -162,7 +166,11 @@ async function loadPeriodData(
  * que antes vivia direto na tela do dashboard (fetch + soma + agrupamento
  * mensal para o gráfico anual).
  */
-export function useTransactions(selectedMonth: string, selectedYear: string) {
+export function useTransactions(
+  selectedMonth: string,
+  selectedYear: string,
+  selectedAccount: string | null = null,
+) {
   const [transactions, setTransactions] = useState<EnrichedTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -181,7 +189,7 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
   const refresh = async () => {
     setIsLoading(true);
     try {
-      applyPeriodData(await loadPeriodData(selectedMonth, selectedYear));
+      applyPeriodData(await loadPeriodData(selectedMonth, selectedYear, selectedAccount));
     } catch (error) {
       logError("Erro ao buscar transações:", error);
     } finally {
@@ -189,9 +197,9 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
     }
   };
 
-  // Trocou o período: volta pra "carregando" já nesta renderização, sem
-  // setState dentro do effect.
-  const period = `${selectedMonth}/${selectedYear}`;
+  // Trocou o período (ou a conta em foco): volta pra "carregando" já nesta
+  // renderização, sem setState dentro do effect.
+  const period = `${selectedMonth}/${selectedYear}/${selectedAccount ?? ""}`;
   const [loadedPeriod, setLoadedPeriod] = useState(period);
   if (loadedPeriod !== period) {
     setLoadedPeriod(period);
@@ -200,7 +208,7 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
 
   useEffect(() => {
     let cancelled = false;
-    loadPeriodData(selectedMonth, selectedYear)
+    loadPeriodData(selectedMonth, selectedYear, selectedAccount)
       .then((data) => {
         if (!cancelled) applyPeriodData(data);
       })
@@ -211,7 +219,7 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
     return () => {
       cancelled = true;
     };
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, selectedAccount]);
 
   const saveTransaction = async (
     editingId: number | null,

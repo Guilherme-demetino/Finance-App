@@ -13,8 +13,11 @@ interface UserProfileHeaderProps {
   userImage: string | null;
   selectedMonth: string;
   selectedYear: string;
+  /** null = todas as contas juntas. Ausente/undefined esconde o seletor (só há uma conta). */
+  selectedAccount?: string | null;
   onOpenMonthModal: () => void;
   onOpenYearModal: () => void;
+  onOpenAccountModal?: () => void;
   onOpenMenu: () => void;
   /** Posição vertical do scroll da tela — usada pra suavizar a borda ao rolar. */
   scrollY?: SharedValue<number>;
@@ -53,8 +56,10 @@ export function UserProfileHeader({
   userImage,
   selectedMonth,
   selectedYear,
+  selectedAccount,
   onOpenMonthModal,
   onOpenYearModal,
+  onOpenAccountModal,
   onOpenMenu,
   scrollY,
 }: UserProfileHeaderProps) {
@@ -136,6 +141,22 @@ export function UserProfileHeader({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {onOpenAccountModal && (
+        <View style={{ alignItems: "center", paddingBottom: 12 }}>
+          <TouchableOpacity
+            style={[selectorButtonStyle, { flexDirection: "row", gap: 6, paddingVertical: 6 }]}
+            onPress={onOpenAccountModal}
+            accessibilityRole="button"
+            accessibilityLabel="Alternar conta"
+          >
+            <Ionicons name="wallet-outline" size={14} color={colors.textPrimary} />
+            <Text style={[selectorTextStyle, { fontSize: 13 }]} numberOfLines={1}>
+              {selectedAccount ?? "Todas as contas"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </Animated.View>
   );
 }

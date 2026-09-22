@@ -39,6 +39,7 @@ function sumExpensesByCategory(
 async function buildComparison(
   selectedMonth: string,
   selectedYear: string,
+  selectedAccount: string | null,
 ): Promise<MonthComparisonResult> {
   const { month: prevMonth, year: prevYear } = getPreviousMonth(
     selectedMonth,
@@ -48,11 +49,18 @@ async function buildComparison(
   const prevMonthNumber = getMonthNumber(prevMonth);
 
   // Só os dois meses comparados, em vez do histórico inteiro.
-  const [currentMonthRows, previousMonthRows, categories] = await Promise.all([
+  const [allCurrentMonthRows, allPreviousMonthRows, categories] = await Promise.all([
     getTransactionsByMonth(currentMonthNumber, selectedYear),
     getTransactionsByMonth(prevMonthNumber, prevYear),
     getAllCategories(),
   ]);
+  // Com uma conta em foco, a comparação também é só dela.
+  const currentMonthRows = selectedAccount
+    ? allCurrentMonthRows.filter((row) => row.account === selectedAccount)
+    : allCurrentMonthRows;
+  const previousMonthRows = selectedAccount
+    ? allPreviousMonthRows.filter((row) => row.account === selectedAccount)
+    : allPreviousMonthRows;
 
   const categoryColorMap: Record<string, string> = {
     ...DEFAULT_CATEGORY_COLORS,
@@ -136,31 +144,34 @@ export function useMonthComparison(
   // serve só de gatilho pra recalcular quando outra transação é
   // criada/editada em outro lugar (ex: ao quitar uma dívida).
   refreshTrigger: EnrichedTransaction[],
+  selectedAccount: string | null = null,
 ) {
   const [comparison, setComparison] = useState<MonthComparisonResult | null>(
     null,
   );
   const [isLoadingComparison, setIsLoadingComparison] = useState(true);
 
-  // Mudou o período (ou outra transação foi criada/editada): volta pra
+  // Mudou o período, a conta em foco (ou outra transação foi criada/editada): volta pra
   // "carregando" já nesta renderização, sem setState dentro do effect.
   const [loadedFor, setLoadedFor] = useState({
     selectedMonth,
     selectedYear,
     refreshTrigger,
+    selectedAccount,
   });
   if (
     loadedFor.selectedMonth !== selectedMonth ||
     loadedFor.selectedYear !== selectedYear ||
-    loadedFor.refreshTrigger !== refreshTrigger
+    loadedFor.refreshTrigger !== refreshTrigger ||
+    loadedFor.selectedAccount !== selectedAccount
   ) {
-    setLoadedFor({ selectedMonth, selectedYear, refreshTrigger });
+    setLoadedFor({ selectedMonth, selectedYear, refreshTrigger, selectedAccount });
     setIsLoadingComparison(true);
   }
 
   useEffect(() => {
     let cancelled = false;
-    buildComparison(selectedMonth, selectedYear)
+    buildComparison(selectedMonth, selectedYear, selectedAccount)
       .then((result) => {
         if (!cancelled) setComparison(result);
       })
@@ -171,7 +182,7 @@ export function useMonthComparison(
     return () => {
       cancelled = true;
     };
-  }, [selectedMonth, selectedYear, refreshTrigger]);
+  }, [selectedMonth, selectedYear, refreshTrigger, selectedAccount]);
 
   return { comparison, isLoadingComparison };
 }
