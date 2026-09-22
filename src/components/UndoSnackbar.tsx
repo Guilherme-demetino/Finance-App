@@ -44,7 +44,7 @@ const useStyles = makeStyles((theme) => {
       position: "absolute",
       left: 16,
       right: 16,
-      bottom: 180,
+      bottom: 200,
       alignItems: "center",
     },
     bar: {
