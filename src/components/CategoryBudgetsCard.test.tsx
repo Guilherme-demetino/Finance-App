@@ -26,6 +26,7 @@ const item = (over: Partial<CategoryBudgetItem> = {}): CategoryBudgetItem => ({
   color: "#F97316",
   spent: 300,
   goal: 500,
+  repeatMonthly: false,
   ...over,
 });
 
@@ -106,13 +107,13 @@ describe("cartão Metas por Categoria: editar", () => {
   });
 
   it("salva o novo valor em reais e fecha o editor", () => {
-    const { tree, props } = mount([item()]);
+    const { tree, props } = mount([item({ repeatMonthly: false })]);
     edit(tree, "Alimentação");
     type(tree, "Alimentação", "125050");
 
     act(() => byLabel(tree, "Salvar meta de Alimentação")?.props.onPress());
 
-    expect(props.onSaveGoal).toHaveBeenCalledWith("Alimentação", 1250.5);
+    expect(props.onSaveGoal).toHaveBeenCalledWith("Alimentação", 1250.5, false);
     expect(tree.root.findAllByType(TextInput)).toHaveLength(0);
   });
 
@@ -171,6 +172,54 @@ describe("cartão Metas por Categoria: editar", () => {
   });
 });
 
+describe("cartão Metas por Categoria: repetir todo mês", () => {
+  const checkbox = (tree: ReactTestRenderer, category: string) => byLabel(tree, `Repetir a meta de ${category} todo mês`);
+
+  it("categoria sem meta ainda: o padrão é repetir", () => {
+    const { tree, props } = mount([item({ goal: null, repeatMonthly: false })]);
+    edit(tree, "Alimentação");
+
+    expect(checkbox(tree, "Alimentação")?.props.accessibilityState).toEqual({ checked: true });
+
+    type(tree, "Alimentação", "50000");
+    act(() => byLabel(tree, "Salvar meta de Alimentação")?.props.onPress());
+
+    expect(props.onSaveGoal).toHaveBeenCalledWith("Alimentação", 500, true);
+  });
+
+  it("categoria com meta que já repete: abre marcado, e desmarcar salva sem repetir", () => {
+    const { tree, props } = mount([item({ goal: 500, repeatMonthly: true })]);
+    edit(tree, "Alimentação");
+    expect(checkbox(tree, "Alimentação")?.props.accessibilityState).toEqual({ checked: true });
+
+    act(() => checkbox(tree, "Alimentação")?.props.onPress());
+    expect(checkbox(tree, "Alimentação")?.props.accessibilityState).toEqual({ checked: false });
+
+    act(() => byLabel(tree, "Salvar meta de Alimentação")?.props.onPress());
+
+    expect(props.onSaveGoal).toHaveBeenCalledWith("Alimentação", 500, false);
+  });
+
+  it("categoria com meta que não repete: abre desmarcado, e marcar salva repetindo", () => {
+    const { tree, props } = mount([item({ goal: 500, repeatMonthly: false })]);
+    edit(tree, "Alimentação");
+
+    act(() => checkbox(tree, "Alimentação")?.props.onPress());
+    act(() => byLabel(tree, "Salvar meta de Alimentação")?.props.onPress());
+
+    expect(props.onSaveGoal).toHaveBeenCalledWith("Alimentação", 500, true);
+  });
+
+  it("mostra 'Repete todo mês' só quando a meta repete", () => {
+    const { tree } = mount([
+      item({ category: "Alimentação", goal: 500, repeatMonthly: true }),
+      item({ id: 2, category: "Lazer", goal: 200, repeatMonthly: false }),
+    ]);
+
+    expect(textOf(tree).match(/Repete todo mês/g)).toHaveLength(1);
+  });
+});
+
 describe("cartão Metas por Categoria: remover meta", () => {
   it("'Remover meta' pede confirmação e só então remove a meta daquela categoria", () => {
     const { tree, props } = mount([item(), item({ id: 2, category: "Lazer", goal: 200 })]);
@@ -178,7 +227,7 @@ describe("cartão Metas por Categoria: remover meta", () => {
 
     act(() => byLabel(tree, "Remover meta de Alimentação")?.props.onPress());
     expect(props.onRemoveGoal).not.toHaveBeenCalled();
-    expect(textOf(tree)).toContain('Remover a meta de "Alimentação" deste mês?');
+    expect(textOf(tree)).toContain('Remover a meta de "Alimentação"?');
 
     act(() => byText(tree, "Remover").props.onPress());
 

@@ -45,7 +45,7 @@ async function seed() {
   // O gasto do mês é o que faz a categoria aparecer na lista de metas.
   await createTransaction({ description: "Mercado", amount: 300, type: "expense", category: "Alimentação", date: firstOfMonth });
   await createTransaction({ description: "Cinema", amount: 50, type: "expense", category: "Lazer", date: firstOfMonth });
-  await setCategoryBudget("Alimentação", MONTH, YEAR, 500);
+  await setCategoryBudget("Alimentação", MONTH, YEAR, 500, false);
 }
 
 const seen = {} as { alert: ReturnType<typeof useAlertState> };
@@ -278,7 +278,7 @@ describe("editar metas por categoria (tela + banco)", () => {
   });
 
   it("remover a meta de uma categoria não mexe nas de outras", async () => {
-    await setCategoryBudget("Lazer", MONTH, YEAR, 200);
+    await setCategoryBudget("Lazer", MONTH, YEAR, 200, false);
     await act(async () => {
       tree.update(
         <DashboardProviders>

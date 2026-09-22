@@ -37,6 +37,7 @@ function mountMenu(over: Partial<Props> = {}) {
     onOpenAppearance: jest.fn(),
     onOpenReminders: jest.fn(),
     onChangePIN: jest.fn(),
+    onOpenTrash: jest.fn(),
     onWipeData: jest.fn(),
     ...over,
   };
@@ -119,11 +120,13 @@ describe("menu do perfil", () => {
     act(() => item(tree, "Lembretes e Alertas").props.onPress());
     act(() => item(tree, "Proteger Backups com Senha").props.onPress());
     act(() => item(tree, "Atualizações do App").props.onPress());
+    act(() => item(tree, "Lixeira").props.onPress());
     act(() => item(tree, "Zerar Dados do App").props.onPress());
 
     expect(props.onOpenReminders).toHaveBeenCalledTimes(1);
     expect(props.onOpenBackupProtection).toHaveBeenCalledTimes(1);
     expect(props.onOpenUpdates).toHaveBeenCalledTimes(1);
+    expect(props.onOpenTrash).toHaveBeenCalledTimes(1);
     expect(props.onWipeData).toHaveBeenCalledTimes(1);
     expect(props.onClose).not.toHaveBeenCalled();
   });

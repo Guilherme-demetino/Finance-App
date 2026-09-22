@@ -263,7 +263,7 @@ describe("fluxo de transações (interface + dados + banco)", () => {
     expect(seen.transactions.totalIncome).toBe(1200);
   });
 
-  it("excluir remove do banco e da tela", async () => {
+  it("excluir remove do banco e da tela, e oferece desfazer (sem alerta bloqueando)", async () => {
     await mountApp();
     await fillAndSave({ title: "Uber", amount: "25,00", type: "expense" });
     const id = seen.transactions.formattedTransactions[0].id;
@@ -275,7 +275,28 @@ describe("fluxo de transações (interface + dados + banco)", () => {
 
     expect(seen.transactions.formattedTransactions).toHaveLength(0);
     expect((await readBackupData()).transactions).toHaveLength(0);
-    expect(seen.alert.alertMessage).toBe("Transação excluída com sucesso.");
+    // Nenhum alerta novo: quem avisa da exclusão agora é o snackbar de "Desfazer".
+    expect(seen.alert.alertMessage).toBe("Transação salva com sucesso!");
+    expect(seen.transactions.pendingUndo).toMatchObject({ id: Number(id), description: "Uber" });
+  });
+
+  it("desfazer a exclusão traz a transação de volta", async () => {
+    await mountApp();
+    await fillAndSave({ title: "Uber", amount: "25,00", type: "expense" });
+    const id = seen.transactions.formattedTransactions[0].id;
+    await act(async () => {
+      await seen.transactions.handleDeleteTransaction(id);
+    });
+    await settle();
+
+    await act(async () => {
+      await seen.transactions.undoDelete();
+    });
+    await settle();
+
+    expect(seen.transactions.formattedTransactions).toHaveLength(1);
+    expect(seen.transactions.pendingUndo).toBeNull();
+    expect((await readBackupData()).transactions).toHaveLength(1);
   });
 });
 

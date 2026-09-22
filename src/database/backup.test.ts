@@ -52,7 +52,7 @@ const SAMPLE: BackupData = {
     },
   ],
   budgets: [{ id: 1, month: "09", year: "2026", amount: 3000 }],
-  categoryBudgets: [{ id: 2, category: "Pets", month: "09", year: "2026", amount: 200 }],
+  categoryBudgets: [{ id: 2, category: "Pets", month: "09", year: "2026", amount: 200, repeat_monthly: 1 }],
   debts: [
     {
       id: 3,
@@ -199,6 +199,16 @@ describe("backup do banco", () => {
     await backup.replaceAllData({ ...SAMPLE, savingsGoals: old });
 
     expect((await backup.readBackupData()).savingsGoals.map((g) => g.start_amount)).toEqual([0]);
+  });
+
+  it("backup antigo (meta por categoria sem a repetição): a meta volta sem repetir", async () => {
+    const { backup, sqlite } = await loadModules();
+    await sqlite.getDatabase();
+    const old = SAMPLE.categoryBudgets.map((b) => ({ ...b, repeat_monthly: undefined })) as unknown as BackupData["categoryBudgets"];
+
+    await backup.replaceAllData({ ...SAMPLE, categoryBudgets: old });
+
+    expect((await backup.readBackupData()).categoryBudgets.map((b) => b.repeat_monthly)).toEqual([0]);
   });
 
   it("uma falha nos cartões também desfaz a restauração inteira", async () => {

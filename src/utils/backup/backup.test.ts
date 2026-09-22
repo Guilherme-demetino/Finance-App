@@ -27,7 +27,7 @@ const DATA: BackupData = {
     },
   ],
   budgets: [{ id: 1, month: "09", year: "2026", amount: 100 }],
-  categoryBudgets: [{ id: 1, category: "Pets", month: "09", year: "2026", amount: 20 }],
+  categoryBudgets: [{ id: 1, category: "Pets", month: "09", year: "2026", amount: 20, repeat_monthly: 1 }],
   debts: [
     {
       id: 1,
@@ -174,6 +174,17 @@ describe("parseBackup", () => {
     const bad = raw();
     bad.data.savingsGoals[0].start_amount = "muito";
     expect(parse(bad)).toEqual({ ok: false, error: "Backup inválido: metas de economia, item 1 (valor inicial)." });
+  });
+
+  it("aceita meta por categoria sem a repetição (versão antiga): vira 0, e recusa valor inválido", () => {
+    const old = raw();
+    delete old.data.categoryBudgets[0].repeat_monthly;
+    const result = parse(old);
+    expect(result.ok).toBe(true);
+
+    const bad = raw();
+    bad.data.categoryBudgets[0].repeat_monthly = 2;
+    expect(parse(bad)).toEqual({ ok: false, error: "Backup inválido: metas por categoria, item 1 (repetição)." });
   });
 
   it("aceita backup das versões antigas, sem assinaturas: leem como listas vazias", () => {

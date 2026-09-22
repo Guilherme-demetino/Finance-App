@@ -12,7 +12,7 @@ import { Text, TextInput, useTheme } from "../theme";
 interface CategoryBudgetsCardProps {
   items: CategoryBudgetItem[];
   isLoading: boolean;
-  onSaveGoal: (category: string, amount: number) => void;
+  onSaveGoal: (category: string, amount: number, repeat: boolean) => void;
   /** Tira a meta da categoria no mês mostrado (a categoria e os gastos continuam). */
   onRemoveGoal: (category: string) => void;
   onCategoryCreated: () => Promise<void> | void;
@@ -38,12 +38,15 @@ export function CategoryBudgetsCard({
     useState<CategoryBudgetItem | null>(null);
   const [goalToRemove, setGoalToRemove] = useState<CategoryBudgetItem | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
+  // Sem meta ainda, o padrão é repetir: é o jeito mais comum de usar (a maioria dos gastos se repete todo mês).
+  const [draftRepeat, setDraftRepeat] = useState(true);
 
   const startEditing = (item: CategoryBudgetItem) => {
     setEditError(null);
     setEditingCategory(item.category);
     const cents = item.goal ? Math.round(item.goal * 100).toString() : "";
     setDraftAmount(cents ? formatCurrency(cents) : "");
+    setDraftRepeat(item.goal !== null ? item.repeatMonthly : true);
   };
 
   const handleSave = (item: CategoryBudgetItem) => {
@@ -59,7 +62,7 @@ export function CategoryBudgetsCard({
       );
       return;
     }
-    onSaveGoal(item.category, numericValue);
+    onSaveGoal(item.category, numericValue, draftRepeat);
     setEditError(null);
     setEditingCategory(null);
     setDraftAmount("");
@@ -71,6 +74,7 @@ export function CategoryBudgetsCard({
     setEditError(null);
     setEditingCategory(categoryName);
     setDraftAmount("");
+    setDraftRepeat(true);
   };
 
   return (
@@ -257,6 +261,23 @@ export function CategoryBudgetsCard({
                       </TouchableOpacity>
                     </View>
 
+                    <TouchableOpacity
+                      onPress={() => setDraftRepeat((current) => !current)}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, paddingVertical: 4 }}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: draftRepeat }}
+                      accessibilityLabel={`Repetir a meta de ${item.category} todo mês`}
+                    >
+                      <Ionicons
+                        name={draftRepeat ? "checkbox" : "square-outline"}
+                        size={18}
+                        color={draftRepeat ? colors.accent : colors.textMuted}
+                      />
+                      <Text style={{ color: colors.textSecondary, fontSize: 13, flex: 1 }}>
+                        Repetir todo mês, até eu mudar
+                      </Text>
+                    </TouchableOpacity>
+
                     {editError ? (
                       <Text
                         style={{ color: colors.expense, fontSize: 12, marginTop: 8, lineHeight: 17 }}
@@ -321,6 +342,11 @@ export function CategoryBudgetsCard({
                           : `${formatCurrencyDisplay(remaining)} restantes`}
                       </Text>
                     </View>
+                    {item.repeatMonthly ? (
+                      <Text style={{ fontSize: 10, color: colors.textMuted, marginTop: 4 }}>
+                        Repete todo mês
+                      </Text>
+                    ) : null}
                   </View>
                 ) : (
                   <TouchableOpacity
@@ -362,7 +388,7 @@ export function CategoryBudgetsCard({
         title="Remover meta"
         message={
           goalToRemove
-            ? `Remover a meta de "${goalToRemove.category}" deste mês? A categoria e os gastos continuam; só a meta some.`
+            ? `Remover a meta de "${goalToRemove.category}"? A categoria e os gastos continuam; só a meta some, deste mês em diante.`
             : ""
         }
         confirmLabel="Remover"

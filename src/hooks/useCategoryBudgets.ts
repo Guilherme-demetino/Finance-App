@@ -18,6 +18,8 @@ export interface CategoryBudgetItem {
   color: string;
   spent: number;
   goal: number | null;
+  /** A meta atual repete nos meses seguintes (foi definida assim, ou é herdada de um mês anterior)? Sem meta, false. */
+  repeatMonthly: boolean;
 }
 
 async function buildCategoryBudgets(
@@ -31,8 +33,11 @@ async function buildCategoryBudgets(
   ]);
 
   const goalsByCategory: Record<string, number> = {};
+  const repeatByCategory: Record<string, boolean> = {};
   budgetRows.forEach((row) => {
-    goalsByCategory[row.category.trim().toLowerCase()] = row.amount;
+    const key = row.category.trim().toLowerCase();
+    goalsByCategory[key] = row.amount;
+    repeatByCategory[key] = row.repeat_monthly === 1;
   });
 
   const spentByCategory: Record<string, number> = {};
@@ -58,6 +63,7 @@ async function buildCategoryBudgets(
       color: cat.color || DEFAULT_CATEGORY_COLORS[key] || CATEGORY_COLORS.categoryNeutral,
       spent: spentByCategory[key] || 0,
       goal: goalsByCategory[key] ?? null,
+      repeatMonthly: repeatByCategory[key] ?? false,
     };
   });
 
@@ -74,6 +80,7 @@ async function buildCategoryBudgets(
         color: DEFAULT_CATEGORY_COLORS[key] || CATEGORY_COLORS.categoryNeutral,
         spent: spentByCategory[key],
         goal: goalsByCategory[key] ?? null,
+        repeatMonthly: repeatByCategory[key] ?? false,
       });
     }
   });
@@ -147,12 +154,14 @@ export function useCategoryBudgets(
     };
   }, [selectedMonth, selectedYear, transactions]);
 
-  const saveCategoryGoal = async (category: string, amount: number) => {
+  /** `repeat` marca se a meta vale também nos meses seguintes, até ser mudada ou removida. */
+  const saveCategoryGoal = async (category: string, amount: number, repeat: boolean) => {
     await setCategoryBudget(
       category,
       getMonthNumber(selectedMonth),
       selectedYear,
       amount,
+      repeat,
     );
     await refresh();
   };

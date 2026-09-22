@@ -315,6 +315,15 @@ describe("despesas e compras andam juntas (Histórico)", () => {
     expect(await m.cards.getAllCardPurchases()).toEqual([]);
   });
 
+  it("desfazer a exclusão da despesa (Lixeira) traz a compra de volta", async () => {
+    const { m, expense } = await withPurchase();
+    await m.transactions.deleteTransaction(expense.id);
+
+    await m.transactions.restoreTransaction(expense.id);
+
+    expect(await m.cards.getAllCardPurchases()).toHaveLength(1);
+  });
+
   it("apagar o mês inteiro no Histórico também", async () => {
     const { m } = await withPurchase();
 

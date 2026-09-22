@@ -92,9 +92,16 @@ export async function deleteCreditCard(id: number): Promise<void> {
   });
 }
 
+// Se a despesa da compra foi para a Lixeira (soft delete, ver database/transactions), a compra some daqui também —
+// volta a aparecer se a exclusão for desfeita, e só é apagada de vez quando a exclusão virar permanente.
 export async function getAllCardPurchases(): Promise<CardPurchaseRow[]> {
   const db = await getDatabase();
-  return db.getAllAsync<CardPurchaseRow>("SELECT * FROM card_purchases ORDER BY id");
+  return db.getAllAsync<CardPurchaseRow>(
+    `SELECT p.* FROM card_purchases p
+     LEFT JOIN transactions t ON t.id = p.transaction_id
+     WHERE p.transaction_id IS NULL OR t.deleted_at IS NULL
+     ORDER BY p.id`,
+  );
 }
 
 /** Grava as linhas de uma compra (uma, ou uma por parcela) e as despesas delas de uma vez: ou tudo entra ou nada. */

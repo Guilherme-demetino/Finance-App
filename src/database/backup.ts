@@ -24,14 +24,15 @@ export async function readBackupData(): Promise<BackupData> {
   const categories = await db.getAllAsync<CategoryRow>(
     "SELECT id, name, color, type FROM categories ORDER BY id",
   );
+  // Excluídas há pouco (ainda podem ser restauradas na Lixeira) não entram no backup: para quem restaura, elas já não existem.
   const transactions = await db.getAllAsync<TransactionRow>(
-    "SELECT id, amount, date, description, type, category_id, recurrence_group_id, recurrence_type, installment_number, installment_total FROM transactions ORDER BY id",
+    "SELECT id, amount, date, description, type, category_id, recurrence_group_id, recurrence_type, installment_number, installment_total FROM transactions WHERE deleted_at IS NULL ORDER BY id",
   );
   const budgets = await db.getAllAsync<BudgetRow>(
     "SELECT id, month, year, amount FROM budgets ORDER BY id",
   );
   const categoryBudgets = await db.getAllAsync<CategoryBudgetRow>(
-    "SELECT id, category, month, year, amount FROM category_budgets ORDER BY id",
+    "SELECT id, category, month, year, amount, repeat_monthly FROM category_budgets ORDER BY id",
   );
   const debts = await db.getAllAsync<DebtRow>(
     "SELECT id, person, amount, type, description, date, status, settled_date, due_date FROM debts ORDER BY id",
@@ -130,12 +131,13 @@ export async function replaceAllData(data: BackupData): Promise<void> {
     }
     for (const b of data.categoryBudgets) {
       db.runSync(
-        "INSERT INTO category_budgets (id, category, month, year, amount) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO category_budgets (id, category, month, year, amount, repeat_monthly) VALUES (?, ?, ?, ?, ?, ?)",
         b.id,
         b.category,
         b.month,
         b.year,
         b.amount,
+        b.repeat_monthly ?? 0, // backups antigos não têm a repetição
       );
     }
     for (const d of data.debts) {

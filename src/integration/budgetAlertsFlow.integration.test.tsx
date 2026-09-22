@@ -106,9 +106,9 @@ async function spend(title: string, amount: string, category = "Alimentação") 
   await waitForCheck();
 }
 
-const setGoal = async (category: string, amount: number) => {
+const setGoal = async (category: string, amount: number, repeat = false) => {
   await act(async () => {
-    await seen.budget.saveCategoryGoal(category, amount);
+    await seen.budget.saveCategoryGoal(category, amount, repeat);
   });
   await settle();
 };

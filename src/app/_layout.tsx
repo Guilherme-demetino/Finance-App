@@ -41,6 +41,7 @@ function ThemedNavigation() {
         <Stack.Screen name="updates" options={{ headerShown: false }} />
         <Stack.Screen name="appearance" options={{ headerShown: false }} />
         <Stack.Screen name="reminders" options={{ headerShown: false }} />
+        <Stack.Screen name="trash" options={{ headerShown: false }} />
       </Stack>
     </>
   );

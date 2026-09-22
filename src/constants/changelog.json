@@ -389,5 +389,26 @@
       "Toda mudança de valor fica no histórico e aparece na assinatura (“Reajustada em …: de R$ X para R$ Y”). As assinaturas entram no backup.",
       "É só o controle do que você paga: as assinaturas não criam despesas (elas já entram pelo cartão ou pelo extrato), então nada é contado em dobro."
     ]
+  },
+  {
+    "id": 44,
+    "date": "22/09/2026",
+    "title": "Meta por categoria repetindo todo mês",
+    "items": [
+      "Ao definir a meta de uma categoria em Orçamento, agora dá para marcar “Repetir todo mês, até eu mudar”: ela passa a valer nos meses seguintes sozinha, sem precisar redefinir mês a mês.",
+      "Um mês com meta repetindo mostra “Repete todo mês” no cartão. Editar o valor de novo (com repetir marcado) muda o que vale dali em diante; editar um mês específico sem marcar repetir vira uma exceção só daquele mês, sem quebrar a repetição.",
+      "Remover a meta para a repetição por completo, em qualquer mês daquela categoria."
+    ]
+  },
+  {
+    "id": 45,
+    "date": "22/09/2026",
+    "title": "Lixeira: desfazer exclusão de transação",
+    "items": [
+      "Excluir uma transação agora manda ela para a Lixeira em vez de apagar na hora: some das listas e dos totais, mas fica lá por 30 dias antes de sumir de vez.",
+      "Ao excluir, aparece um aviso rápido com o botão “Desfazer”. Também dá para restaurar (ou excluir definitivamente, sem volta) pela nova Lixeira, no menu do perfil.",
+      "Se a despesa era de uma compra no cartão, a compra some junto e volta se a exclusão for desfeita.",
+      "Isso vale só para excluir uma transação por vez: apagar uma série inteira, um mês inteiro ou os dados do app continua sendo definitivo, sem passar pela Lixeira."
+    ]
   }
 ]

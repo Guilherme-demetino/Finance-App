@@ -4,6 +4,7 @@ import { addMonthsToDateString, getMonthlyDates } from "../utils/dates";
 import { splitAmountIntoInstallments } from "../utils/currency";
 import { planRemainingInstallments } from "../utils/installments";
 import { isDateInRange, yearsInRange, type DateRange } from "../utils/historyFilters";
+import { TRASH_RETENTION_DAYS } from "../utils/trash";
 
 // Menor número de meses aceito para uma recorrência — abaixo disso não
 // faz sentido chamar de "recorrente".
@@ -25,10 +26,13 @@ function pruneCardPurchases(db: Db): void {
   );
 }
 
+// Todas as leituras "ativas" abaixo ignoram o que está na Lixeira (deleted_at IS NOT NULL): para o resto do app, uma
+// transação excluída não existe mais, mesmo que a linha ainda esteja na tabela por um tempo (ver utils/trash.ts).
+
 export async function getAllTransactions(): Promise<TransactionRow[]> {
   const db = await getDatabase();
   return db.getAllAsync<TransactionRow>(
-    "SELECT * FROM transactions ORDER BY id DESC",
+    "SELECT * FROM transactions WHERE deleted_at IS NULL ORDER BY id DESC",
   );
 }
 
@@ -39,7 +43,7 @@ export async function getAllTransactions(): Promise<TransactionRow[]> {
 export async function getRecurringExpenses(): Promise<TransactionRow[]> {
   const db = await getDatabase();
   return db.getAllAsync<TransactionRow>(
-    "SELECT * FROM transactions WHERE type = 'expense' AND recurrence_type IS NOT NULL",
+    "SELECT * FROM transactions WHERE type = 'expense' AND recurrence_type IS NOT NULL AND deleted_at IS NULL",
   );
 }
 
@@ -52,7 +56,7 @@ export async function getTransactionsByYear(
 ): Promise<TransactionRow[]> {
   const db = await getDatabase();
   return db.getAllAsync<TransactionRow>(
-    "SELECT * FROM transactions WHERE date LIKE ? ORDER BY id DESC",
+    "SELECT * FROM transactions WHERE date LIKE ? AND deleted_at IS NULL ORDER BY id DESC",
     `%/${year}`,
   );
 }
@@ -76,7 +80,7 @@ export async function getTransactionsByMonth(
 ): Promise<TransactionRow[]> {
   const db = await getDatabase();
   return db.getAllAsync<TransactionRow>(
-    "SELECT * FROM transactions WHERE date LIKE ? ORDER BY id DESC",
+    "SELECT * FROM transactions WHERE date LIKE ? AND deleted_at IS NULL ORDER BY id DESC",
     `%/${monthNumber}/${year}`,
   );
 }
@@ -128,10 +132,63 @@ export async function updateTransaction(
   );
 }
 
+/**
+ * Exclusão com prazo: só marca `deleted_at` (não some da tabela). A transação sai na hora de todas as listas e
+ * cálculos, mas fica na Lixeira por alguns dias, com a chance de ser restaurada antes de sumir de vez (ver
+ * restoreTransaction e purgeExpiredDeletedTransactions). Se for a despesa de uma compra de cartão, a compra some
+ * junto (ver getAllCardPurchases) e volta se a exclusão for desfeita.
+ */
 export async function deleteTransaction(id: number): Promise<void> {
   const db = await getDatabase();
-  db.runSync("DELETE FROM transactions WHERE id = ?", id);
-  pruneCardPurchases(db);
+  db.runSync(
+    "UPDATE transactions SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL",
+    new Date().toISOString(),
+    id,
+  );
+}
+
+/** Desfaz a exclusão: a transação volta a valer, como se nunca tivesse sido apagada. */
+export async function restoreTransaction(id: number): Promise<void> {
+  const db = await getDatabase();
+  db.runSync("UPDATE transactions SET deleted_at = NULL WHERE id = ?", id);
+}
+
+/** As transações na Lixeira (excluídas, ainda não apagadas de vez), da mais recente para a mais antiga. */
+export async function getDeletedTransactions(): Promise<TransactionRow[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<TransactionRow>(
+    // id DESC desempata quando duas exclusões caem no mesmo milissegundo.
+    "SELECT * FROM transactions WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC",
+  );
+}
+
+/** Apaga uma transação da Lixeira de vez (não dá mais para desfazer). */
+export async function permanentlyDeleteTransaction(id: number): Promise<void> {
+  const db = await getDatabase();
+  db.withTransactionSync(() => {
+    db.runSync("DELETE FROM transactions WHERE id = ?", id);
+    pruneCardPurchases(db);
+  });
+}
+
+/**
+ * Limpeza da Lixeira: apaga de vez quem já passou dos dias de prazo. Roda ao abrir o painel (ver
+ * context/TransactionsContext) — não é um agendamento em segundo plano, só acontece na próxima vez que o app abrir.
+ * Devolve quantas foram apagadas.
+ */
+export async function purgeExpiredDeletedTransactions(now: Date = new Date()): Promise<number> {
+  const db = await getDatabase();
+  const cutoff = new Date(now.getTime() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  let purged = 0;
+  db.withTransactionSync(() => {
+    const result = db.runSync(
+      "DELETE FROM transactions WHERE deleted_at IS NOT NULL AND deleted_at <= ?",
+      cutoff,
+    );
+    purged = result.changes;
+    if (purged > 0) pruneCardPurchases(db);
+  });
+  return purged;
 }
 
 /** Apaga todas as transações de um mês/ano específico (formato DD/MM/AAAA). */
@@ -153,7 +210,7 @@ export async function getTransactionsByGroupId(
 ): Promise<TransactionRow[]> {
   const db = await getDatabase();
   return db.getAllAsync<TransactionRow>(
-    "SELECT * FROM transactions WHERE recurrence_group_id = ? ORDER BY id ASC",
+    "SELECT * FROM transactions WHERE recurrence_group_id = ? AND deleted_at IS NULL ORDER BY id ASC",
     groupId,
   );
 }

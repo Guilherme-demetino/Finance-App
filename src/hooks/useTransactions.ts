@@ -10,6 +10,7 @@ import {
   deleteTransactionsByMonth,
   deleteTransactionsFromIdInGroup,
   getTransactionsByYear,
+  restoreTransaction,
   TransactionInput,
   updateTransaction,
 } from "../database/transactions";
@@ -167,6 +168,8 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
   const [monthsData, setMonthsData] = useState<MonthDatum[]>(emptyMonthsData);
+  // A última exclusão de uma transação (não de séries/mês inteiro): dá pra desfazer enquanto isso ficar preenchido.
+  const [pendingUndo, setPendingUndo] = useState<{ id: number; description: string } | null>(null);
 
   const applyPeriodData = (data: PeriodData) => {
     setTransactions(data.transactions);
@@ -231,11 +234,25 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
   };
 
   // Apagar despesas que são compras de cartão tira a compra do cartão: a tela de cartões relê.
+  // A exclusão tem prazo (Lixeira): guarda o suficiente pra oferecer "Desfazer" logo em seguida.
   const removeTransaction = async (id: number) => {
+    const target = transactions.find((item) => item.id === id);
     await deleteTransaction(id);
     await refresh();
     notifyCardsChanged();
+    setPendingUndo(target ? { id, description: target.description } : null);
   };
+
+  const undoDelete = async () => {
+    if (!pendingUndo) return;
+    const { id } = pendingUndo;
+    setPendingUndo(null);
+    await restoreTransaction(id);
+    await refresh();
+    notifyCardsChanged();
+  };
+
+  const dismissUndo = () => setPendingUndo(null);
 
   const removeAllForCurrentPeriod = async () => {
     await deleteTransactionsByMonth(getMonthNumber(selectedMonth), selectedYear);
@@ -267,5 +284,8 @@ export function useTransactions(selectedMonth: string, selectedYear: string) {
     removeAllForCurrentPeriod,
     removeSeries,
     removeSeriesFromId,
+    pendingUndo,
+    undoDelete,
+    dismissUndo,
   };
 }

@@ -14,6 +14,7 @@ import { PanoramaContainer } from "../../components/dashboard/PanoramaContainer"
 import { ProfileMenuContainer } from "../../components/dashboard/ProfileMenuContainer";
 import { SavingsModalsContainer } from "../../components/dashboard/SavingsModalsContainer";
 import { TransactionModalContainer } from "../../components/dashboard/TransactionModalContainer";
+import { UndoSnackbarContainer } from "../../components/dashboard/UndoSnackbarContainer";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 
 import { DashboardProviders } from "../../context/DashboardProviders";
@@ -153,6 +154,7 @@ function DashboardChrome() {
       <ReleaseNotesModal releases={releases} onClose={dismissReleaseNotes} />
 
       <AlertContainer />
+      <UndoSnackbarContainer />
       <AutoBackupRunner />
       <DueRemindersRunner />
       <BudgetAlertsRunner />

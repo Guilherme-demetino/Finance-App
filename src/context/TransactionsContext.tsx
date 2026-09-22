@@ -1,5 +1,6 @@
-import { createContext, useMemo, type ReactNode } from "react";
+import { createContext, useEffect, useMemo, type ReactNode } from "react";
 
+import { purgeExpiredDeletedTransactions } from "../database/transactions";
 import { useStableCallback } from "../hooks/useStableCallback";
 import { useTransactions } from "../hooks/useTransactions";
 import type { DisplayTransaction } from "../types";
@@ -24,6 +25,10 @@ interface TransactionsData {
   handleDeleteAllTransactions: () => Promise<void>;
   handleDeleteSeriesFromId: (groupId: string, fromId: number) => Promise<void>;
   handleDeleteSeries: (groupId: string) => Promise<void>;
+  /** A última transação excluída (não série/mês inteiro), enquanto ainda dá pra desfazer. */
+  pendingUndo: TransactionsHook["pendingUndo"];
+  undoDelete: TransactionsHook["undoDelete"];
+  dismissUndo: TransactionsHook["dismissUndo"];
 }
 
 /** Ações de escrita com identidade fixa: quem só grava (dívidas, formulário) não re-renderiza quando os dados mudam. */
@@ -52,8 +57,19 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     removeSeries,
     removeSeriesFromId,
     refresh,
+    pendingUndo,
+    undoDelete,
+    dismissUndo,
   } = useTransactions(selectedMonth, selectedYear);
   const totalBalance = totalIncome - totalExpense;
+
+  // Uma vez por sessão (ao abrir o painel): limpa da Lixeira quem já passou do prazo. Não precisa relêr nada — são
+  // linhas que já estavam escondidas das listas ativas.
+  useEffect(() => {
+    purgeExpiredDeletedTransactions().catch((error) =>
+      logError("Erro ao limpar a Lixeira de transações:", error),
+    );
+  }, []);
 
   const stableSaveTransaction = useStableCallback(saveTransaction);
   const stableRefreshTransactions = useStableCallback(refresh);
@@ -70,10 +86,10 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     [transactions],
   );
 
+  // Sem alerta de sucesso aqui: quem avisa é o snackbar de "Desfazer" (ver UndoSnackbar).
   const handleDeleteTransaction = async (id: string) => {
     try {
       await removeTransaction(Number(id));
-      showAlert("Sucesso", "Transação excluída com sucesso.");
     } catch (error) {
       logError("Erro ao excluir transação:", error);
       showAlert("Erro", "Não foi possível excluir a transação.");
@@ -128,6 +144,9 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     handleDeleteAllTransactions,
     handleDeleteSeriesFromId,
     handleDeleteSeries,
+    pendingUndo,
+    undoDelete,
+    dismissUndo,
   };
 
   return (

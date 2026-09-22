@@ -20,6 +20,7 @@ interface ProfileMenuModalProps {
   onOpenAppearance: () => void;
   onOpenReminders: () => void;
   onChangePIN: () => void;
+  onOpenTrash: () => void;
   onWipeData: () => void;
 }
 
@@ -41,6 +42,7 @@ export function ProfileMenuModal({
   onOpenAppearance,
   onOpenReminders,
   onChangePIN,
+  onOpenTrash,
   onWipeData,
 }: ProfileMenuModalProps) {
   const { colors } = useTheme();
@@ -140,6 +142,11 @@ export function ProfileMenuModal({
           <TouchableOpacity style={styles.menuItem} onPress={onChangePIN}>
             <Ionicons name="lock-closed-outline" size={24} color={colors.textPrimary} />
             <Text style={styles.menuItemText}>Alterar PIN de Segurança</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={onOpenTrash}>
+            <Ionicons name="time-outline" size={24} color={colors.textPrimary} />
+            <Text style={styles.menuItemText}>Lixeira</Text>
           </TouchableOpacity>
 
           <View style={styles.divider} />

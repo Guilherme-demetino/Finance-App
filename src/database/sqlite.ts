@@ -36,7 +36,8 @@ function createTables(db: SQLite.SQLiteDatabase) {
         recurrence_group_id TEXT,
         recurrence_type TEXT,
         installment_number INTEGER,
-        installment_total INTEGER
+        installment_total INTEGER,
+        deleted_at TEXT
       );
     `);
 
@@ -64,6 +65,7 @@ function createTables(db: SQLite.SQLiteDatabase) {
         month TEXT NOT NULL,
         year TEXT NOT NULL,
         amount REAL NOT NULL,
+        repeat_monthly INTEGER NOT NULL DEFAULT 0,
         UNIQUE(category, month, year)
       );
     `);
@@ -198,6 +200,10 @@ function createTables(db: SQLite.SQLiteDatabase) {
     { table: "transactions", column: "installment_number INTEGER" },
     { table: "transactions", column: "installment_total INTEGER" },
     { table: "debts", column: "due_date TEXT" },
+    { table: "category_budgets", column: "repeat_monthly INTEGER NOT NULL DEFAULT 0" },
+    // Exclusão com prazo: apagar uma transação só marca `deleted_at`; ela some das listas, mas
+    // pode ser restaurada por um tempo antes de sair de vez (ver database/transactions.ts).
+    { table: "transactions", column: "deleted_at TEXT" },
   ];
   for (const { table, column } of columnsToMigrate) {
     try {

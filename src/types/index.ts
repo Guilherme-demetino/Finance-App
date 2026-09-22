@@ -15,6 +15,8 @@ export interface TransactionRow {
   recurrence_type?: RecurrenceType | null;
   installment_number?: number | null;
   installment_total?: number | null;
+  /** ISO 8601: quando foi excluída (fica na Lixeira até ser restaurada ou sumir de vez). null = não excluída. */
+  deleted_at?: string | null;
 }
 
 /** Linha crua da tabela `categories` no SQLite. */
@@ -47,6 +49,8 @@ export interface CategoryBudgetRow {
   month: string; // "01".."12"
   year: string;
   amount: number;
+  /** 1 = essa meta vale também nos meses seguintes, até ser mudada ou removida (ver database/categoryBudgets). */
+  repeat_monthly: number;
 }
 
 /** "lent" = você emprestou (a receber). "borrowed" = você pegou emprestado (a pagar). */

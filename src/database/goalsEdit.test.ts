@@ -103,9 +103,9 @@ describe("editar meta de economia", () => {
 describe("remover meta por categoria", () => {
   it("tira só a meta daquele mês e categoria", async () => {
     const { budgets } = await load();
-    await budgets.setCategoryBudget("Alimentação", "09", "2026", 500);
-    await budgets.setCategoryBudget("Alimentação", "10", "2026", 600);
-    await budgets.setCategoryBudget("Lazer", "09", "2026", 200);
+    await budgets.setCategoryBudget("Alimentação", "09", "2026", 500, false);
+    await budgets.setCategoryBudget("Alimentação", "10", "2026", 600, false);
+    await budgets.setCategoryBudget("Lazer", "09", "2026", 200, false);
 
     await budgets.removeCategoryBudget("Alimentação", "09", "2026");
 
@@ -115,7 +115,7 @@ describe("remover meta por categoria", () => {
 
   it("não diferencia maiúsculas nem espaços, como a leitura das metas", async () => {
     const { budgets } = await load();
-    await budgets.setCategoryBudget("Alimentação", "09", "2026", 500);
+    await budgets.setCategoryBudget("Alimentação", "09", "2026", 500, false);
 
     await budgets.removeCategoryBudget("  ALIMENTAÇÃO ", "09", "2026");
 
@@ -124,7 +124,7 @@ describe("remover meta por categoria", () => {
 
   it("categoria sem meta: não faz nada e não estoura", async () => {
     const { budgets } = await load();
-    await budgets.setCategoryBudget("Lazer", "09", "2026", 200);
+    await budgets.setCategoryBudget("Lazer", "09", "2026", 200, false);
 
     await expect(budgets.removeCategoryBudget("Transporte", "09", "2026")).resolves.toBeUndefined();
 

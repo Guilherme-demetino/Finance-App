@@ -112,6 +112,10 @@ export function ProfileMenuContainer({
           onCloseMenu();
           handleChangePIN();
         }}
+        onOpenTrash={() => {
+          onCloseMenu();
+          router.push("/trash");
+        }}
         onWipeData={() => {
           onCloseMenu();
           setIsWipeConfirmOpen(true);

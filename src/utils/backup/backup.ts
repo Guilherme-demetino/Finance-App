@@ -204,6 +204,8 @@ function readData(raw: unknown): BackupData {
       if (!isString(r.month) || !/^\d{2}$/.test(r.month)) return "mês";
       if (!isString(r.year) || !/^\d{4}$/.test(r.year)) return "ano";
       if (!isNumber(r.amount)) return "valor";
+      // Backups antigos não têm a repetição (a meta não repetia então).
+      if (r.repeat_monthly != null && r.repeat_monthly !== 0 && r.repeat_monthly !== 1) return "repetição";
       return null;
     },
     (r) => `${r.category}/${r.month}/${r.year}`,
