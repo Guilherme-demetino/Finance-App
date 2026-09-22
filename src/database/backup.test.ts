@@ -37,6 +37,7 @@ const SAMPLE: BackupData = {
       recurrence_type: null,
       installment_number: null,
       installment_total: null,
+      account: "Conta principal",
     },
     {
       id: 11,
@@ -49,6 +50,7 @@ const SAMPLE: BackupData = {
       recurrence_type: "installment",
       installment_number: 2,
       installment_total: 3,
+      account: "Poupança",
     },
   ],
   budgets: [{ id: 1, month: "09", year: "2026", amount: 3000 }],
@@ -77,7 +79,7 @@ const SAMPLE: BackupData = {
       start_amount: 5,
     },
   ],
-  creditCards: [{ id: 7, name: "Nubank", closing_day: 28, due_day: 5, credit_limit: 5000 }],
+  creditCards: [{ id: 7, name: "Nubank", closing_day: 28, due_day: 5, credit_limit: 5000, account: "Conta principal" }],
   cardPurchases: [
     {
       id: 20,
@@ -109,6 +111,7 @@ const SAMPLE: BackupData = {
   cardPayments: [{ id: 30, card_id: 7, invoice_ref: "2026-09", paid_date: "05/09/2026", amount: 300, transaction_id: null }],
   subscriptions: [{ id: 4, name: "Netflix", amount: 44.9, cycle: "monthly", billing_day: 5, billing_month: null, category: "Lazer", match_text: "netflix", active: 1, created_date: "01/08/2026", price_since: "05/09/2026", ignored_amount: 49.9 }],
   subscriptionPriceChanges: [{ id: 6, subscription_id: 4, date: "05/09/2026", old_amount: 39.9, new_amount: 44.9 }],
+  accounts: [{ id: 2, name: "Poupança", color: "#00aabb" }],
 };
 
 describe("backup do banco", () => {
@@ -141,12 +144,20 @@ describe("backup do banco", () => {
     ]);
   });
 
-  it("restaurar troca também os cartões, e um backup sem cartões (versão 1) deixa o app sem cartões", async () => {
+  it("restaurar troca também os cartões, e um backup sem cartões/contas (versões antigas) deixa o app sem eles", async () => {
     const { backup, sqlite } = await loadModules();
     await sqlite.getDatabase();
     await backup.replaceAllData(SAMPLE);
 
-    await backup.replaceAllData({ ...SAMPLE, creditCards: undefined, cardPurchases: undefined, cardPayments: undefined, subscriptions: undefined, subscriptionPriceChanges: undefined });
+    await backup.replaceAllData({
+      ...SAMPLE,
+      creditCards: undefined,
+      cardPurchases: undefined,
+      cardPayments: undefined,
+      subscriptions: undefined,
+      subscriptionPriceChanges: undefined,
+      accounts: undefined,
+    });
 
     const data = await backup.readBackupData();
     expect(data.creditCards).toEqual([]);
@@ -154,6 +165,7 @@ describe("backup do banco", () => {
     expect(data.cardPayments).toEqual([]);
     expect(data.subscriptions).toEqual([]);
     expect(data.subscriptionPriceChanges).toEqual([]);
+    expect(data.accounts).toEqual([]);
   });
 
   it("depois de restaurar, novos cartões continuam com ids novos, sem colidir", async () => {
@@ -209,6 +221,19 @@ describe("backup do banco", () => {
     await backup.replaceAllData({ ...SAMPLE, categoryBudgets: old });
 
     expect((await backup.readBackupData()).categoryBudgets.map((b) => b.repeat_monthly)).toEqual([0]);
+  });
+
+  it("backup antigo (transação e cartão sem conta): voltam na conta padrão", async () => {
+    const { backup, sqlite } = await loadModules();
+    await sqlite.getDatabase();
+    const oldTransactions = SAMPLE.transactions.map((t) => ({ ...t, account: undefined }));
+    const oldCards = SAMPLE.creditCards!.map((c) => ({ ...c, account: undefined }));
+
+    await backup.replaceAllData({ ...SAMPLE, transactions: oldTransactions, creditCards: oldCards });
+
+    const data = await backup.readBackupData();
+    expect(data.transactions.map((t) => t.account)).toEqual(["Conta principal", "Conta principal"]);
+    expect(data.creditCards!.map((c) => c.account)).toEqual(["Conta principal"]);
   });
 
   it("uma falha nos cartões também desfaz a restauração inteira", async () => {

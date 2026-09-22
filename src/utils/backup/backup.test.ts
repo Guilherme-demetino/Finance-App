@@ -71,6 +71,7 @@ const DATA: BackupData = {
   cardPayments: [{ id: 1, card_id: 1, invoice_ref: "2026-09", paid_date: "05/09/2026", amount: 300, transaction_id: null }],
   subscriptions: [{ id: 1, name: "Netflix", amount: 39.9, cycle: "monthly", billing_day: 5, billing_month: null, category: "Lazer", match_text: "netflix", active: 1, created_date: "01/08/2026", price_since: "10/09/2026", ignored_amount: null }],
   subscriptionPriceChanges: [{ id: 1, subscription_id: 1, date: "10/09/2026", old_amount: 34.9, new_amount: 39.9 }],
+  accounts: [{ id: 1, name: "Carteira", color: "#123456" }],
 };
 
 const NOW = new Date(2026, 8, 19, 20, 30);
@@ -219,6 +220,37 @@ describe("parseBackup", () => {
     }
   });
 
+  it("aceita backup das versões antigas, sem contas: lê como lista vazia, e conta com nome/cor vazios é recusada", () => {
+    const file = raw();
+    file.version = 3;
+    delete file.data.accounts;
+
+    const result = parse(file);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.backup.data.accounts).toEqual([]);
+
+    const bad = raw();
+    bad.data.accounts = [{ id: 1, name: "", color: "#111111" }];
+    expect(parse(bad)).toEqual({ ok: false, error: "Backup inválido: contas, item 1 (nome)." });
+  });
+
+  it("transação e cartão sem conta (versões antigas) leem normalmente, mas uma conta vazia é recusada", () => {
+    const file = raw();
+    delete file.data.transactions[0].account;
+    delete file.data.creditCards[0].account;
+
+    expect(parse(file).ok).toBe(true);
+
+    const badTransaction = raw();
+    badTransaction.data.transactions[0].account = "   ";
+    expect(parse(badTransaction)).toEqual({ ok: false, error: "Backup inválido: transações, item 1 (conta)." });
+
+    const badCard = raw();
+    badCard.data.creditCards[0].account = "   ";
+    expect(parse(badCard)).toEqual({ ok: false, error: "Backup inválido: cartões, item 1 (conta)." });
+  });
+
   it("aceita backup sem nome (null) e listas vazias", () => {
     const empty: BackupData = {
       userName: null,
@@ -249,15 +281,16 @@ describe("nome do arquivo e textos", () => {
       creditCards: 1,
       cardPurchases: 1,
       subscriptions: 1,
+      accounts: 1,
     });
   });
 
   it("describeRestore compara o backup com o que há no app e avisa que substitui", () => {
     const text = describeRestore(
-      { transactions: 2, categories: 0, budgets: 0, categoryBudgets: 0, debts: 0, savingsGoals: 3, creditCards: 0, cardPurchases: 0, subscriptions: 0 },
+      { transactions: 2, categories: 0, budgets: 0, categoryBudgets: 0, debts: 0, savingsGoals: 3, creditCards: 0, cardPurchases: 0, subscriptions: 0, accounts: 0 },
       buildBackupFile(DATA, NOW),
     );
-    expect(text).toContain("Backup de 19/09/2026: 1 transação, 1 dívida, 1 meta de economia, 1 categoria própria, 1 cartão, 1 compra no cartão, 1 assinatura.");
+    expect(text).toContain("Backup de 19/09/2026: 1 transação, 1 dívida, 1 meta de economia, 1 categoria própria, 1 cartão, 1 compra no cartão, 1 assinatura, 1 conta.");
     expect(text).toContain("Agora no app: 2 transações, 0 dívidas, 3 metas de economia, 0 categorias próprias.");
     // Quem não usa cartão não vê o assunto no texto.
     expect(text).not.toContain("0 cartões");

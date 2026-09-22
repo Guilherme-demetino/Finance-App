@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { TouchableOpacity, View } from "react-native";
+import { ScrollView, TouchableOpacity, View } from "react-native";
 
+import { DEFAULT_ACCOUNT_NAME } from "../../database/accounts";
 import type { CreditCardInput } from "../../database/creditCards";
+import { useAccounts } from "../../hooks/useAccounts";
 import { Text, TextInput, makeStyles, useTheme } from "../../theme";
 import type { CreditCardRow } from "../../types";
 import { formatCurrencyInput, parseCurrencyInput } from "../../utils/currency";
 import { validateCard } from "../../utils/creditCards";
+import { AccountModal } from "../forms/AccountModal";
 import { TopFormSheet } from "../forms/TopFormSheet";
 
 interface CardFormModalProps {
@@ -52,7 +55,10 @@ export function CardFormModal({ visible, card = null, onClose, onSave, errorMess
   const [closingDay, setClosingDay] = useState("");
   const [dueDay, setDueDay] = useState("");
   const [limit, setLimit] = useState("");
+  const [account, setAccount] = useState(DEFAULT_ACCOUNT_NAME);
+  const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { options: accountOptions, refresh: refreshAccounts } = useAccounts();
 
   const isEditing = card !== null;
 
@@ -65,6 +71,7 @@ export function CardFormModal({ visible, card = null, onClose, onSave, errorMess
       setClosingDay(card ? String(card.closing_day) : "");
       setDueDay(card ? String(card.due_day) : "");
       setLimit(card?.credit_limit != null ? formatCurrencyInput(String(Math.round(card.credit_limit * 100))) : "");
+      setAccount(card?.account || DEFAULT_ACCOUNT_NAME);
       setError(null);
     }
   }
@@ -75,6 +82,7 @@ export function CardFormModal({ visible, card = null, onClose, onSave, errorMess
       closingDay: toDayNumber(closingDay),
       dueDay: toDayNumber(dueDay),
       limit: parseCurrencyInput(limit),
+      account,
     };
     const problem = validateCard(input);
     if (problem) {
@@ -148,11 +156,74 @@ export function CardFormModal({ visible, card = null, onClose, onSave, errorMess
         />
       </View>
 
+      <View style={styles.field}>
+        <Text style={styles.label}>Conta que paga a fatura</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => setIsAccountModalVisible(true)}
+              style={{
+                backgroundColor: colors.surfaceAlt,
+                borderWidth: 1,
+                borderColor: colors.textPrimary,
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 8,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+              }}
+              accessibilityRole="button"
+            >
+              <Text style={{ color: colors.textPrimary, fontWeight: "bold", fontSize: 12 }}>+ Nova</Text>
+            </TouchableOpacity>
+            {accountOptions.map((option) => {
+              const isSelected = account === option.name;
+              return (
+                <TouchableOpacity
+                  key={option.name}
+                  onPress={() => setAccount(option.name)}
+                  style={{
+                    backgroundColor: colors.surfaceAlt,
+                    borderWidth: 1,
+                    borderColor: option.color,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    opacity: isSelected ? 1 : 0.5,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                  accessibilityRole="button"
+                >
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: option.color }} />
+                  <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "bold" }}>{option.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
+        {isEditing && (
+          <Text style={styles.hint}>Mudar a conta vale só para compras novas: as já lançadas não mudam.</Text>
+        )}
+      </View>
+
       {shownError ? <Text style={styles.error}>{shownError}</Text> : null}
 
       <TouchableOpacity onPress={handleSave} style={styles.saveButton} accessibilityRole="button">
         <Text style={styles.saveText}>{isEditing ? "Salvar alterações" : "Criar cartão"}</Text>
       </TouchableOpacity>
+
+      <AccountModal
+        visible={isAccountModalVisible}
+        onClose={() => setIsAccountModalVisible(false)}
+        onSave={(novaConta) => {
+          setIsAccountModalVisible(false);
+          setAccount(novaConta);
+          refreshAccounts();
+        }}
+      />
     </TopFormSheet>
   );
 }

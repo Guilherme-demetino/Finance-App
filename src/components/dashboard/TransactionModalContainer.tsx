@@ -19,6 +19,8 @@ export function TransactionModalContainer() {
     setTransactionDate,
     transactionCategory,
     setTransactionCategory,
+    transactionAccount,
+    setTransactionAccount,
     isRecurring,
     setIsRecurring,
     recurringMonths,
@@ -47,6 +49,8 @@ export function TransactionModalContainer() {
       setTransactionDate={setTransactionDate}
       transactionCategory={transactionCategory}
       setTransactionCategory={setTransactionCategory}
+      transactionAccount={transactionAccount}
+      setTransactionAccount={setTransactionAccount}
       isRecurring={isRecurring}
       setIsRecurring={setIsRecurring}
       recurringMonths={recurringMonths}

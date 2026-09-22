@@ -387,10 +387,10 @@ export function TransactionsHistoryList({
               }}
             >
               <Text
-                style={{ color: colors.textMuted, fontSize: 12 }}
+                style={{ color: colors.textMuted, fontSize: 12, flexShrink: 1 }}
                 numberOfLines={1}
               >
-                {item.date}
+                {item.account ? `${item.date} · ${item.account}` : item.date}
               </Text>
 
               <View style={{ flexDirection: "row", gap: 8 }}>

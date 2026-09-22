@@ -33,7 +33,7 @@ describe("cartões", () => {
     const m = await load();
 
     const id = await m.cards.createCreditCard({ name: "  Nubank  ", closingDay: 28, dueDay: 5, limit: null });
-    expect(await m.cards.getAllCreditCards()).toEqual([{ id, name: "Nubank", closing_day: 28, due_day: 5, credit_limit: null }]);
+    expect(await m.cards.getAllCreditCards()).toEqual([{ id, name: "Nubank", closing_day: 28, due_day: 5, credit_limit: null, account: "Conta principal" }]);
 
     await m.cards.updateCreditCard(id, { name: "Nubank Ultravioleta", closingDay: 10, dueDay: 17, limit: 8000 });
     expect((await m.cards.getAllCreditCards())[0]).toMatchObject({ name: "Nubank Ultravioleta", closing_day: 10, due_day: 17, credit_limit: 8000 });
@@ -145,6 +145,42 @@ describe("compras no cartão viram despesas", () => {
   });
 });
 
+describe("a despesa da compra vai para a conta que paga o cartão", () => {
+  it("compra nova entra na conta do cartão", async () => {
+    const m = await load();
+    const card = await newCard(m, { account: "Poupança" });
+
+    await m.cards.addCardPurchases(planPurchase({ card, description: "Mercado", totalAmount: 80.5, date: new Date(2026, 7, 12), category: "Alimentação", installments: 1, groupId: "a" }));
+
+    const [expense] = await m.transactions.getAllTransactions();
+    expect(expense.account).toBe("Poupança");
+  });
+
+  it("sem conta escolhida ao criar o cartão, cai na conta padrão", async () => {
+    const m = await load();
+    const card = await newCard(m);
+
+    await m.cards.addCardPurchases(planPurchase({ card, description: "Mercado", totalAmount: 80.5, date: new Date(2026, 7, 12), category: "Alimentação", installments: 1, groupId: "a" }));
+
+    const [expense] = await m.transactions.getAllTransactions();
+    expect(expense.account).toBe("Conta principal");
+  });
+
+  it("mudar a conta do cartão vale só para compras novas: as já lançadas não mudam", async () => {
+    const m = await load();
+    const card = await newCard(m, { account: "Conta principal" });
+    await m.cards.addCardPurchases(planPurchase({ card, description: "Antiga", totalAmount: 50, date: new Date(2026, 7, 1), category: "Outros", installments: 1, groupId: "a" }));
+
+    await m.cards.updateCreditCard(card.id, { name: card.name, closingDay: card.closing_day, dueDay: card.due_day, limit: card.credit_limit, account: "Poupança" });
+    const updatedCard = (await m.cards.getAllCreditCards())[0];
+    await m.cards.addCardPurchases(planPurchase({ card: updatedCard, description: "Nova", totalAmount: 30, date: new Date(2026, 7, 20), category: "Outros", installments: 1, groupId: "b" }));
+
+    const byDescription = Object.fromEntries((await m.transactions.getAllTransactions()).map((t) => [t.description, t.account]));
+    expect(byDescription.Antiga).toBe("Conta principal");
+    expect(byDescription.Nova).toBe("Poupança");
+  });
+});
+
 describe("pagar a fatura", () => {
   const pay = (m: Modules, cardId: number, over = {}) => m.cards.payInvoice({ cardId, ref: "2026-10", amount: 1250.5, paidDate: "05/10/2026", ...over });
 
@@ -207,9 +243,9 @@ describe("pagar a fatura", () => {
 describe("conciliação das compras do cartão com as despesas", () => {
   const rawDb = (m: Modules) => m.db as unknown as { runSync: (sql: string, ...params: unknown[]) => { lastInsertRowId: number } };
 
-  it("compra sem despesa (lançada antes desta regra) ganha a dela, uma vez só", async () => {
+  it("compra sem despesa (lançada antes desta regra) ganha a dela, uma vez só, na conta do cartão", async () => {
     const m = await load();
-    const card = await newCard(m);
+    const card = await newCard(m, { account: "Poupança" });
     rawDb(m).runSync(
       "INSERT INTO card_purchases (card_id, description, amount, date, category, invoice_ref, installment_group_id, installment_number, installment_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       card.id, "Notebook", 300, "10/08/2026", "Outros", "2026-10", "g", 2, 5,
@@ -218,7 +254,7 @@ describe("conciliação das compras do cartão com as despesas", () => {
     expect(await m.cards.reconcileCardTransactions()).toBe(1);
 
     const [expense] = await m.transactions.getAllTransactions();
-    expect(expense).toMatchObject({ amount: 300, description: "Notebook (2/5)", category_id: "Outros", date: "10/08/2026" });
+    expect(expense).toMatchObject({ amount: 300, description: "Notebook (2/5)", category_id: "Outros", date: "10/08/2026", account: "Poupança" });
     expect((await m.cards.getAllCardPurchases())[0].transaction_id).toBe(expense.id);
     expect(await m.cards.reconcileCardTransactions()).toBe(0);
   });

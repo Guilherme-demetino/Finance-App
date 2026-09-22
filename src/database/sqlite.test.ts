@@ -47,6 +47,7 @@ const ALL_TABLES = [
   "card_invoice_payments",
   "subscriptions",
   "subscription_price_changes",
+  "accounts",
   "app_meta",
 ];
 

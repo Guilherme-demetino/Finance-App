@@ -17,6 +17,15 @@ export interface TransactionRow {
   installment_total?: number | null;
   /** ISO 8601: quando foi excluída (fica na Lixeira até ser restaurada ou sumir de vez). null = não excluída. */
   deleted_at?: string | null;
+  /** Conta/carteira dona da transação (texto livre, como category_id — ver database/accounts). Ausente = conta padrão. */
+  account?: string;
+}
+
+/** Linha crua da tabela `accounts` — uma conta/carteira (para separar o saldo). */
+export interface AccountRow {
+  id: number;
+  name: string;
+  color: string;
 }
 
 /** Linha crua da tabela `categories` no SQLite. */
@@ -77,6 +86,8 @@ export interface CreditCardRow {
   closing_day: number; // 1 a 31; em mês mais curto vale o último dia
   due_day: number; // 1 a 31; em mês mais curto vale o último dia
   credit_limit: number | null;
+  /** Conta que paga a fatura: as despesas das compras deste cartão entram nela. Mudar vale só para compras novas. Ausente = conta padrão. */
+  account?: string;
 }
 
 /**
@@ -210,4 +221,5 @@ export interface DisplayTransaction {
   recurrenceGroupId?: string | null;
   installmentNumber?: number | null;
   installmentTotal?: number | null;
+  account?: string;
 }

@@ -1,10 +1,17 @@
 import { getDatabase } from "./sqlite";
+import { DEFAULT_ACCOUNT_NAME } from "./accounts";
 import type { TransactionRow, TransactionType } from "../types";
 import { addMonthsToDateString, getMonthlyDates } from "../utils/dates";
 import { splitAmountIntoInstallments } from "../utils/currency";
 import { planRemainingInstallments } from "../utils/installments";
 import { isDateInRange, yearsInRange, type DateRange } from "../utils/historyFilters";
 import { TRASH_RETENTION_DAYS } from "../utils/trash";
+
+/** Quando quem chama não escolhe uma conta (dívidas, importação, onboarding), tudo entra na conta padrão. */
+function resolveAccount(account: string | undefined): string {
+  const trimmed = (account || "").trim();
+  return trimmed || DEFAULT_ACCOUNT_NAME;
+}
 
 // Menor número de meses aceito para uma recorrência — abaixo disso não
 // faz sentido chamar de "recorrente".
@@ -91,6 +98,8 @@ export interface TransactionInput {
   description: string;
   type: TransactionType;
   category: string;
+  /** Conta/carteira dona da transação. Sem escolha explícita, cai na conta padrão (ver resolveAccount). */
+  account?: string;
 }
 
 export async function createTransaction(
@@ -98,12 +107,13 @@ export async function createTransaction(
 ): Promise<void> {
   const db = await getDatabase();
   db.runSync(
-    "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO transactions (amount, date, description, type, category_id, account) VALUES (?, ?, ?, ?, ?, ?)",
     data.amount,
     data.date,
     data.description,
     data.type,
     data.category,
+    resolveAccount(data.account),
   );
 }
 
@@ -113,12 +123,13 @@ export async function updateTransaction(
 ): Promise<void> {
   const db = await getDatabase();
   db.runSync(
-    "UPDATE transactions SET amount = ?, date = ?, description = ?, type = ?, category_id = ? WHERE id = ?",
+    "UPDATE transactions SET amount = ?, date = ?, description = ?, type = ?, category_id = ?, account = ? WHERE id = ?",
     data.amount,
     data.date,
     data.description,
     data.type,
     data.category,
+    resolveAccount(data.account),
     id,
   );
   // Se a despesa é uma compra de cartão, a compra acompanha (valor, data, descrição e categoria).
@@ -262,7 +273,7 @@ export async function createRecurringTransactions(
     for (let i = 0; i < totalMonths; i++) {
       const date = i === 0 ? data.date : addMonthsToDateString(data.date, i);
       db.runSync(
-        "INSERT INTO transactions (amount, date, description, type, category_id, recurrence_group_id, recurrence_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO transactions (amount, date, description, type, category_id, recurrence_group_id, recurrence_type, account) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         data.amount,
         date,
         data.description,
@@ -270,6 +281,7 @@ export async function createRecurringTransactions(
         data.category,
         groupId,
         "recurring",
+        resolveAccount(data.account),
       );
     }
   });
@@ -283,12 +295,13 @@ export async function importTransactions(
   db.withTransactionSync(() => {
     for (const row of rows) {
       db.runSync(
-        "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO transactions (amount, date, description, type, category_id, account) VALUES (?, ?, ?, ?, ?, ?)",
         row.amount,
         row.date,
         row.description,
         row.type,
         row.category,
+        resolveAccount(row.account),
       );
     }
   });
@@ -313,7 +326,7 @@ export async function createRecurringOnDay(
   db.withTransactionSync(() => {
     for (const date of dates) {
       db.runSync(
-        "INSERT INTO transactions (amount, date, description, type, category_id, recurrence_group_id, recurrence_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO transactions (amount, date, description, type, category_id, recurrence_group_id, recurrence_type, account) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         data.amount,
         date,
         data.description,
@@ -321,6 +334,7 @@ export async function createRecurringOnDay(
         data.category,
         groupId,
         "recurring",
+        resolveAccount(data.account),
       );
     }
   });
@@ -348,7 +362,7 @@ export async function createRemainingInstallments(
   db.withTransactionSync(() => {
     for (const item of plan) {
       db.runSync(
-        "INSERT INTO transactions (amount, date, description, type, category_id, recurrence_group_id, recurrence_type, installment_number, installment_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO transactions (amount, date, description, type, category_id, recurrence_group_id, recurrence_type, installment_number, installment_total, account) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         data.amount,
         item.date,
         item.description,
@@ -358,6 +372,7 @@ export async function createRemainingInstallments(
         "installment",
         item.number,
         total,
+        resolveAccount(data.account),
       );
     }
   });
@@ -381,7 +396,7 @@ export async function createInstallmentTransactions(
       const date = i === 0 ? data.date : addMonthsToDateString(data.date, i);
       const description = `${data.description} (${i + 1}/${installmentCount})`;
       db.runSync(
-        "INSERT INTO transactions (amount, date, description, type, category_id, recurrence_group_id, recurrence_type, installment_number, installment_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO transactions (amount, date, description, type, category_id, recurrence_group_id, recurrence_type, installment_number, installment_total, account) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         amounts[i],
         date,
         description,
@@ -391,6 +406,7 @@ export async function createInstallmentTransactions(
         "installment",
         i + 1,
         installmentCount,
+        resolveAccount(data.account),
       );
     }
   });

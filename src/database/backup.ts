@@ -1,4 +1,5 @@
 import type {
+  AccountRow,
   BudgetRow,
   CardPaymentRow,
   CardPurchaseRow,
@@ -12,6 +13,7 @@ import type {
   TransactionRow,
 } from "../types";
 import type { BackupData } from "../utils/backup/backup";
+import { DEFAULT_ACCOUNT_NAME } from "./accounts";
 import { getDatabase } from "./sqlite";
 
 /** Lê tudo que entra no backup (ver utils/backup/backup.ts para o que fica de fora). */
@@ -26,7 +28,7 @@ export async function readBackupData(): Promise<BackupData> {
   );
   // Excluídas há pouco (ainda podem ser restauradas na Lixeira) não entram no backup: para quem restaura, elas já não existem.
   const transactions = await db.getAllAsync<TransactionRow>(
-    "SELECT id, amount, date, description, type, category_id, recurrence_group_id, recurrence_type, installment_number, installment_total FROM transactions WHERE deleted_at IS NULL ORDER BY id",
+    "SELECT id, amount, date, description, type, category_id, recurrence_group_id, recurrence_type, installment_number, installment_total, account FROM transactions WHERE deleted_at IS NULL ORDER BY id",
   );
   const budgets = await db.getAllAsync<BudgetRow>(
     "SELECT id, month, year, amount FROM budgets ORDER BY id",
@@ -42,7 +44,7 @@ export async function readBackupData(): Promise<BackupData> {
   );
 
   const creditCards = await db.getAllAsync<CreditCardRow>(
-    "SELECT id, name, closing_day, due_day, credit_limit FROM credit_cards ORDER BY id",
+    "SELECT id, name, closing_day, due_day, credit_limit, account FROM credit_cards ORDER BY id",
   );
   const cardPurchases = await db.getAllAsync<CardPurchaseRow>(
     "SELECT id, card_id, description, amount, date, category, invoice_ref, installment_group_id, installment_number, installment_total, transaction_id FROM card_purchases ORDER BY id",
@@ -58,6 +60,10 @@ export async function readBackupData(): Promise<BackupData> {
     "SELECT id, subscription_id, date, old_amount, new_amount FROM subscription_price_changes ORDER BY id",
   );
 
+  const accounts = await db.getAllAsync<AccountRow>(
+    "SELECT id, name, color FROM accounts ORDER BY id",
+  );
+
   return {
     userName: user?.name ?? null,
     categories,
@@ -71,6 +77,7 @@ export async function readBackupData(): Promise<BackupData> {
     cardPayments,
     subscriptions,
     subscriptionPriceChanges,
+    accounts,
   };
 }
 
@@ -95,6 +102,7 @@ export async function replaceAllData(data: BackupData): Promise<void> {
     db.runSync("DELETE FROM card_invoice_payments");
     db.runSync("DELETE FROM subscriptions");
     db.runSync("DELETE FROM subscription_price_changes");
+    db.runSync("DELETE FROM accounts");
 
     for (const c of data.categories) {
       db.runSync(
@@ -107,7 +115,7 @@ export async function replaceAllData(data: BackupData): Promise<void> {
     }
     for (const t of data.transactions) {
       db.runSync(
-        "INSERT INTO transactions (id, amount, date, description, type, category_id, recurrence_group_id, recurrence_type, installment_number, installment_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO transactions (id, amount, date, description, type, category_id, recurrence_group_id, recurrence_type, installment_number, installment_total, account) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         t.id,
         t.amount,
         t.date,
@@ -118,6 +126,7 @@ export async function replaceAllData(data: BackupData): Promise<void> {
         t.recurrence_type ?? null,
         t.installment_number ?? null,
         t.installment_total ?? null,
+        t.account || DEFAULT_ACCOUNT_NAME, // backups antigos não têm conta
       );
     }
     for (const b of data.budgets) {
@@ -169,12 +178,13 @@ export async function replaceAllData(data: BackupData): Promise<void> {
 
     for (const c of data.creditCards ?? []) {
       db.runSync(
-        "INSERT INTO credit_cards (id, name, closing_day, due_day, credit_limit) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO credit_cards (id, name, closing_day, due_day, credit_limit, account) VALUES (?, ?, ?, ?, ?, ?)",
         c.id,
         c.name,
         c.closing_day,
         c.due_day,
         c.credit_limit ?? null,
+        c.account || DEFAULT_ACCOUNT_NAME, // backups antigos não têm conta
       );
     }
     for (const p of data.cardPurchases ?? []) {
@@ -231,6 +241,10 @@ export async function replaceAllData(data: BackupData): Promise<void> {
         c.old_amount,
         c.new_amount,
       );
+    }
+
+    for (const a of data.accounts ?? []) {
+      db.runSync("INSERT INTO accounts (id, name, color) VALUES (?, ?, ?)", a.id, a.name, a.color);
     }
 
     if (data.userName !== null) {

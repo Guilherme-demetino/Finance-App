@@ -16,5 +16,6 @@ export function toDisplayTransaction(item: EnrichedTransaction): DisplayTransact
     recurrenceGroupId: item.recurrence_group_id,
     installmentNumber: item.installment_number,
     installmentTotal: item.installment_total,
+    account: item.account,
   };
 }

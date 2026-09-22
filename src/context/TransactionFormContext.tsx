@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { DEFAULT_ACCOUNT_NAME } from "../database/accounts";
 import type {
   DisplayTransaction,
   TransactionRepeatMode,
@@ -38,6 +39,8 @@ interface TransactionFormContextValue {
   setTransactionDate: (value: string) => void;
   transactionCategory: string;
   setTransactionCategory: (value: string) => void;
+  transactionAccount: string;
+  setTransactionAccount: (value: string) => void;
   isRecurring: boolean;
   setIsRecurring: (value: boolean) => void;
   recurringMonths: number;
@@ -76,6 +79,7 @@ export function TransactionFormProvider({ children }: { children: ReactNode }) {
     `${currentDay}/${currentMonthNum}/${currentYearStr}`,
   );
   const [transactionCategory, setTransactionCategory] = useState("Salário");
+  const [transactionAccount, setTransactionAccount] = useState(DEFAULT_ACCOUNT_NAME);
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringMonths, setRecurringMonths] = useState(12);
   const [installmentCount, setInstallmentCount] = useState(1);
@@ -92,6 +96,7 @@ export function TransactionFormProvider({ children }: { children: ReactNode }) {
     setTransactionCategory(
       item.category || (item.type === "income" ? "Salário" : "Alimentação"),
     );
+    setTransactionAccount(item.account || DEFAULT_ACCOUNT_NAME);
     // Editar sempre mexe só nessa ocorrência — nunca reabre como
     // recorrente/parcelada, mesmo se a transação original era uma delas.
     setIsRecurring(false);
@@ -146,6 +151,7 @@ export function TransactionFormProvider({ children }: { children: ReactNode }) {
           description: safeTitle,
           type: safeType,
           category: safeCategory,
+          account: transactionAccount,
         },
         repeatMode,
       );
@@ -165,6 +171,7 @@ export function TransactionFormProvider({ children }: { children: ReactNode }) {
       setIsRecurring(false);
       setRecurringMonths(12);
       setInstallmentCount(1);
+      setTransactionAccount(DEFAULT_ACCOUNT_NAME);
       setIsTransactionModalOpen(false);
     } catch (error) {
       logError("Erro ao salvar transação:", error);
@@ -178,6 +185,7 @@ export function TransactionFormProvider({ children }: { children: ReactNode }) {
     setTransactionTitle("");
     setTransactionAmount("");
     setTransactionCategory("Salário");
+    setTransactionAccount(DEFAULT_ACCOUNT_NAME);
     setIsRecurring(false);
     setRecurringMonths(12);
     setInstallmentCount(1);
@@ -218,6 +226,8 @@ export function TransactionFormProvider({ children }: { children: ReactNode }) {
     setTransactionDate,
     transactionCategory,
     setTransactionCategory,
+    transactionAccount,
+    setTransactionAccount,
     isRecurring,
     setIsRecurring,
     recurringMonths,

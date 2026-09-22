@@ -2,6 +2,7 @@ import Animated, {
   useAnimatedScrollHandler,
 } from "react-native-reanimated";
 
+import { AccountBalancesCard } from "../../components/overview/AccountBalancesCard";
 import { AlertsCard } from "../../components/overview/AlertsCard";
 import { AnnualPanoramaCard } from "../../components/overview/AnnualPanoramaCard";
 import { BalanceCard } from "../../components/overview/BalanceCard";
@@ -75,6 +76,8 @@ export default function DashboardHomeScreen() {
         selectedMonth={selectedMonth}
         selectedYear={selectedYear}
       />
+
+      <AccountBalancesCard transactions={transactions} />
 
       <SummaryCards totalIncome={totalIncome} totalExpense={totalExpense} />
 

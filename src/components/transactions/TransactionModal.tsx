@@ -7,9 +7,12 @@ import {
   DEFAULT_INCOME_CATEGORIES,
 } from "../../constants/categories";
 import { getAllCategories } from "../../database/categories";
+import { DEFAULT_ACCOUNT_NAME } from "../../database/accounts";
+import { useAccounts } from "../../hooks/useAccounts";
 import type { CategoryRow } from "../../types";
 import { formatCurrency as formatCurrencyDisplay } from "../../utils/currency";
 import { formatDateToString, parseDateString } from "../../utils/dates";
+import { AccountModal } from "../forms/AccountModal";
 import { CalendarPicker } from "../forms/CalendarPicker";
 import { CategoryModal } from "../forms/CategoryModal";
 import { ConfirmModal } from "../ConfirmModal";
@@ -32,6 +35,8 @@ interface TransactionModalProps {
   setTransactionDate: (date: string) => void;
   transactionCategory: string;
   setTransactionCategory: (category: string) => void;
+  transactionAccount: string;
+  setTransactionAccount: (account: string) => void;
   isRecurring: boolean;
   setIsRecurring: (value: boolean) => void;
   recurringMonths: number;
@@ -58,6 +63,8 @@ export function TransactionModal({
   setTransactionDate,
   transactionCategory,
   setTransactionCategory,
+  transactionAccount,
+  setTransactionAccount,
   isRecurring,
   setIsRecurring,
   recurringMonths,
@@ -78,6 +85,9 @@ export function TransactionModal({
   const [dbCategories, setDbCategories] = useState<CategoryRow[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<{ id: number; name: string } | null>(null);
+  const { options: accountOptions, remove: removeAccount, refresh: refreshAccounts } = useAccounts();
 
   const fetchCategories = async () => {
     setIsLoadingCategories(true);
@@ -157,6 +167,17 @@ export function TransactionModal({
       setTransactionCategory(defaultCategories[0]);
     }
     fetchCategories();
+  };
+
+  const confirmDeleteAccount = async () => {
+    const account = accountToDelete;
+    setAccountToDelete(null);
+    if (!account) return;
+
+    await removeAccount(account.id);
+    if (transactionAccount === account.name) {
+      setTransactionAccount(DEFAULT_ACCOUNT_NAME);
+    }
   };
 
   if (!visible) return null;
@@ -449,6 +470,71 @@ export function TransactionModal({
               </ScrollView>
             </View>
 
+            {/* LISTA DE CONTAS */}
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 10 }}>
+                Conta
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                  <TouchableOpacity
+                    onPress={() => setIsAccountModalVisible(true)}
+                    style={{
+                      backgroundColor: colors.surfaceAlt,
+                      borderWidth: 1,
+                      borderColor: colors.textPrimary,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <Ionicons name="add" size={14} color={colors.textPrimary} />
+                    <Text style={{ color: colors.textPrimary, fontWeight: "bold", fontSize: 12 }}>
+                      Nova
+                    </Text>
+                  </TouchableOpacity>
+
+                  {accountOptions.map((option) => {
+                    const isSelected = transactionAccount === option.name;
+                    return (
+                      <TouchableOpacity
+                        key={option.name}
+                        onPress={() => setTransactionAccount(option.name)}
+                        style={{
+                          backgroundColor: colors.surfaceAlt,
+                          borderWidth: 1,
+                          borderColor: option.color,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 8,
+                          opacity: isSelected ? 1 : 0.5,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: option.color }} />
+                        <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "bold" }}>
+                          {option.name}
+                        </Text>
+                        {option.id !== null && (
+                          <TouchableOpacity
+                            onPress={() => setAccountToDelete({ id: option.id as number, name: option.name })}
+                            hitSlop={8}
+                          >
+                            <Ionicons name="trash-outline" size={14} color={colors.expense} />
+                          </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            </View>
+
             {/* RECORRÊNCIA / PARCELAMENTO */}
             {!isEditing && (
               <View style={{ marginBottom: 24 }}>
@@ -697,6 +783,31 @@ export function TransactionModal({
         destructive
         onCancel={() => setCategoryToDelete(null)}
         onConfirm={confirmDeleteCategory}
+      />
+
+      {/* MODAL DE CRIAR CONTA */}
+      <AccountModal
+        visible={isAccountModalVisible}
+        onClose={() => setIsAccountModalVisible(false)}
+        onSave={(novaConta) => {
+          setIsAccountModalVisible(false);
+          setTransactionAccount(novaConta);
+          refreshAccounts();
+        }}
+      />
+
+      <ConfirmModal
+        visible={!!accountToDelete}
+        title="Excluir conta"
+        message={
+          accountToDelete
+            ? `Excluir a conta "${accountToDelete.name}"? As transações já registradas nela continuam existindo, só deixam de aparecer atreladas a essa conta.`
+            : ""
+        }
+        confirmLabel="Excluir"
+        destructive
+        onCancel={() => setAccountToDelete(null)}
+        onConfirm={confirmDeleteAccount}
       />
     </>
   );

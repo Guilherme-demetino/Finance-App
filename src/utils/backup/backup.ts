@@ -1,4 +1,5 @@
 import type {
+  AccountRow,
   BudgetRow,
   CardPaymentRow,
   CardPurchaseRow,
@@ -20,8 +21,9 @@ import type {
  */
 
 export const BACKUP_FORMAT = "meu-financeiro-backup";
-// 2: entraram os cartões de crédito, as compras e os pagamentos de fatura. 3: as assinaturas recorrentes. Arquivos das versões antigas seguem aceitos.
-export const BACKUP_VERSION = 3;
+// 2: entraram os cartões de crédito, as compras e os pagamentos de fatura. 3: as assinaturas recorrentes.
+// 4: contas/carteiras — transações e cartões ganham a conta. Arquivos das versões antigas seguem aceitos.
+export const BACKUP_VERSION = 4;
 
 export interface BackupData {
   userName: string | null;
@@ -38,6 +40,8 @@ export interface BackupData {
   /** Assinaturas recorrentes e o histórico de reajustes (backups antigos não têm: leem como vazio). */
   subscriptions?: SubscriptionRow[];
   subscriptionPriceChanges?: SubscriptionPriceChangeRow[];
+  /** Contas/carteiras cadastradas (backups antigos não têm: leem como vazio — as transações caem na conta padrão). */
+  accounts?: AccountRow[];
 }
 
 export interface BackupFile {
@@ -62,6 +66,7 @@ export interface BackupCounts {
   creditCards: number;
   cardPurchases: number;
   subscriptions: number;
+  accounts: number;
 }
 
 export function buildBackupFile(data: BackupData, now: Date): BackupFile {
@@ -99,6 +104,7 @@ export function countBackup(data: BackupData): BackupCounts {
     creditCards: data.creditCards?.length ?? 0,
     cardPurchases: data.cardPurchases?.length ?? 0,
     subscriptions: data.subscriptions?.length ?? 0,
+    accounts: data.accounts?.length ?? 0,
   };
 }
 
@@ -171,6 +177,8 @@ function readData(raw: unknown): BackupData {
     if (r.recurrence_type != null && !RECURRENCE_TYPES.includes(r.recurrence_type as string)) return "tipo de série";
     if (r.installment_number != null && !isInteger(r.installment_number)) return "parcela";
     if (r.installment_total != null && !isInteger(r.installment_total)) return "total de parcelas";
+    // Backups antigos não têm a conta (o app só tinha uma).
+    if (r.account != null && (!isString(r.account) || r.account.trim() === "")) return "conta";
     return null;
   });
 
@@ -244,6 +252,7 @@ function readData(raw: unknown): BackupData {
         if (!isInteger(r.closing_day) || r.closing_day < 1 || r.closing_day > 31) return "dia de fechamento";
         if (!isInteger(r.due_day) || r.due_day < 1 || r.due_day > 31) return "dia de vencimento";
         if (r.credit_limit != null && !isNumber(r.credit_limit)) return "limite";
+        if (r.account != null && (!isString(r.account) || r.account.trim() === "")) return "conta";
         return null;
       });
   const cardIds = new Set(creditCards.map((card) => card.id));
@@ -314,6 +323,15 @@ function readData(raw: unknown): BackupData {
         return null;
       });
 
+  const accounts = raw.accounts === undefined
+    ? []
+    : readRows<AccountRow>(raw.accounts, "contas", (r) => {
+        if (!isInteger(r.id)) return "id";
+        if (!isString(r.name) || r.name.trim() === "") return "nome";
+        if (!isString(r.color)) return "cor";
+        return null;
+      });
+
   return {
     userName: raw.userName as string | null,
     categories,
@@ -327,6 +345,7 @@ function readData(raw: unknown): BackupData {
     cardPayments,
     subscriptions,
     subscriptionPriceChanges,
+    accounts,
   };
 }
 
@@ -389,6 +408,7 @@ function describeCounts(counts: BackupCounts): string {
     parts.push(plural(counts.creditCards, "cartão", "cartões"), plural(counts.cardPurchases, "compra no cartão", "compras no cartão"));
   }
   if (counts.subscriptions > 0) parts.push(plural(counts.subscriptions, "assinatura", "assinaturas"));
+  if (counts.accounts > 0) parts.push(plural(counts.accounts, "conta", "contas"));
   return parts.join(", ");
 }
 

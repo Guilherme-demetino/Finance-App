@@ -37,7 +37,18 @@ function createTables(db: SQLite.SQLiteDatabase) {
         recurrence_type TEXT,
         installment_number INTEGER,
         installment_total INTEGER,
-        deleted_at TEXT
+        deleted_at TEXT,
+        account TEXT NOT NULL DEFAULT 'Conta principal'
+      );
+    `);
+
+    // Contas/carteiras: texto livre nas transações e nos cartões (como category_id), sem chave estrangeira —
+    // apagar uma conta não mexe no que já foi lançado com o nome dela (ver database/accounts).
+    db.runSync(`
+      CREATE TABLE IF NOT EXISTS accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        color TEXT NOT NULL
       );
     `);
 
@@ -103,7 +114,8 @@ function createTables(db: SQLite.SQLiteDatabase) {
         name TEXT NOT NULL,
         closing_day INTEGER NOT NULL,
         due_day INTEGER NOT NULL,
-        credit_limit REAL
+        credit_limit REAL,
+        account TEXT NOT NULL DEFAULT 'Conta principal'
       );
     `);
 
@@ -204,6 +216,10 @@ function createTables(db: SQLite.SQLiteDatabase) {
     // Exclusão com prazo: apagar uma transação só marca `deleted_at`; ela some das listas, mas
     // pode ser restaurada por um tempo antes de sair de vez (ver database/transactions.ts).
     { table: "transactions", column: "deleted_at TEXT" },
+    // Múltiplas contas/carteiras: instalações existentes ganham tudo numa só ("Conta principal"),
+    // como se sempre tivesse sido assim (ver database/accounts.ts).
+    { table: "transactions", column: "account TEXT NOT NULL DEFAULT 'Conta principal'" },
+    { table: "credit_cards", column: "account TEXT NOT NULL DEFAULT 'Conta principal'" },
   ];
   for (const { table, column } of columnsToMigrate) {
     try {
@@ -278,6 +294,7 @@ export async function resetDatabase(): Promise<void> {
     db.runSync("DROP TABLE IF EXISTS card_invoice_payments");
     db.runSync("DROP TABLE IF EXISTS subscriptions");
     db.runSync("DROP TABLE IF EXISTS subscription_price_changes");
+    db.runSync("DROP TABLE IF EXISTS accounts");
     db.runSync("DROP TABLE IF EXISTS users");
     db.runSync("DROP TABLE IF EXISTS security");
   });

@@ -1,6 +1,7 @@
 import type { CardPaymentRow, CardPurchaseRow, CreditCardRow } from "../types";
 import { invoiceDates, purchaseExpenseDescription, type NewPurchase } from "../utils/creditCards";
 import { addMonthsToDateString, formatDateToString } from "../utils/dates";
+import { DEFAULT_ACCOUNT_NAME } from "./accounts";
 import { getMeta, setMeta } from "./appMeta";
 import { getDatabase } from "./sqlite";
 
@@ -12,6 +13,8 @@ export interface CreditCardInput {
   dueDay: number;
   /** null = sem limite definido. */
   limit: number | null;
+  /** Conta que paga a fatura: as despesas de compras novas neste cartão entram nela. Ausente = conta padrão. */
+  account?: string;
 }
 
 export async function getAllCreditCards(): Promise<CreditCardRow[]> {
@@ -19,21 +22,25 @@ export async function getAllCreditCards(): Promise<CreditCardRow[]> {
   return db.getAllAsync<CreditCardRow>("SELECT * FROM credit_cards ORDER BY id");
 }
 
+function resolveCardAccount(account: string | undefined): string {
+  return (account || "").trim() || DEFAULT_ACCOUNT_NAME;
+}
+
 export async function createCreditCard(input: CreditCardInput): Promise<number> {
   const db = await getDatabase();
   const result = await db.runAsync(
-    "INSERT INTO credit_cards (name, closing_day, due_day, credit_limit) VALUES (?, ?, ?, ?)",
-    [input.name.trim(), input.closingDay, input.dueDay, input.limit],
+    "INSERT INTO credit_cards (name, closing_day, due_day, credit_limit, account) VALUES (?, ?, ?, ?, ?)",
+    [input.name.trim(), input.closingDay, input.dueDay, input.limit, resolveCardAccount(input.account)],
   );
   return result.lastInsertRowId;
 }
 
-/** Mudar os dias vale só para compras novas: as já lançadas ficam nas faturas em que foram gravadas. */
+/** Mudar os dias (ou a conta) vale só para compras novas: as já lançadas ficam como foram gravadas. */
 export async function updateCreditCard(id: number, input: CreditCardInput): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
-    "UPDATE credit_cards SET name = ?, closing_day = ?, due_day = ?, credit_limit = ? WHERE id = ?",
-    [input.name.trim(), input.closingDay, input.dueDay, input.limit, id],
+    "UPDATE credit_cards SET name = ?, closing_day = ?, due_day = ?, credit_limit = ?, account = ? WHERE id = ?",
+    [input.name.trim(), input.closingDay, input.dueDay, input.limit, resolveCardAccount(input.account), id],
   );
 }
 
@@ -46,15 +53,16 @@ function findCard(db: Db, cardId: number): CreditCardRow {
 }
 
 /** Grava a compra e, se for um gasto (valor positivo), a despesa dela nas despesas do app. Créditos não geram despesa. */
-function insertPurchase(db: Db, row: NewPurchase): void {
+function insertPurchase(db: Db, row: NewPurchase, cardAccount: string): void {
   let transactionId: number | null = null;
   if (row.amount > 0) {
     const expense = db.runSync(
-      "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, 'expense', ?)",
+      "INSERT INTO transactions (amount, date, description, type, category_id, account) VALUES (?, ?, ?, 'expense', ?, ?)",
       row.amount,
       row.date,
       purchaseExpenseDescription(row),
       row.category,
+      cardAccount,
     );
     transactionId = expense.lastInsertRowId;
   }
@@ -108,13 +116,14 @@ export async function getAllCardPurchases(): Promise<CardPurchaseRow[]> {
 export async function addCardPurchases(rows: NewPurchase[]): Promise<void> {
   const db = await getDatabase();
   db.withTransactionSync(() => {
-    const checked = new Set<number>();
+    const accountByCard = new Map<number, string>();
     for (const row of rows) {
-      if (!checked.has(row.card_id)) {
-        findCard(db, row.card_id); // recusa compra de um cartão que não existe
-        checked.add(row.card_id);
+      let account = accountByCard.get(row.card_id);
+      if (!account) {
+        account = resolveCardAccount(findCard(db, row.card_id).account); // recusa compra de um cartão que não existe
+        accountByCard.set(row.card_id, account);
       }
-      insertPurchase(db, row);
+      insertPurchase(db, row, account);
     }
   });
 }
@@ -258,11 +267,12 @@ export async function reconcileCardTransactions(): Promise<number> {
       const [card] = db.getAllSync<CreditCardRow>("SELECT * FROM credit_cards WHERE id = ?", purchase.card_id);
       if (!card) continue;
       const expense = db.runSync(
-        "INSERT INTO transactions (amount, date, description, type, category_id) VALUES (?, ?, ?, 'expense', ?)",
+        "INSERT INTO transactions (amount, date, description, type, category_id, account) VALUES (?, ?, ?, 'expense', ?, ?)",
         purchase.amount,
         purchase.date,
         purchaseExpenseDescription(purchase),
         purchase.category,
+        resolveCardAccount(card.account),
       );
       db.runSync("UPDATE card_purchases SET transaction_id = ? WHERE id = ?", expense.lastInsertRowId, purchase.id);
       changed++;

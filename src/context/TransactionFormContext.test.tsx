@@ -131,6 +131,7 @@ describe("TransactionFormProvider", () => {
         description: "Salário",
         type: "income",
         category: "Salário",
+        account: "Conta principal",
       },
       { kind: "single" },
     );

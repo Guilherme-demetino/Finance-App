@@ -410,5 +410,17 @@
       "Se a despesa era de uma compra no cartão, a compra some junto e volta se a exclusão for desfeita.",
       "Isso vale só para excluir uma transação por vez: apagar uma série inteira, um mês inteiro ou os dados do app continua sendo definitivo, sem passar pela Lixeira."
     ]
+  },
+  {
+    "id": 46,
+    "date": "22/09/2026",
+    "title": "Múltiplas contas/carteiras",
+    "items": [
+      "Agora dá para cadastrar mais de uma conta (ex: carteira, poupança, outro banco) e escolher qual delas recebe cada transação, direto no formulário de receita/despesa.",
+      "No Início, quando há mais de uma conta em uso, aparece \"Saldo por conta\" com o saldo do mês de cada uma, separado.",
+      "Cada cartão de crédito agora tem a conta que paga a fatura: as despesas das compras entram nela automaticamente. Mudar a conta do cartão vale só para compras novas.",
+      "No Histórico, a conta aparece junto da data de cada transação.",
+      "Dívidas quitadas, extratos importados e transações de antes desta versão entram/ficam na \"Conta principal\". Ainda não dá para transferir dinheiro entre contas nem escolher a conta ao quitar uma dívida ou importar um extrato — se fizer falta, é só pedir."
+    ]
   }
 ]
