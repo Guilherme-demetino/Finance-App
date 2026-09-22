@@ -9,6 +9,7 @@ import {
   monthsUntilDeadline,
   savingsProgress,
 } from "../../utils/savings";
+import { describeOutlook, expectedSavingsPercent, savingsOutlook } from "../../utils/savingsOutlook";
 import { ConfirmModal } from "../ConfirmModal";
 import { GoalEditButton } from "../GoalEditButton";
 import { Text, makeStyles, useTheme } from "../../theme";
@@ -20,6 +21,8 @@ interface SavingsGoalsCardProps {
   onOpenDeposit: (goal: SavingsGoalRow) => void;
   onEdit: (goal: SavingsGoalRow) => void;
   onDelete: (id: number) => void;
+  /** O dia de "hoje" para a projeção (nos testes é fixo). */
+  today?: Date;
 }
 
 const useIconButtonStyles = makeStyles(({ colors }) => ({
@@ -42,11 +45,17 @@ export function SavingsGoalsCard({
   onOpenDeposit,
   onEdit,
   onDelete,
+  today,
 }: SavingsGoalsCardProps) {
   const { colors } = useTheme();
   const { button: iconButtonStyle } = useIconButtonStyles();
   const styles = useDashboardStyles();
   const [goalToDelete, setGoalToDelete] = useState<SavingsGoalRow | null>(null);
+
+  // Resumo de todas as metas juntas (só faz sentido com mais de uma).
+  const totalSaved = goals.reduce((sum, goal) => sum + Math.min(goal.saved_amount, goal.target_amount), 0);
+  const totalTarget = goals.reduce((sum, goal) => sum + goal.target_amount, 0);
+  const totalPercent = savingsProgress(totalSaved, totalTarget);
 
   return (
     <View style={styles.chartCard}>
@@ -74,6 +83,17 @@ export function SavingsGoalsCard({
           <Ionicons name="add" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
+
+      {!isLoading && goals.length > 1 ? (
+        <View style={{ marginTop: 12 }} accessibilityLabel={`Todas as metas: ${Math.floor(totalPercent)}% guardado`}>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 6 }}>
+            Todas as metas: {formatCurrency(totalSaved)} de {formatCurrency(totalTarget)} ({Math.floor(totalPercent)}%)
+          </Text>
+          <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.surfaceAlt, overflow: "hidden" }}>
+            <View style={{ height: "100%", width: `${totalPercent}%`, backgroundColor: colors.accent, borderRadius: 3 }} />
+          </View>
+        </View>
+      ) : null}
 
       <View style={{ marginTop: 12, gap: 20 }}>
         {isLoading ? null : goals.length === 0 ? (
@@ -118,6 +138,10 @@ export function SavingsGoalsCard({
               !isDone && goal.deadline
                 ? monthsUntilDeadline(goal.deadline).isOverdue
                 : false;
+            const outlook = describeOutlook(savingsOutlook(goal, today));
+            const expected = isDone ? null : expectedSavingsPercent(goal, today);
+            const toneColor =
+              outlook?.tone === "good" ? colors.income : outlook?.tone === "bad" ? colors.expense : colors.textMuted;
 
             return (
               <View key={goal.id}>
@@ -166,22 +190,38 @@ export function SavingsGoalsCard({
                   </View>
                 </View>
 
-                <View
-                  style={{
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: colors.surfaceAlt,
-                    overflow: "hidden",
-                  }}
-                >
+                <View style={{ justifyContent: "center" }}>
                   <View
                     style={{
-                      height: "100%",
-                      width: `${percent}%`,
-                      backgroundColor: barColor,
+                      height: 8,
                       borderRadius: 4,
+                      backgroundColor: colors.surfaceAlt,
+                      overflow: "hidden",
                     }}
-                  />
+                  >
+                    <View
+                      style={{
+                        height: "100%",
+                        width: `${percent}%`,
+                        backgroundColor: barColor,
+                        borderRadius: 4,
+                      }}
+                    />
+                  </View>
+                  {expected !== null ? (
+                    <View
+                      accessibilityLabel={`Esperado até hoje para chegar no prazo: ${Math.round(expected)}%`}
+                      style={{
+                        position: "absolute",
+                        left: `${expected}%`,
+                        width: 2,
+                        height: 14,
+                        marginLeft: -1,
+                        borderRadius: 1,
+                        backgroundColor: colors.textPrimary,
+                      }}
+                    />
+                  ) : null}
                 </View>
 
                 <View
@@ -221,6 +261,15 @@ export function SavingsGoalsCard({
                     </Text>
                   ) : null}
                 </View>
+
+                {expected !== null ? (
+                  <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>
+                    A marca na barra é onde você deveria estar hoje para chegar no prazo ({Math.round(expected)}%).
+                  </Text>
+                ) : null}
+                {outlook ? (
+                  <Text style={{ color: toneColor, fontSize: 12, marginTop: 4, lineHeight: 17 }}>{outlook.text}</Text>
+                ) : null}
               </View>
             );
           })

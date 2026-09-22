@@ -89,7 +89,8 @@ function createTables(db: SQLite.SQLiteDatabase) {
         target_amount REAL NOT NULL,
         saved_amount REAL NOT NULL DEFAULT 0,
         deadline TEXT,
-        created_date TEXT NOT NULL
+        created_date TEXT NOT NULL,
+        start_amount REAL NOT NULL DEFAULT 0
       );
     `);
 
@@ -135,6 +136,13 @@ function createTables(db: SQLite.SQLiteDatabase) {
     db.runSync(
       "CREATE INDEX IF NOT EXISTS idx_card_purchases_card ON card_purchases(card_id, invoice_ref);",
     );
+
+    // Metas criadas antes da projeção não têm o valor inicial (começam em 0).
+    try {
+      db.runSync("ALTER TABLE savings_goals ADD COLUMN start_amount REAL NOT NULL DEFAULT 0");
+    } catch {
+      // Já existe (banco novo ou já atualizado).
+    }
 
     // Bancos criados antes de a compra no cartão virar despesa não têm a coluna que liga a compra à despesa.
     try {

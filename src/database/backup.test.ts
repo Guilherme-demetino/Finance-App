@@ -74,6 +74,7 @@ const SAMPLE: BackupData = {
       saved_amount: 800,
       deadline: "31/12/2026",
       created_date: "01/09/2026",
+      start_amount: 5,
     },
   ],
   creditCards: [{ id: 7, name: "Nubank", closing_day: 28, due_day: 5, credit_limit: 5000 }],
@@ -184,6 +185,16 @@ describe("backup do banco", () => {
     const descriptions = (await transactions.getAllTransactions()).map((t) => t.description);
     expect(descriptions).toContain("TV (1/2)");
     expect(descriptions).toContain("Mercado");
+  });
+
+  it("backup antigo (metas sem o valor inicial): a meta volta com o valor inicial 0", async () => {
+    const { backup, sqlite } = await loadModules();
+    await sqlite.getDatabase();
+    const old = SAMPLE.savingsGoals.map((g) => ({ ...g, start_amount: undefined })) as unknown as BackupData["savingsGoals"];
+
+    await backup.replaceAllData({ ...SAMPLE, savingsGoals: old });
+
+    expect((await backup.readBackupData()).savingsGoals.map((g) => g.start_amount)).toEqual([0]);
   });
 
   it("uma falha nos cartões também desfaz a restauração inteira", async () => {

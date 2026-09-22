@@ -17,6 +17,24 @@ async function load() {
   };
 }
 
+describe("atualizar um banco que já tinha metas (sem o valor inicial)", () => {
+  it("a coluna nova é criada e as metas antigas ficam com valor inicial 0", async () => {
+    jest.resetModules();
+    const db = (await createSqlJsDatabase()) as unknown as { runSync: (sql: string, ...params: unknown[]) => unknown };
+    mockState.db = db;
+    db.runSync(
+      "CREATE TABLE savings_goals (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, target_amount REAL NOT NULL, saved_amount REAL NOT NULL DEFAULT 0, deadline TEXT, created_date TEXT NOT NULL)",
+    );
+    db.runSync("INSERT INTO savings_goals (name, target_amount, saved_amount, deadline, created_date) VALUES (?, ?, ?, ?, ?)", "Antiga", 1000, 250, null, "01/06/2026");
+
+    const savings = jest.requireActual<typeof import("./savingsGoals")>("./savingsGoals");
+
+    expect(await savings.getAllSavingsGoals()).toEqual([
+      { id: 1, name: "Antiga", target_amount: 1000, saved_amount: 250, deadline: null, created_date: "01/06/2026", start_amount: 0 },
+    ]);
+  });
+});
+
 describe("editar meta de economia", () => {
   it("muda nome, valor, quanto já foi guardado e prazo, e mantém a data de criação", async () => {
     const { savings } = await load();
@@ -33,7 +51,28 @@ describe("editar meta de economia", () => {
       saved_amount: 1500.25,
       deadline: "30/06/2027",
       created_date: "01/09/2026",
+      start_amount: 1000, // o que já estava guardado ao criar a meta fica como está
     });
+  });
+
+  it("o valor guardado na criação vira o valor inicial; guardar depois não muda o inicial", async () => {
+    const { savings } = await load();
+    await savings.createSavingsGoal({ name: "Reserva", targetAmount: 5000, savedAmount: 800, deadline: null, createdDate: "01/09/2026" });
+    const [goal] = await savings.getAllSavingsGoals();
+
+    await savings.updateSavedAmount(goal.id, 1300);
+
+    expect((await savings.getAllSavingsGoals())[0]).toMatchObject({ saved_amount: 1300, start_amount: 800 });
+  });
+
+  it("corrigir o valor guardado para menos que o inicial leva o inicial junto", async () => {
+    const { savings } = await load();
+    await savings.createSavingsGoal({ name: "Reserva", targetAmount: 5000, savedAmount: 800, deadline: null, createdDate: "01/09/2026" });
+    const [goal] = await savings.getAllSavingsGoals();
+
+    await savings.updateSavingsGoal(goal.id, { name: "Reserva", targetAmount: 5000, savedAmount: 300, deadline: null });
+
+    expect((await savings.getAllSavingsGoals())[0]).toMatchObject({ saved_amount: 300, start_amount: 300 });
   });
 
   it("dá para tirar o prazo (deadline nulo)", async () => {

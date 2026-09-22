@@ -114,6 +114,8 @@ export interface SavingsGoalRow {
   saved_amount: number;
   deadline: string | null; // DD/MM/AAAA
   created_date: string; // DD/MM/AAAA
+  /** Quanto já estava guardado quando a meta foi criada: não conta como ritmo na projeção. */
+  start_amount: number;
 }
 
 /** Rascunhos do onboarding — ficam só em memória até o usuário concluir. */

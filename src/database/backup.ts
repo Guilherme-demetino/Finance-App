@@ -35,7 +35,7 @@ export async function readBackupData(): Promise<BackupData> {
     "SELECT id, person, amount, type, description, date, status, settled_date, due_date FROM debts ORDER BY id",
   );
   const savingsGoals = await db.getAllAsync<SavingsGoalRow>(
-    "SELECT id, name, target_amount, saved_amount, deadline, created_date FROM savings_goals ORDER BY id",
+    "SELECT id, name, target_amount, saved_amount, deadline, created_date, start_amount FROM savings_goals ORDER BY id",
   );
 
   const creditCards = await db.getAllAsync<CreditCardRow>(
@@ -141,13 +141,14 @@ export async function replaceAllData(data: BackupData): Promise<void> {
     }
     for (const g of data.savingsGoals) {
       db.runSync(
-        "INSERT INTO savings_goals (id, name, target_amount, saved_amount, deadline, created_date) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO savings_goals (id, name, target_amount, saved_amount, deadline, created_date, start_amount) VALUES (?, ?, ?, ?, ?, ?, ?)",
         g.id,
         g.name,
         g.target_amount,
         g.saved_amount,
         g.deadline,
         g.created_date,
+        g.start_amount ?? 0, // backups antigos não têm o valor inicial
       );
     }
 

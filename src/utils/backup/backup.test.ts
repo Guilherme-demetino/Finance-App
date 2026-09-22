@@ -49,6 +49,7 @@ const DATA: BackupData = {
       saved_amount: 10,
       deadline: null,
       created_date: "01/09/2026",
+      start_amount: 0,
     },
   ],
   creditCards: [{ id: 1, name: "Nubank", closing_day: 28, due_day: 5, credit_limit: 5000 }],
@@ -154,6 +155,16 @@ describe("parseBackup", () => {
       ok: false,
       error: "Backup inválido: dívidas, item 1 (valor).",
     });
+  });
+
+  it("aceita backup de metas sem o valor inicial (versão antiga) e recusa valor inicial inválido", () => {
+    const old = raw();
+    delete old.data.savingsGoals[0].start_amount;
+    expect(parse(old).ok).toBe(true);
+
+    const bad = raw();
+    bad.data.savingsGoals[0].start_amount = "muito";
+    expect(parse(bad)).toEqual({ ok: false, error: "Backup inválido: metas de economia, item 1 (valor inicial)." });
   });
 
   it("aceita backup da versão 1, sem cartões: as listas de cartão leem como vazias", () => {

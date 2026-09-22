@@ -19,20 +19,23 @@ export interface SavingsGoalInput {
 export async function createSavingsGoal(data: SavingsGoalInput): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
-    "INSERT INTO savings_goals (name, target_amount, saved_amount, deadline, created_date) VALUES (?, ?, ?, ?, ?)",
-    [data.name, data.targetAmount, data.savedAmount, data.deadline, data.createdDate],
+    "INSERT INTO savings_goals (name, target_amount, saved_amount, deadline, created_date, start_amount) VALUES (?, ?, ?, ?, ?, ?)",
+    [data.name, data.targetAmount, data.savedAmount, data.deadline, data.createdDate, data.savedAmount],
   );
 }
 
-/** Muda os dados de uma meta (a data de criação fica como está). */
+/**
+ * Muda os dados de uma meta (a data de criação fica como está). Se o valor guardado for corrigido para menos que o
+ * valor inicial, o inicial acompanha (senão o ritmo ficaria negativo).
+ */
 export async function updateSavingsGoal(
   id: number,
   data: Omit<SavingsGoalInput, "createdDate">,
 ): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
-    "UPDATE savings_goals SET name = ?, target_amount = ?, saved_amount = ?, deadline = ? WHERE id = ?",
-    [data.name, data.targetAmount, data.savedAmount, data.deadline, id],
+    "UPDATE savings_goals SET name = ?, target_amount = ?, saved_amount = ?, deadline = ?, start_amount = MIN(start_amount, ?) WHERE id = ?",
+    [data.name, data.targetAmount, data.savedAmount, data.deadline, data.savedAmount, id],
   );
 }
 

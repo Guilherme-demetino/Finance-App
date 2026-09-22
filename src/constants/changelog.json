@@ -366,5 +366,16 @@
       "O pop-up avisa quantas novidades são e a lista rola, usando mais espaço da tela.",
       "Na tela Atualizações, antes de baixar, agora aparecem até as 15 últimas novidades (eram 6)."
     ]
+  },
+  {
+    "id": 42,
+    "date": "21/09/2026",
+    "title": "Projeção nas metas de economia",
+    "items": [
+      "Cada meta de economia agora mostra o ritmo atual (quanto você guarda por mês, em média, desde que criou a meta) e em que mês ela será atingida se você continuar assim.",
+      "A projeção diz se você chega dentro do prazo (verde) ou quantos meses depois dele (vermelho). Metas com menos de 14 dias, ou sem nada guardado desde a criação, mostram um aviso em vez de uma data.",
+      "Na barra de progresso há uma marca com onde você deveria estar hoje para chegar no prazo em linha reta, para ver de relance se está adiantado ou atrasado. Com duas ou mais metas, aparece também uma barra com o total de todas juntas.",
+      "O valor que já estava guardado quando a meta foi criada não conta como ritmo. Metas criadas antes desta versão consideram o valor inicial como 0, então se você já começou com dinheiro guardado a projeção pode ficar otimista: ela corrige sozinha conforme o tempo passa."
+    ]
   }
 ]

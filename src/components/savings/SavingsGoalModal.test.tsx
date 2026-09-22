@@ -28,6 +28,7 @@ const GOAL: SavingsGoalRow = {
   saved_amount: 1250.5,
   deadline: "31/12/2026",
   created_date: "01/09/2026",
+  start_amount: 0,
 };
 
 type Props = React.ComponentProps<typeof SavingsGoalModal>;

@@ -24,6 +24,7 @@ const goal = (over: Partial<SavingsGoalRow> = {}): SavingsGoalRow => ({
   saved_amount: 1000,
   deadline: null,
   created_date: "01/09/2026",
+  start_amount: 0,
   ...over,
 });
 
@@ -127,5 +128,73 @@ describe("cartão Metas de Economia", () => {
     expect(textOf(tree)).not.toContain("Editar");
     act(() => byText(tree, "Nenhuma meta de economia").props.onPress());
     expect(props.onOpenCreate).toHaveBeenCalledTimes(1);
+  });
+
+  describe("ritmo e projeção", () => {
+    // 01/03/2026: 59 dias depois da criação (01/01).
+    const TODAY = new Date(2026, 2, 1);
+    const started = (over: Partial<SavingsGoalRow> = {}) => goal({ created_date: "01/01/2026", ...over });
+    const markLabels = (tree: ReactTestRenderer) =>
+      tree.root
+        .findAll((node) => typeof node.type === "string" && String(node.props.accessibilityLabel ?? "").startsWith("Esperado até hoje"))
+        .map((node) => node.props.accessibilityLabel as string);
+
+    it("mostra o ritmo e quando a meta será atingida, dentro do prazo", () => {
+      const { tree } = mount([started({ deadline: "31/12/2026" })], { today: TODAY });
+
+      expect(textOf(tree)).toMatch(/No ritmo atual \(R\$ 5\d\d,\d\d\/mês\) você chega lá em out\/2026, dentro do prazo\./);
+    });
+
+    it("avisa quando o ritmo atual passa do prazo", () => {
+      const { tree } = mount([started({ deadline: "31/07/2026" })], { today: TODAY });
+
+      expect(textOf(tree)).toMatch(/você chega lá em out\/2026, [23] meses depois do prazo\./);
+    });
+
+    it("põe na barra a marca de onde deveria estar hoje para chegar no prazo", () => {
+      const { tree } = mount([started({ deadline: "31/12/2026" })], { today: TODAY });
+
+      expect(markLabels(tree)).toEqual(["Esperado até hoje para chegar no prazo: 16%"]);
+      expect(textOf(tree)).toContain("A marca na barra é onde você deveria estar hoje para chegar no prazo (16%).");
+    });
+
+    it("sem prazo: projeta, mas não há marca na barra", () => {
+      const { tree } = mount([started()], { today: TODAY });
+
+      expect(markLabels(tree)).toEqual([]);
+      expect(textOf(tree)).toMatch(/você chega lá em out\/2026\./);
+    });
+
+    it("meta nova demais: explica que a projeção aparece depois de 14 dias", () => {
+      const { tree } = mount([goal({ created_date: "25/02/2026" })], { today: TODAY });
+
+      expect(textOf(tree)).toContain("A projeção aparece depois de 14 dias de meta (faltam 10 dias).");
+    });
+
+    it("sem depósitos desde a criação: convida a guardar", () => {
+      const { tree } = mount([started({ saved_amount: 0 })], { today: TODAY });
+
+      expect(textOf(tree)).toContain("Ainda sem depósitos");
+    });
+
+    it("meta alcançada não tem projeção nem marca", () => {
+      const { tree } = mount([started({ saved_amount: 5000, deadline: "31/12/2026" })], { today: TODAY });
+
+      expect(textOf(tree)).toContain("Meta alcançada");
+      expect(textOf(tree)).not.toContain("No ritmo atual");
+      expect(markLabels(tree)).toEqual([]);
+    });
+
+    it("com várias metas mostra o total guardado de todas juntas", () => {
+      const { tree } = mount([started({ id: 1, saved_amount: 1000, target_amount: 5000 }), started({ id: 2, name: "Carro", saved_amount: 9000, target_amount: 10000 })], { today: TODAY });
+
+      expect(textOf(tree)).toContain("Todas as metas: R$ 10.000,00 de R$ 15.000,00 (66%)");
+    });
+
+    it("com uma meta só, sem o resumo geral", () => {
+      const { tree } = mount([started()], { today: TODAY });
+
+      expect(textOf(tree)).not.toContain("Todas as metas");
+    });
   });
 });

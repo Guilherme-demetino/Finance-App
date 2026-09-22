@@ -222,6 +222,8 @@ function readData(raw: unknown): BackupData {
     if (!isNumber(r.saved_amount)) return "valor guardado";
     if (!isNullableDate(r.deadline)) return "prazo";
     if (!isDate(r.created_date)) return "data de criação";
+    // Backups antigos não têm o valor inicial (a meta começa em 0).
+    if (r.start_amount != null && !isNumber(r.start_amount)) return "valor inicial";
     return null;
   });
 
