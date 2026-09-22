@@ -34,6 +34,7 @@ function mount(over: Partial<Props> = {}) {
     visible: true,
     value: EMPTY_HISTORY_FILTERS,
     categories: ["Alimentação", "Lazer", "Moradia"],
+    accounts: ["Carteira", "Poupança"],
     onApply: jest.fn(),
     onClose: jest.fn(),
     ...over,
@@ -106,7 +107,7 @@ describe("filtros avançados: abrir", () => {
 
   it("abre já preenchido com os filtros em uso", () => {
     const { tree } = mount({
-      value: { minAmount: 1250.5, maxAmount: 3000, categories: ["Lazer"], period: { from: "01/08/2026", to: "15/09/2026" } },
+      value: { minAmount: 1250.5, maxAmount: 3000, categories: ["Lazer"], accounts: [], period: { from: "01/08/2026", to: "15/09/2026" } },
     });
 
     expect(field(tree, "Valor mínimo").props.value).toBe("1.250,50");
@@ -129,7 +130,7 @@ describe("filtros avançados: faixa de valor", () => {
     expect(field(tree, "Valor máximo").props.value).toBe("1.250,50");
     press(tree, "Aplicar filtros");
 
-    expect(applied(props)).toEqual({ minAmount: 50, maxAmount: 1250.5, categories: [], period: null });
+    expect(applied(props)).toEqual({ minAmount: 50, maxAmount: 1250.5, categories: [], accounts: [], period: null });
   });
 
   it("só o mínimo: o máximo continua sem limite", () => {
@@ -183,6 +184,37 @@ describe("filtros avançados: várias categorias", () => {
     const { tree } = mount({ categories: [] });
 
     expect(textOf(tree)).toContain("Nenhuma categoria cadastrada ainda.");
+  });
+});
+
+describe("filtros avançados: várias contas", () => {
+  it("marca e desmarca quantas quiser e aplica todas", () => {
+    const { tree, props } = mount();
+
+    press(tree, "Conta Carteira");
+    press(tree, "Conta Poupança");
+    press(tree, "Conta Poupança"); // desmarca
+    expect(button(tree, "Conta Carteira").props.accessibilityState.checked).toBe(true);
+    expect(button(tree, "Conta Poupança").props.accessibilityState.checked).toBe(false);
+    press(tree, "Aplicar filtros");
+
+    expect(applied(props).accounts).toEqual(["Carteira"]);
+  });
+
+  it("'Desmarcar' limpa a seleção", () => {
+    const { tree } = mount({ value: { ...EMPTY_HISTORY_FILTERS, accounts: ["Carteira", "Poupança"] } });
+    expect(textOf(tree)).toContain("Desmarcar (2)");
+
+    press(tree, "Desmarcar todas as contas");
+
+    expect(button(tree, "Conta Carteira").props.accessibilityState.checked).toBe(false);
+    expect(hasButton(tree, "Desmarcar todas as contas")).toBe(false);
+  });
+
+  it("sem contas cadastradas, avisa", () => {
+    const { tree } = mount({ accounts: [] });
+
+    expect(textOf(tree)).toContain("Nenhuma conta cadastrada ainda.");
   });
 });
 
@@ -257,13 +289,14 @@ describe("filtros avançados: botões", () => {
       minAmount: null,
       maxAmount: 200,
       categories: ["Lazer"],
+      accounts: [],
       period: presetRange("thisYear"),
     });
   });
 
   it("'Limpar tudo' zera o formulário (sem aplicar até você confirmar)", () => {
     const { tree, props } = mount({
-      value: { minAmount: 10, maxAmount: 20, categories: ["Lazer"], period: { from: "01/09/2026", to: "10/09/2026" } },
+      value: { minAmount: 10, maxAmount: 20, categories: ["Lazer"], accounts: [], period: { from: "01/09/2026", to: "10/09/2026" } },
     });
 
     press(tree, "Limpar tudo");

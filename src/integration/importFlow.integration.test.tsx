@@ -169,7 +169,7 @@ describe("importar extrato (menu do perfil)", () => {
     expect(await getAllTransactions()).toHaveLength(0); // ainda nada gravado
 
     await act(async () => {
-      await seen.transfer.confirmImport();
+      await seen.transfer.confirmImport("Conta principal");
     });
     await settle();
 
@@ -185,11 +185,25 @@ describe("importar extrato (menu do perfil)", () => {
     expect(seen.transfer.pendingImport).toBeNull();
   });
 
+  it("a conta escolhida na confirmação vale para o lote inteiro", async () => {
+    await mountApp();
+    await pickForImport(bytesOf(NUBANK_CSV()));
+
+    await act(async () => {
+      await seen.transfer.confirmImport("Poupança");
+    });
+    await settle();
+
+    const stored = await getAllTransactions();
+    expect(stored).toHaveLength(2);
+    expect(stored.every((t) => t.account === "Poupança")).toBe(true);
+  });
+
   it("importar o mesmo arquivo de novo não duplica", async () => {
     await mountApp();
     await pickForImport(bytesOf(NUBANK_CSV()));
     await act(async () => {
-      await seen.transfer.confirmImport();
+      await seen.transfer.confirmImport("Conta principal");
     });
     await settle();
 

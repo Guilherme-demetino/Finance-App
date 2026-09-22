@@ -20,7 +20,11 @@ interface DebtsContextValue {
   isDebtModalOpen: boolean;
   setIsDebtModalOpen: (value: boolean) => void;
   handleAddDebt: (data: DebtInput) => Promise<void>;
-  handleSettleDebt: (debt: DebtRow) => Promise<void>;
+  /** A dívida esperando a escolha da conta antes de quitar de fato (ver requestSettleDebt). */
+  pendingSettleDebt: DebtRow | null;
+  requestSettleDebt: (debt: DebtRow) => void;
+  cancelSettleDebt: () => void;
+  handleSettleDebt: (debt: DebtRow, account: string) => Promise<void>;
   handleDeleteDebt: (id: number) => Promise<void>;
 }
 
@@ -31,7 +35,7 @@ const DebtsContext = createContext<DebtsContextValue | null>(null);
  * da quitação (não afeta meses já fechados). Fica fora do provider para o
  * React Compiler conseguir otimizá-lo (ele não aceita condicionais dentro de try).
  */
-function buildSettlementTransaction(debt: DebtRow, date: string) {
+function buildSettlementTransaction(debt: DebtRow, date: string, account: string) {
   const isLent = debt.type === "lent";
   const type: TransactionType = isLent ? "income" : "expense";
   return {
@@ -42,6 +46,7 @@ function buildSettlementTransaction(debt: DebtRow, date: string) {
       : `Pagamento a ${debt.person}`,
     type,
     category: "Empréstimos",
+    account,
   };
 }
 
@@ -61,6 +66,7 @@ export function DebtsProvider({ children }: { children: ReactNode }) {
     removeDebt,
   } = useDebts();
   const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
+  const [pendingSettleDebt, setPendingSettleDebt] = useState<DebtRow | null>(null);
 
   const handleAddDebt = async (data: DebtInput) => {
     try {
@@ -72,13 +78,16 @@ export function DebtsProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const handleSettleDebt = async (debt: DebtRow) => {
+  const requestSettleDebt = (debt: DebtRow) => setPendingSettleDebt(debt);
+  const cancelSettleDebt = () => setPendingSettleDebt(null);
+
+  const handleSettleDebt = async (debt: DebtRow, account: string) => {
     try {
       const todayStr = `${currentDay}/${currentMonthNum}/${currentYearStr}`;
       await settleDebt(debt.id, todayStr);
 
       // Só a partir de agora o valor entra no saldo.
-      await saveTransaction(null, buildSettlementTransaction(debt, todayStr));
+      await saveTransaction(null, buildSettlementTransaction(debt, todayStr, account));
 
       showAlert("Sucesso", "Dívida quitada e registrada no seu saldo.");
     } catch (error) {
@@ -106,6 +115,9 @@ export function DebtsProvider({ children }: { children: ReactNode }) {
     isDebtModalOpen,
     setIsDebtModalOpen,
     handleAddDebt,
+    pendingSettleDebt,
+    requestSettleDebt,
+    cancelSettleDebt,
     handleSettleDebt,
     handleDeleteDebt,
   };

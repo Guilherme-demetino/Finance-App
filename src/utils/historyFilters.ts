@@ -19,6 +19,8 @@ export interface HistoryFilters {
   maxAmount: number | null;
   /** Nomes das categorias marcadas (qualquer uma delas serve); vazio = todas. */
   categories: string[];
+  /** Nomes das contas marcadas (qualquer uma delas serve); vazio = todas. Independente da conta em foco no topo do app. */
+  accounts: string[];
   /** Período personalizado; null = o mês selecionado no topo do app. */
   period: DateRange | null;
 }
@@ -27,13 +29,14 @@ export const EMPTY_HISTORY_FILTERS: HistoryFilters = {
   minAmount: null,
   maxAmount: null,
   categories: [],
+  accounts: [],
   period: null,
 };
 
 // Quantos anos um período pode ter (cada ano é uma consulta ao banco).
 export const MAX_PERIOD_YEARS = 10;
 
-export type FilterKind = "value" | "categories" | "period";
+export type FilterKind = "value" | "categories" | "accounts" | "period";
 
 const hasValue = (f: HistoryFilters) => f.minAmount !== null || f.maxAmount !== null;
 
@@ -41,16 +44,18 @@ export function activeFilterKinds(filters: HistoryFilters): FilterKind[] {
   const kinds: FilterKind[] = [];
   if (hasValue(filters)) kinds.push("value");
   if (filters.categories.length > 0) kinds.push("categories");
+  if (filters.accounts.length > 0) kinds.push("accounts");
   if (filters.period !== null) kinds.push("period");
   return kinds;
 }
 
 export const hasActiveFilters = (filters: HistoryFilters): boolean => activeFilterKinds(filters).length > 0;
 
-/** Tira um dos três filtros, mantendo os outros. */
+/** Tira um dos filtros, mantendo os outros. */
 export function clearFilter(filters: HistoryFilters, kind: FilterKind): HistoryFilters {
   if (kind === "value") return { ...filters, minAmount: null, maxAmount: null };
   if (kind === "categories") return { ...filters, categories: [] };
+  if (kind === "accounts") return { ...filters, accounts: [] };
   return { ...filters, period: null };
 }
 
@@ -88,6 +93,7 @@ export interface FilterableTransaction {
   amount: number;
   date: string;
   category?: string;
+  account?: string;
 }
 
 const normalizeCategory = (name: string | undefined) => (name ?? "").trim().toLowerCase();
@@ -109,6 +115,11 @@ export function matchesFilters(item: FilterableTransaction, filters: HistoryFilt
   if (filters.categories.length > 0) {
     const wanted = new Set(filters.categories.map(normalizeCategory));
     if (!wanted.has(normalizeCategory(item.category))) return false;
+  }
+
+  if (filters.accounts.length > 0) {
+    const wanted = new Set(filters.accounts.map(normalizeCategory));
+    if (!wanted.has(normalizeCategory(item.account))) return false;
   }
 
   if (filters.period !== null && !isDateInRange(item.date, filters.period)) return false;
@@ -141,7 +152,7 @@ export interface FilterChip {
 /** Uma etiqueta por filtro ativo, para mostrar sob a busca. */
 export function describeFilters(filters: HistoryFilters): FilterChip[] {
   const chips: FilterChip[] = [];
-  const { minAmount, maxAmount, categories, period } = filters;
+  const { minAmount, maxAmount, categories, accounts, period } = filters;
 
   if (minAmount !== null && maxAmount !== null) {
     chips.push({ kind: "value", label: `Valor: ${formatCurrency(minAmount)} a ${formatCurrency(maxAmount)}` });
@@ -155,6 +166,13 @@ export function describeFilters(filters: HistoryFilters): FilterChip[] {
     chips.push({
       kind: "categories",
       label: categories.length <= 2 ? `Categorias: ${categories.join(", ")}` : `${categories.length} categorias`,
+    });
+  }
+
+  if (accounts.length > 0) {
+    chips.push({
+      kind: "accounts",
+      label: accounts.length <= 2 ? `Contas: ${accounts.join(", ")}` : `${accounts.length} contas`,
     });
   }
 

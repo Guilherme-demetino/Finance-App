@@ -237,12 +237,15 @@ describe("DashboardProviders: handlers movidos", () => {
     const { seen } = setup();
 
     await act(async () => {
-      await seen.debts.handleSettleDebt({
-        id: 3,
-        type: "lent",
-        person: "Bia",
-        amount: 50,
-      } as never);
+      await seen.debts.handleSettleDebt(
+        {
+          id: 3,
+          type: "lent",
+          person: "Bia",
+          amount: 50,
+        } as never,
+        "Conta principal",
+      );
     });
 
     expect(mockSettleDebt).toHaveBeenCalledWith(3, todayString());
@@ -252,6 +255,7 @@ describe("DashboardProviders: handlers movidos", () => {
       description: "Recebimento de Bia",
       type: "income",
       category: "Empréstimos",
+      account: "Conta principal",
     });
     expect(seen.alertState.alertMessage).toBe(
       "Dívida quitada e registrada no seu saldo.",
@@ -264,12 +268,15 @@ describe("DashboardProviders: handlers movidos", () => {
     const { seen } = setup();
 
     await act(async () => {
-      await seen.debts.handleSettleDebt({
-        id: 4,
-        type: "borrowed",
-        person: "Caio",
-        amount: 20,
-      } as never);
+      await seen.debts.handleSettleDebt(
+        {
+          id: 4,
+          type: "borrowed",
+          person: "Caio",
+          amount: 20,
+        } as never,
+        "Conta principal",
+      );
     });
 
     expect(mockSaveTransaction).toHaveBeenCalledWith(

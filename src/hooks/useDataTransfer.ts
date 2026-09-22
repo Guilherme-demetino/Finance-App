@@ -349,13 +349,13 @@ export function useDataTransfer() {
     }
   };
 
-  const confirmImport = async () => {
+  const confirmImport = async (account: string) => {
     const plan = pendingImport;
     setPendingImport(null);
     if (!plan) return;
 
     try {
-      await importTransactions(plan.toImport);
+      await importTransactions(plan.toImport.map((row) => ({ ...row, account })));
       await refreshTransactions();
       showAlert(
         "Sucesso",

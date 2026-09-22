@@ -432,5 +432,16 @@
       "Escolher uma conta ali passa a valer no painel inteiro: saldo, resumo, projeção do mês, gráfico anual, gastos por categoria no Orçamento, comparativo com o mês anterior e a lista do Histórico (incluindo período personalizado) mostram só aquela conta.",
       "\"Todas as contas\" continua disponível para ver tudo somado, como era antes."
     ]
+  },
+  {
+    "id": 48,
+    "date": "22/09/2026",
+    "title": "Contas: gerenciar, dívidas, extrato e filtro no Histórico",
+    "items": [
+      "Nova tela \"Contas\" no menu do perfil: lista as contas cadastradas e dá para criar ou excluir por lá, sem precisar abrir o formulário de transação.",
+      "Ao quitar uma dívida (receber ou pagar), agora escolhe em qual conta entra o valor, antes de confirmar.",
+      "Ao importar um extrato, escolhe em qual conta entram as transações do arquivo inteiro, antes de confirmar.",
+      "Filtros avançados do Histórico ganham \"Contas\": marque quantas quiser para ver só as transações delas, independente da conta escolhida no topo do painel."
+    ]
   }
 ]

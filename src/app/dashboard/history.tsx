@@ -12,6 +12,7 @@ import { useAccountFilter } from "../../context/AccountFilterContext";
 import { useScrollY } from "../../context/DashboardUiContext";
 import { useTransactionsData } from "../../context/TransactionsContext";
 import { useTransactionActions } from "../../context/TransactionFormContext";
+import { useAccounts } from "../../hooks/useAccounts";
 import { useCategoryNames } from "../../hooks/useCategoryNames";
 import { useHistoryRange } from "../../hooks/useHistoryRange";
 import { useDashboardStyles } from "../../styles/dashboardStyles";
@@ -48,6 +49,7 @@ export default function DashboardHistoryScreen() {
   // O período personalizado busca direto no banco (todas as contas): a conta em foco é aplicada aqui.
   const range = useHistoryRange(filters.period, transactions);
   const registeredCategories = useCategoryNames(transactions);
+  const { options: registeredAccounts } = useAccounts();
   const periodSource = filters.period ? range.items : formattedTransactions;
   const source = selectedAccount
     ? periodSource.filter((item) => item.account === selectedAccount)
@@ -73,6 +75,15 @@ export default function DashboardHistoryScreen() {
         ...DEFAULT_EXPENSE_CATEGORIES,
         ...DEFAULT_INCOME_CATEGORIES,
       ]
+        .filter((name) => name.trim() !== "")
+        .map((name) => [name.trim().toLowerCase(), name.trim()] as const),
+    ).values(),
+  ].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  // As contas para marcar: as cadastradas e as que aparecem nas transações listadas (mesma lógica das categorias).
+  const accountOptions = [
+    ...new Map(
+      [...registeredAccounts.map((option) => option.name), ...source.map((item) => item.account ?? "")]
         .filter((name) => name.trim() !== "")
         .map((name) => [name.trim().toLowerCase(), name.trim()] as const),
     ).values(),
@@ -116,6 +127,7 @@ export default function DashboardHistoryScreen() {
         visible={isFiltersOpen}
         value={filters}
         categories={categoryOptions}
+        accounts={accountOptions}
         onApply={(next) => {
           setFilters(next);
           setIsFiltersOpen(false);

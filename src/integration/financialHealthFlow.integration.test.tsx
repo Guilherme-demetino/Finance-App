@@ -193,7 +193,7 @@ describe("saúde financeira no painel (providers + banco)", () => {
     expect(cardText()).toContain("Você deve R$ 5.000,00 (100% da receita do mês), 1 vencida.");
 
     await act(async () => {
-      await seen.debts.handleSettleDebt(seen.debts.pendingDebts[0]);
+      await seen.debts.handleSettleDebt(seen.debts.pendingDebts[0], "Conta principal");
     });
     await settle();
     expect(cardText()).not.toContain("Você deve");

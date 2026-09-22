@@ -20,6 +20,8 @@ interface AdvancedFiltersModalProps {
   value: HistoryFilters;
   /** Categorias que podem ser marcadas. */
   categories: string[];
+  /** Contas que podem ser marcadas. */
+  accounts: string[];
   onApply: (filters: HistoryFilters) => void;
   onClose: () => void;
 }
@@ -31,7 +33,7 @@ const sameCategory = (a: string, b: string) => a.trim().toLowerCase() === b.trim
 
 type CalendarTarget = "from" | "to" | null;
 
-function FiltersForm({ value, categories, onApply, onClose }: Omit<AdvancedFiltersModalProps, "visible">) {
+function FiltersForm({ value, categories, accounts, onApply, onClose }: Omit<AdvancedFiltersModalProps, "visible">) {
   const theme = useTheme();
   const { colors } = theme;
   const styles = useStyles();
@@ -42,12 +44,14 @@ function FiltersForm({ value, categories, onApply, onClose }: Omit<AdvancedFilte
   const [minText, setMinText] = useState(toFieldText(value.minAmount));
   const [maxText, setMaxText] = useState(toFieldText(value.maxAmount));
   const [selected, setSelected] = useState<string[]>(value.categories);
+  const [selectedAccounts, setSelectedAccounts] = useState<string[]>(value.accounts);
   const [calendarFor, setCalendarFor] = useState<CalendarTarget>(null);
 
   const draft: HistoryFilters = {
     minAmount: parseCurrencyInput(minText),
     maxAmount: parseCurrencyInput(maxText),
     categories: selected,
+    accounts: selectedAccounts,
     period: useCustomPeriod ? { from: from ?? "", to: to ?? "" } : null,
   };
   const error = validateFilters(draft);
@@ -59,10 +63,18 @@ function FiltersForm({ value, categories, onApply, onClose }: Omit<AdvancedFilte
     setMinText("");
     setMaxText("");
     setSelected([]);
+    setSelectedAccounts([]);
   };
 
   const toggleCategory = (name: string) =>
     setSelected((current) =>
+      current.some((item) => sameCategory(item, name))
+        ? current.filter((item) => !sameCategory(item, name))
+        : [...current, name],
+    );
+
+  const toggleAccount = (name: string) =>
+    setSelectedAccounts((current) =>
       current.some((item) => sameCategory(item, name))
         ? current.filter((item) => !sameCategory(item, name))
         : [...current, name],
@@ -199,6 +211,39 @@ function FiltersForm({ value, categories, onApply, onClose }: Omit<AdvancedFilte
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked }}
                       accessibilityLabel={`Categoria ${name}`}
+                    >
+                      {checked && <Ionicons name="checkmark" size={14} color={colors.accent} />}
+                      <Text style={[styles.chipText, checked && styles.chipTextChecked]}>{name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+            <Text style={styles.hint}>Marque quantas quiser: aparecem as transações de qualquer uma delas.</Text>
+
+            {/* ------------------------------------------------------------ contas */}
+            <View style={styles.sectionRow}>
+              <Text style={styles.section}>Contas</Text>
+              {selectedAccounts.length > 0 && (
+                <TouchableOpacity onPress={() => setSelectedAccounts([])} accessibilityRole="button" accessibilityLabel="Desmarcar todas as contas">
+                  <Text style={styles.link}>Desmarcar ({selectedAccounts.length})</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {accounts.length === 0 ? (
+              <Text style={styles.hint}>Nenhuma conta cadastrada ainda.</Text>
+            ) : (
+              <View style={styles.chips}>
+                {accounts.map((name) => {
+                  const checked = selectedAccounts.some((item) => sameCategory(item, name));
+                  return (
+                    <TouchableOpacity
+                      key={name}
+                      style={[styles.chip, checked && styles.chipChecked]}
+                      onPress={() => toggleAccount(name)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked }}
+                      accessibilityLabel={`Conta ${name}`}
                     >
                       {checked && <Ionicons name="checkmark" size={14} color={colors.accent} />}
                       <Text style={[styles.chipText, checked && styles.chipTextChecked]}>{name}</Text>

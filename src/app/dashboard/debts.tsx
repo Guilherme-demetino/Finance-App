@@ -18,7 +18,7 @@ export default function DashboardDebtsScreen() {
     totalToPay,
     isLoadingDebts,
     setIsDebtModalOpen,
-    handleSettleDebt,
+    requestSettleDebt,
     handleDeleteDebt,
   } = useDebtsContext();
   const { currentDay, currentMonthNum, currentYearStr } = useToday();
@@ -41,7 +41,7 @@ export default function DashboardDebtsScreen() {
         totalToPay={totalToPay}
         isLoading={isLoadingDebts}
         onOpenAddDebt={() => setIsDebtModalOpen(true)}
-        onSettleDebt={handleSettleDebt}
+        onSettleDebt={requestSettleDebt}
         onDeleteDebt={handleDeleteDebt}
         today={`${currentDay}/${currentMonthNum}/${currentYearStr}`}
       />

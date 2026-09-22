@@ -11,6 +11,7 @@ import { describeImportPlan } from "../../utils/statements/importSummary";
 import { AutoBackupModal } from "../profile/AutoBackupModal";
 import { BackupProtectionModal, RestorePasswordModal } from "../profile/BackupProtectionModals";
 import { ConfirmModal } from "../ConfirmModal";
+import { ImportAccountModal } from "../ImportAccountModal";
 import { EditNameModal, ProfileMenuModal } from "../profile/ProfileMenuModals";
 import { Text, useTheme } from "../../theme";
 
@@ -116,6 +117,10 @@ export function ProfileMenuContainer({
           onCloseMenu();
           router.push("/trash");
         }}
+        onOpenAccounts={() => {
+          onCloseMenu();
+          router.push("/accounts");
+        }}
         onWipeData={() => {
           onCloseMenu();
           setIsWipeConfirmOpen(true);
@@ -165,11 +170,9 @@ export function ProfileMenuContainer({
         onCancel={cancelRestorePassword}
       />
 
-      <ConfirmModal
+      <ImportAccountModal
         visible={pendingImport !== null}
-        title="Importar transações"
         message={pendingImport ? describeImportPlan(pendingImport) : ""}
-        confirmLabel="Importar"
         onCancel={() => setPendingImport(null)}
         onConfirm={confirmImport}
       />

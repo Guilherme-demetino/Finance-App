@@ -341,7 +341,7 @@ describe("extrato: o pagamento da fatura só vira despesa ao pagar na aba Cartõ
     expect(seen.transfer.pendingImport?.toImport.map((row) => row.description)).toEqual(["Compra no débito - Padaria"]);
     expect(seen.transfer.pendingImport?.cardPaymentsIgnored).toBe(1);
     await act(async () => {
-      await seen.transfer.confirmImport();
+      await seen.transfer.confirmImport("Conta principal");
     });
     await settle();
     expect((await getAllTransactions()).map((row) => row.description)).toEqual(["Compra no débito - Padaria"]);

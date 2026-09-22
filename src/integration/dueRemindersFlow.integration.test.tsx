@@ -181,7 +181,7 @@ describe("lembretes de vencimento (painel + banco + serviço)", () => {
     expect(fake.state.scheduled.size).toBe(1);
 
     await act(async () => {
-      await seen.debts.handleSettleDebt(seen.debts.pendingDebts[0]);
+      await seen.debts.handleSettleDebt(seen.debts.pendingDebts[0], "Conta principal");
     });
     await waitForSync();
 

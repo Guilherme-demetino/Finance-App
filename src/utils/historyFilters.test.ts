@@ -17,11 +17,18 @@ import {
 
 const filters = (over: Partial<HistoryFilters> = {}): HistoryFilters => ({ ...EMPTY_HISTORY_FILTERS, ...over });
 
-const tx = (amount: number, category = "Alimentação", date = "10/09/2026", type: "income" | "expense" = "expense") => ({
+const tx = (
+  amount: number,
+  category = "Alimentação",
+  date = "10/09/2026",
+  type: "income" | "expense" = "expense",
+  account?: string,
+) => ({
   amount,
   category,
   date,
   type,
+  account,
 });
 
 describe("filtros ativos", () => {
@@ -31,17 +38,18 @@ describe("filtros ativos", () => {
   });
 
   it("cada grupo conta uma vez, mesmo com valor mínimo e máximo juntos", () => {
-    const all = filters({ minAmount: 10, maxAmount: 20, categories: ["A", "B"], period: { from: "01/09/2026", to: "30/09/2026" } });
+    const all = filters({ minAmount: 10, maxAmount: 20, categories: ["A", "B"], accounts: ["Carteira"], period: { from: "01/09/2026", to: "30/09/2026" } });
 
-    expect(activeFilterKinds(all)).toEqual(["value", "categories", "period"]);
+    expect(activeFilterKinds(all)).toEqual(["value", "categories", "accounts", "period"]);
     expect(activeFilterKinds(filters({ minAmount: 0 }))).toEqual(["value"]); // 0 é um limite de verdade
   });
 
   it("clearFilter tira só o grupo escolhido", () => {
-    const all = filters({ minAmount: 10, maxAmount: 20, categories: ["A"], period: { from: "01/09/2026", to: "30/09/2026" } });
+    const all = filters({ minAmount: 10, maxAmount: 20, categories: ["A"], accounts: ["Carteira"], period: { from: "01/09/2026", to: "30/09/2026" } });
 
     expect(clearFilter(all, "value")).toMatchObject({ minAmount: null, maxAmount: null, categories: ["A"] });
     expect(clearFilter(all, "categories").categories).toEqual([]);
+    expect(clearFilter(all, "accounts").accounts).toEqual([]);
     expect(clearFilter(all, "period").period).toBeNull();
     expect(clearFilter(all, "period").minAmount).toBe(10);
   });
@@ -112,6 +120,24 @@ describe("várias categorias", () => {
 
   it("nenhuma marcada = todas", () => {
     expect(matchesFilters(tx(10, "Qualquer"), filters())).toBe(true);
+  });
+});
+
+describe("várias contas", () => {
+  it("serve qualquer uma das marcadas, sem diferenciar maiúsculas nem espaços", () => {
+    const some = filters({ accounts: ["carteira", " Poupança "] });
+
+    expect(matchesFilters(tx(10, "Alimentação", "10/09/2026", "expense", "Carteira"), some)).toBe(true);
+    expect(matchesFilters(tx(10, "Alimentação", "10/09/2026", "expense", "POUPANÇA"), some)).toBe(true);
+    expect(matchesFilters(tx(10, "Alimentação", "10/09/2026", "expense", "Conta principal"), some)).toBe(false);
+  });
+
+  it("sem conta na transação não casa com nenhuma marcada", () => {
+    expect(matchesFilters({ amount: 10, date: "10/09/2026" }, filters({ accounts: ["Carteira"] }))).toBe(false);
+  });
+
+  it("nenhuma marcada = todas", () => {
+    expect(matchesFilters(tx(10, "Alimentação", "10/09/2026", "expense", "Qualquer"), filters())).toBe(true);
   });
 });
 
@@ -196,6 +222,12 @@ describe("etiquetas dos filtros", () => {
     expect(describeFilters(filters({ categories: ["Alimentação"] }))[0].label).toBe("Categorias: Alimentação");
     expect(describeFilters(filters({ categories: ["A", "B"] }))[0].label).toBe("Categorias: A, B");
     expect(describeFilters(filters({ categories: ["A", "B", "C"] }))[0].label).toBe("3 categorias");
+  });
+
+  it("contas: nomes até duas, depois só a contagem", () => {
+    expect(describeFilters(filters({ accounts: ["Carteira"] }))[0].label).toBe("Contas: Carteira");
+    expect(describeFilters(filters({ accounts: ["A", "B"] }))[0].label).toBe("Contas: A, B");
+    expect(describeFilters(filters({ accounts: ["A", "B", "C"] }))[0].label).toBe("3 contas");
   });
 
   it("período e a ordem das etiquetas", () => {

@@ -353,7 +353,7 @@ describe("fluxo de dívidas e orçamento (interface + dados + banco)", () => {
     expect(seen.transactions.totalIncome).toBe(0); // pendente não mexe no saldo
 
     await act(async () => {
-      await seen.debts.handleSettleDebt(seen.debts.pendingDebts[0]);
+      await seen.debts.handleSettleDebt(seen.debts.pendingDebts[0], "Conta principal");
     });
     await settle();
 
@@ -366,6 +366,39 @@ describe("fluxo de dívidas e orçamento (interface + dados + banco)", () => {
       type: "income",
     });
     expect(seen.alert.alertMessage).toBe("Dívida quitada e registrada no seu saldo.");
+  });
+
+  it("quitar numa conta específica: a transação criada entra nela; cancelar não cria nada", async () => {
+    await mountApp();
+    await act(async () => {
+      await seen.debts.handleAddDebt({
+        person: "Caio",
+        amount: 20,
+        type: "borrowed",
+        description: null,
+        date: today(),
+        dueDate: null,
+      });
+    });
+    await settle();
+    const debt = seen.debts.pendingDebts[0];
+
+    act(() => seen.debts.requestSettleDebt(debt));
+    expect(seen.debts.pendingSettleDebt).toEqual(debt);
+
+    act(() => seen.debts.cancelSettleDebt());
+    expect(seen.debts.pendingSettleDebt).toBeNull();
+    expect(seen.debts.pendingDebts).toHaveLength(1); // cancelar não quita nada
+
+    await act(async () => {
+      await seen.debts.handleSettleDebt(debt, "Poupança");
+    });
+    await settle();
+
+    expect(seen.transactions.formattedTransactions[0]).toMatchObject({
+      description: "Pagamento a Caio",
+      account: "Poupança",
+    });
   });
 
   it("o orçamento do mês continua lá depois de fechar e abrir o painel", async () => {

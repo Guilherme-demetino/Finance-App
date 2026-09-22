@@ -50,6 +50,7 @@ const ALL: HistoryFilters = {
   minAmount: 50,
   maxAmount: 500,
   categories: ["Alimentação", "Lazer"],
+  accounts: [],
   period: { from: "01/09/2026", to: "20/09/2026" },
 };
 
