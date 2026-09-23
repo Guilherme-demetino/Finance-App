@@ -15,6 +15,7 @@ import { ProfileMenuContainer } from "../../components/dashboard/ProfileMenuCont
 import { SavingsModalsContainer } from "../../components/dashboard/SavingsModalsContainer";
 import { TransactionModalContainer } from "../../components/dashboard/TransactionModalContainer";
 import { UndoSnackbarContainer } from "../../components/dashboard/UndoSnackbarContainer";
+import { WidgetSyncRunner } from "../../components/dashboard/WidgetSyncRunner";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 
 import { DashboardProviders } from "../../context/DashboardProviders";
@@ -158,6 +159,7 @@ function DashboardChrome() {
       <AutoBackupRunner />
       <DueRemindersRunner />
       <BudgetAlertsRunner />
+      <WidgetSyncRunner />
     </SafeAreaView>
   );
 }

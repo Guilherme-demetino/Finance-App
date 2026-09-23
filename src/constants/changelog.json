@@ -463,5 +463,16 @@
       "É só um chute inicial: os campos continuam editáveis, e nada é salvo até você conferir e confirmar.",
       "Essa novidade precisa da versão nova do app instalada (não chega por atualização automática) — veja \"Nova versão do aplicativo\" no Início."
     ]
+  },
+  {
+    "id": 51,
+    "date": "23/09/2026",
+    "title": "Widgets na tela inicial",
+    "items": [
+      "Dois widgets novos para colocar na tela inicial do Android: \"Saldo do mês\" (receitas menos despesas do mês atual) e \"Próximas contas\" (as dívidas, parcelas e faturas mais próximas de vencer).",
+      "Cada um atualiza sozinho sempre que algo muda no app, e tocar nele abre o Meu Financeiro.",
+      "Para adicionar, segure um espaço vazio na tela inicial do aparelho, toque em \"Widgets\" e procure por \"Finance\".",
+      "Essa novidade precisa da versão nova do app instalada (não chega por atualização automática) — veja \"Nova versão do aplicativo\" no Início."
+    ]
   }
 ]

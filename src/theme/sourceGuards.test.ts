@@ -34,8 +34,9 @@ function sourceFiles(dir: string = SRC): string[] {
 const relative = (file: string) => path.relative(SRC, file).replace(/\\/g, "/");
 
 // Onde cor literal é permitida: as paletas, o relatório em HTML (é impresso, não usa o tema)
-// e a lista de cores que o usuário escolhe para categorias.
-const COLOR_ALLOWED = new Set(["theme/palettes.ts", "utils/export.ts"]);
+// e a lista de cores que o usuário escolhe para categorias. Os widgets de tela inicial rodam fora
+// da árvore React (sem ThemeContext), então também têm sua própria paleta fixa.
+const COLOR_ALLOWED = new Set(["theme/palettes.ts", "utils/export.ts", "widgets/colors.ts"]);
 
 describe("código-fonte do app", () => {
   it("não tem cor solta: as cores vêm do tema (só o véu preto atrás dos modais é literal)", () => {
