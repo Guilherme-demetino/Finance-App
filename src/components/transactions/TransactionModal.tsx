@@ -1,24 +1,23 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import {
   DEFAULT_EXPENSE_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
 } from "../../constants/categories";
-import { getAllCategories } from "../../database/categories";
 import { DEFAULT_ACCOUNT_NAME } from "../../database/accounts";
 import { useAccounts } from "../../hooks/useAccounts";
-import { scanReceiptFromCamera, scanReceiptFromLibrary, type ReceiptScanResult } from "../../services/receiptScan";
+import { useCategoryOptions } from "../../hooks/useCategoryOptions";
+import { useInlineEntityManager } from "../../hooks/useInlineEntityManager";
+import { useReceiptScan } from "../../hooks/useReceiptScan";
 import type { CategoryRow } from "../../types";
-import { formatCurrency as formatCurrencyDisplay, formatCurrencyInput } from "../../utils/currency";
+import { formatCurrency as formatCurrencyDisplay } from "../../utils/currency";
 import { formatDateToString, parseDateString } from "../../utils/dates";
-import { parseReceiptText } from "../../utils/statements/receiptOcr";
 import { AccountModal } from "../forms/AccountModal";
 import { CalendarPicker } from "../forms/CalendarPicker";
 import { CategoryModal } from "../forms/CategoryModal";
 import { ConfirmModal } from "../ConfirmModal";
-import { logError } from "../../utils/logger";
 import { Text, TextInput, modalCard, modalScrim, useTheme } from "../../theme";
 
 const INSTALLMENT_OPTIONS = [2, 3, 4, 6, 10, 12];
@@ -80,53 +79,18 @@ export function TransactionModal({
 }: TransactionModalProps) {
   const theme = useTheme();
   const { colors } = theme;
-  const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<CategoryRow | null>(
-    null,
-  );
-  const [dbCategories, setDbCategories] = useState<CategoryRow[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
-  const [accountToDelete, setAccountToDelete] = useState<{ id: number; name: string } | null>(null);
   const { options: accountOptions, remove: removeAccount, refresh: refreshAccounts } = useAccounts();
-  const [isScanningReceipt, setIsScanningReceipt] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
-
-  const fetchCategories = async () => {
-    setIsLoadingCategories(true);
-    try {
-      const result = await getAllCategories();
-      setDbCategories(result);
-    } catch (error) {
-      logError("Erro ao buscar categorias:", error);
-    } finally {
-      setIsLoadingCategories(false);
-    }
-  };
-
-  // Ao abrir, marca "carregando" já na renderização (sem setState síncrono no effect).
-  const [wasVisible, setWasVisible] = useState(false);
-  if (visible !== wasVisible) {
-    setWasVisible(visible);
-    if (visible) setIsLoadingCategories(true);
-  }
-
-  useEffect(() => {
-    if (!visible) return;
-    let cancelled = false;
-    getAllCategories()
-      .then((result) => {
-        if (!cancelled) setDbCategories(result);
-      })
-      .catch((error) => logError("Erro ao buscar categorias:", error))
-      .finally(() => {
-        if (!cancelled) setIsLoadingCategories(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [visible]);
+  const { categories: dbCategories, isLoading: isLoadingCategories, refresh: fetchCategories } =
+    useCategoryOptions(visible);
+  const { isScanning: isScanningReceipt, scanError, scanFromCamera: handleScanFromCamera, scanFromLibrary: handleScanFromLibrary } =
+    useReceiptScan({
+      setTransactionType,
+      setTransactionTitle,
+      setTransactionAmount,
+      setTransactionDate,
+      setTransactionCategory,
+    });
 
   const customIncomeCategories = dbCategories
     .filter((c) => String(c.type).trim().toLowerCase() === "income")
@@ -161,86 +125,26 @@ export function TransactionModal({
     );
   };
 
-  const confirmDeleteCategory = async () => {
-    const category = categoryToDelete;
-    setCategoryToDelete(null);
-    if (!category) return;
+  const categoryManager = useInlineEntityManager<CategoryRow>({
+    selectedValue: transactionCategory,
+    setSelectedValue: setTransactionCategory,
+    fallbackValue: defaultCategories[0],
+    valueOf: (category) => String(category.name).trim(),
+    remove: async (category) => {
+      await onDeleteCategory(category.id);
+      await fetchCategories();
+    },
+  });
 
-    await onDeleteCategory(category.id);
-    if (transactionCategory === String(category.name).trim()) {
-      setTransactionCategory(defaultCategories[0]);
-    }
-    fetchCategories();
-  };
-
-  const confirmDeleteAccount = async () => {
-    const account = accountToDelete;
-    setAccountToDelete(null);
-    if (!account) return;
-
-    await removeAccount(account.id);
-    if (transactionAccount === account.name) {
-      setTransactionAccount(DEFAULT_ACCOUNT_NAME);
-    }
-  };
-
-  /** Preenche o formulário com o que a leitura do recibo achou; o usuário sempre confere antes de salvar. */
-  const applyReceiptScanResult = (result: ReceiptScanResult) => {
-    if (result.status === "cancelled") return;
-    if (result.status === "unsupported") {
-      setScanError("Esse aparelho não suporta a leitura de recibo por foto.");
-      return;
-    }
-    if (result.status === "permission-denied") {
-      setScanError("Sem permissão para usar a câmera ou a galeria.");
-      return;
-    }
-    if (result.status === "no-text") {
-      setScanError("Não encontrei nenhum texto legível nessa foto. Tente uma foto mais nítida.");
-      return;
-    }
-    if (result.status === "error") {
-      setScanError("Não foi possível ler essa foto. Tente de novo.");
-      return;
-    }
-
-    const parsed = parseReceiptText(result.text);
-    setScanError(null);
-    setTransactionType("expense");
-    if (parsed.description) setTransactionTitle(parsed.description);
-    if (parsed.amount !== null) {
-      const rawCents = Math.round(parsed.amount * 100).toString();
-      setTransactionAmount(formatCurrencyInput(rawCents));
-    }
-    setTransactionDate(parsed.date);
-    if (parsed.category) setTransactionCategory(parsed.category);
-  };
-
-  const handleScanFromCamera = async () => {
-    setScanError(null);
-    setIsScanningReceipt(true);
-    try {
-      applyReceiptScanResult(await scanReceiptFromCamera());
-    } catch (error) {
-      logError("Erro ao escanear recibo (câmera):", error);
-      setScanError("Não foi possível ler essa foto. Tente de novo.");
-    } finally {
-      setIsScanningReceipt(false);
-    }
-  };
-
-  const handleScanFromLibrary = async () => {
-    setScanError(null);
-    setIsScanningReceipt(true);
-    try {
-      applyReceiptScanResult(await scanReceiptFromLibrary());
-    } catch (error) {
-      logError("Erro ao escanear recibo (galeria):", error);
-      setScanError("Não foi possível ler essa foto. Tente de novo.");
-    } finally {
-      setIsScanningReceipt(false);
-    }
-  };
+  const accountManager = useInlineEntityManager<{ id: number; name: string }>({
+    selectedValue: transactionAccount,
+    setSelectedValue: setTransactionAccount,
+    fallbackValue: DEFAULT_ACCOUNT_NAME,
+    valueOf: (account) => account.name,
+    remove: async (account) => {
+      await removeAccount(account.id);
+    },
+  });
 
   if (!visible) return null;
 
@@ -518,7 +422,7 @@ export function TransactionModal({
                   style={{ flexDirection: "row", gap: 8, alignItems: "center" }}
                 >
                   <TouchableOpacity
-                    onPress={() => setIsCategoryModalVisible(true)}
+                    onPress={categoryManager.openCreateModal}
                     style={{
                       backgroundColor: colors.surfaceAlt,
                       borderWidth: 1,
@@ -578,7 +482,7 @@ export function TransactionModal({
                         </Text>
                         {deletable && (
                           <TouchableOpacity
-                            onPress={() => setCategoryToDelete(deletable)}
+                            onPress={() => categoryManager.requestDelete(deletable)}
                             hitSlop={8}
                           >
                             <Ionicons
@@ -603,7 +507,7 @@ export function TransactionModal({
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
                   <TouchableOpacity
-                    onPress={() => setIsAccountModalVisible(true)}
+                    onPress={accountManager.openCreateModal}
                     style={{
                       backgroundColor: colors.surfaceAlt,
                       borderWidth: 1,
@@ -647,7 +551,7 @@ export function TransactionModal({
                         </Text>
                         {option.id !== null && (
                           <TouchableOpacity
-                            onPress={() => setAccountToDelete({ id: option.id as number, name: option.name })}
+                            onPress={() => accountManager.requestDelete({ id: option.id as number, name: option.name })}
                             hitSlop={8}
                           >
                             <Ionicons name="trash-outline" size={14} color={colors.expense} />
@@ -885,11 +789,11 @@ export function TransactionModal({
 
       {/* MODAL DE CRIAR CATEGORIA */}
       <CategoryModal
-        visible={isCategoryModalVisible}
-        onClose={() => setIsCategoryModalVisible(false)}
+        visible={categoryManager.isCreateModalVisible}
+        onClose={categoryManager.closeCreateModal}
         transactionType={transactionType}
         onSave={(novaCategoria, tipoEscolhido) => {
-          setIsCategoryModalVisible(false);
+          categoryManager.closeCreateModal();
           setTransactionType(tipoEscolhido);
           setTransactionCategory(String(novaCategoria).trim());
           fetchCategories();
@@ -897,42 +801,42 @@ export function TransactionModal({
       />
 
       <ConfirmModal
-        visible={!!categoryToDelete}
+        visible={!!categoryManager.itemToDelete}
         title="Excluir categoria"
         message={
-          categoryToDelete
-            ? `Excluir a categoria "${String(categoryToDelete.name).trim()}"? As transações e metas já registradas com ela continuam existindo, só deixam de aparecer atreladas a essa categoria.`
+          categoryManager.itemToDelete
+            ? `Excluir a categoria "${String(categoryManager.itemToDelete.name).trim()}"? As transações e metas já registradas com ela continuam existindo, só deixam de aparecer atreladas a essa categoria.`
             : ""
         }
         confirmLabel="Excluir"
         destructive
-        onCancel={() => setCategoryToDelete(null)}
-        onConfirm={confirmDeleteCategory}
+        onCancel={categoryManager.cancelDelete}
+        onConfirm={categoryManager.confirmDelete}
       />
 
       {/* MODAL DE CRIAR CONTA */}
       <AccountModal
-        visible={isAccountModalVisible}
-        onClose={() => setIsAccountModalVisible(false)}
+        visible={accountManager.isCreateModalVisible}
+        onClose={accountManager.closeCreateModal}
         onSave={(novaConta) => {
-          setIsAccountModalVisible(false);
+          accountManager.closeCreateModal();
           setTransactionAccount(novaConta);
           refreshAccounts();
         }}
       />
 
       <ConfirmModal
-        visible={!!accountToDelete}
+        visible={!!accountManager.itemToDelete}
         title="Excluir conta"
         message={
-          accountToDelete
-            ? `Excluir a conta "${accountToDelete.name}"? As transações já registradas nela continuam existindo, só deixam de aparecer atreladas a essa conta.`
+          accountManager.itemToDelete
+            ? `Excluir a conta "${accountManager.itemToDelete.name}"? As transações já registradas nela continuam existindo, só deixam de aparecer atreladas a essa conta.`
             : ""
         }
         confirmLabel="Excluir"
         destructive
-        onCancel={() => setAccountToDelete(null)}
-        onConfirm={confirmDeleteAccount}
+        onCancel={accountManager.cancelDelete}
+        onConfirm={accountManager.confirmDelete}
       />
     </>
   );
