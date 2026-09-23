@@ -9,9 +9,11 @@ import {
 import { getAllCategories } from "../../database/categories";
 import { DEFAULT_ACCOUNT_NAME } from "../../database/accounts";
 import { useAccounts } from "../../hooks/useAccounts";
+import { scanReceiptFromCamera, scanReceiptFromLibrary, type ReceiptScanResult } from "../../services/receiptScan";
 import type { CategoryRow } from "../../types";
-import { formatCurrency as formatCurrencyDisplay } from "../../utils/currency";
+import { formatCurrency as formatCurrencyDisplay, formatCurrencyInput } from "../../utils/currency";
 import { formatDateToString, parseDateString } from "../../utils/dates";
+import { parseReceiptText } from "../../utils/statements/receiptOcr";
 import { AccountModal } from "../forms/AccountModal";
 import { CalendarPicker } from "../forms/CalendarPicker";
 import { CategoryModal } from "../forms/CategoryModal";
@@ -88,6 +90,8 @@ export function TransactionModal({
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<{ id: number; name: string } | null>(null);
   const { options: accountOptions, remove: removeAccount, refresh: refreshAccounts } = useAccounts();
+  const [isScanningReceipt, setIsScanningReceipt] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const fetchCategories = async () => {
     setIsLoadingCategories(true);
@@ -177,6 +181,64 @@ export function TransactionModal({
     await removeAccount(account.id);
     if (transactionAccount === account.name) {
       setTransactionAccount(DEFAULT_ACCOUNT_NAME);
+    }
+  };
+
+  /** Preenche o formulário com o que a leitura do recibo achou; o usuário sempre confere antes de salvar. */
+  const applyReceiptScanResult = (result: ReceiptScanResult) => {
+    if (result.status === "cancelled") return;
+    if (result.status === "unsupported") {
+      setScanError("Esse aparelho não suporta a leitura de recibo por foto.");
+      return;
+    }
+    if (result.status === "permission-denied") {
+      setScanError("Sem permissão para usar a câmera ou a galeria.");
+      return;
+    }
+    if (result.status === "no-text") {
+      setScanError("Não encontrei nenhum texto legível nessa foto. Tente uma foto mais nítida.");
+      return;
+    }
+    if (result.status === "error") {
+      setScanError("Não foi possível ler essa foto. Tente de novo.");
+      return;
+    }
+
+    const parsed = parseReceiptText(result.text);
+    setScanError(null);
+    setTransactionType("expense");
+    if (parsed.description) setTransactionTitle(parsed.description);
+    if (parsed.amount !== null) {
+      const rawCents = Math.round(parsed.amount * 100).toString();
+      setTransactionAmount(formatCurrencyInput(rawCents));
+    }
+    setTransactionDate(parsed.date);
+    if (parsed.category) setTransactionCategory(parsed.category);
+  };
+
+  const handleScanFromCamera = async () => {
+    setScanError(null);
+    setIsScanningReceipt(true);
+    try {
+      applyReceiptScanResult(await scanReceiptFromCamera());
+    } catch (error) {
+      logError("Erro ao escanear recibo (câmera):", error);
+      setScanError("Não foi possível ler essa foto. Tente de novo.");
+    } finally {
+      setIsScanningReceipt(false);
+    }
+  };
+
+  const handleScanFromLibrary = async () => {
+    setScanError(null);
+    setIsScanningReceipt(true);
+    try {
+      applyReceiptScanResult(await scanReceiptFromLibrary());
+    } catch (error) {
+      logError("Erro ao escanear recibo (galeria):", error);
+      setScanError("Não foi possível ler essa foto. Tente de novo.");
+    } finally {
+      setIsScanningReceipt(false);
     }
   };
 
@@ -309,6 +371,69 @@ export function TransactionModal({
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* ESCANEAR RECIBO */}
+            {!isEditing && (
+              <View style={{ marginBottom: 16 }}>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={handleScanFromCamera}
+                    disabled={isScanningReceipt}
+                    style={{
+                      flex: 1,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      backgroundColor: colors.surfaceAlt,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: 12,
+                      paddingVertical: 10,
+                      opacity: isScanningReceipt ? 0.6 : 1,
+                    }}
+                    accessibilityRole="button"
+                  >
+                    <Ionicons name="camera-outline" size={16} color={colors.textPrimary} />
+                    <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "600" }}>
+                      Fotografar recibo
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleScanFromLibrary}
+                    disabled={isScanningReceipt}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      backgroundColor: colors.surfaceAlt,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: 12,
+                      paddingVertical: 10,
+                      paddingHorizontal: 14,
+                      opacity: isScanningReceipt ? 0.6 : 1,
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Escolher foto do recibo na galeria"
+                  >
+                    {isScanningReceipt ? (
+                      <ActivityIndicator size="small" color={colors.textPrimary} />
+                    ) : (
+                      <Ionicons name="image-outline" size={16} color={colors.textPrimary} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+                <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6 }}>
+                  Lê o valor, a data e a loja do recibo e preenche os campos abaixo — sempre dá para conferir e editar
+                  antes de salvar.
+                </Text>
+                {scanError && (
+                  <Text style={{ color: colors.expense, fontSize: 12, marginTop: 6 }}>{scanError}</Text>
+                )}
+              </View>
+            )}
 
             {/* CAMPOS DE TEXTO */}
             <View style={{ marginBottom: 16 }}>

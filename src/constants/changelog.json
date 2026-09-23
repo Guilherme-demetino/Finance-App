@@ -453,5 +453,15 @@
       "A transferência sai como saída de uma conta e entra como entrada na outra, ajustando o saldo das duas — mas não conta como receita nem despesa de verdade: fica de fora do Resumo, do Saldo Atual, da saúde financeira, do orçamento por categoria, dos alertas de orçamento e do comparativo com o mês anterior.",
       "Aparece no Histórico com um ícone próprio e a descrição \"Transferência para/de X\"; não tem edição (mexeria só numa das pontas), só exclusão, que apaga as duas de uma vez (com o mesmo prazo de desfazer da Lixeira)."
     ]
+  },
+  {
+    "id": 50,
+    "date": "22/09/2026",
+    "title": "Escanear recibo com a câmera",
+    "items": [
+      "No formulário de nova transação, os botões \"Fotografar recibo\" e a galeria leem o texto do recibo direto no aparelho (sem internet) e preenchem sozinhos o valor, a data, a loja (como título) e a categoria.",
+      "É só um chute inicial: os campos continuam editáveis, e nada é salvo até você conferir e confirmar.",
+      "Essa novidade precisa da versão nova do app instalada (não chega por atualização automática) — veja \"Nova versão do aplicativo\" no Início."
+    ]
   }
 ]

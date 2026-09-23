@@ -2,7 +2,7 @@
   "expo": {
     "name": "Finance",
     "slug": "my-app",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -43,7 +43,23 @@
       ],
       "expo-secure-store",
       "expo-sharing",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Usar a câmera para fotografar um recibo e preencher a transação sozinho.",
+          "microphonePermission": false
+        }
+      ],
+      ["expo-mlkit-ocr", { "iosEngine": "auto" }],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
