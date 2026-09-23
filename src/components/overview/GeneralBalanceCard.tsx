@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { TouchableOpacity, View } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
+import { groupByCategory } from "../../utils/categoryBreakdown";
 import { formatCurrency } from "../../utils/currency";
 import { Text, makeStyles, useTheme } from "../../theme";
 
@@ -23,37 +24,6 @@ interface GeneralBalanceCardProps {
 // depois das despesas, sempre na cor de receita.
 
 type ViewMode = "expense" | "income";
-
-function groupByCategory(
-  transactions: Transaction[],
-  totalIncome: number,
-  fallbackColor: string,
-) {
-  const grouped = transactions.reduce(
-    (acc: Record<string, { amount: number; color: string }>, t) => {
-      const cat = t.category || "Outros";
-      if (!acc[cat]) {
-        acc[cat] = {
-          amount: 0,
-          color: t.color || fallbackColor,
-        };
-      }
-      acc[cat].amount += t.amount;
-      return acc;
-    },
-    {},
-  );
-
-  return Object.keys(grouped)
-    .map((key) => ({
-      name: key.toUpperCase(),
-      originalName: key,
-      amount: grouped[key].amount,
-      color: grouped[key].color,
-      percent: totalIncome > 0 ? (grouped[key].amount / totalIncome) * 100 : 0,
-    }))
-    .sort((a, b) => b.amount - a.amount);
-}
 
 export function GeneralBalanceCard({
   totalIncome,

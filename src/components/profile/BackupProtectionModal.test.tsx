@@ -2,7 +2,7 @@ import React from "react";
 import { ActivityIndicator, Switch, Text as RNText, TextInput, TouchableOpacity } from "react-native";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
-import { BackupProtectionModal, RestorePasswordModal } from "./BackupProtectionModals";
+import { BackupProtectionModal } from "./BackupProtectionModal";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -221,81 +221,5 @@ describe("Proteger backups com senha: com problema", () => {
     expect(text).toContain("nenhum backup é gravado sem senha");
     expect(hasButton(tree, "Ativar proteção")).toBe(true);
     expect(hasButton(tree, "Desativar proteção")).toBe(true);
-  });
-});
-
-describe("Senha para restaurar", () => {
-  type RestoreProps = React.ComponentProps<typeof RestorePasswordModal>;
-
-  function mountRestore(over: Partial<RestoreProps> = {}) {
-    const props: RestoreProps = {
-      visible: true,
-      isBusy: false,
-      error: null,
-      onSubmit: jest.fn(),
-      onCancel: jest.fn(),
-      ...over,
-    };
-    let tree!: ReactTestRenderer;
-    act(() => {
-      tree = create(<RestorePasswordModal {...props} />);
-    });
-    mounted.push(tree);
-    return { tree, props };
-  }
-
-  it("pede a senha, oculta o que se digita e já vem marcado para continuar protegendo", () => {
-    const { tree } = mountRestore();
-
-    expect(textOf(tree)).toContain("Backup protegido");
-    expect(textOf(tree)).toContain("Digite a senha usada para proteger este backup.");
-    expect(textOf(tree)).toContain("leva alguns segundos");
-    expect(field(tree, "Senha do backup").props.secureTextEntry).toBe(true);
-    expect(toggle(tree, "Continuar protegendo meus backups com esta senha").props.value).toBe(true);
-  });
-
-  it("sem senha digitada, não dá para abrir", () => {
-    const { tree, props } = mountRestore();
-
-    expect(button(tree, "Abrir backup").props.disabled).toBe(true);
-    act(() => button(tree, "Abrir backup").props.onPress());
-    expect(props.onSubmit).not.toHaveBeenCalled();
-  });
-
-  it("abrir entrega a senha e a escolha de continuar protegendo; a senha some do campo", () => {
-    const { tree, props } = mountRestore();
-    act(() => field(tree, "Senha do backup").props.onChangeText("minha frase de senha"));
-    act(() => toggle(tree, "Continuar protegendo meus backups com esta senha").props.onValueChange(false));
-
-    act(() => button(tree, "Abrir backup").props.onPress());
-
-    expect(props.onSubmit).toHaveBeenCalledWith("minha frase de senha", false);
-    expect(field(tree, "Senha do backup").props.value).toBe("");
-  });
-
-  it("senha errada: mostra o erro e deixa tentar de novo", () => {
-    const { tree } = mountRestore({ error: "Senha incorreta ou arquivo alterado." });
-
-    expect(textOf(tree)).toContain("Senha incorreta ou arquivo alterado.");
-    expect(hasButton(tree, "Abrir backup")).toBe(true);
-  });
-
-  it("abrindo: mostra o aviso, tira o botão e trava o cancelar", () => {
-    const { tree } = mountRestore({ isBusy: true });
-
-    expect(textOf(tree)).toContain("Abrindo o backup…");
-    expect(hasButton(tree, "Abrir backup")).toBe(false);
-    expect(button(tree, "Cancelar").props.disabled).toBe(true);
-    expect(field(tree, "Senha do backup").props.editable).toBe(false);
-  });
-
-  it("cancelar avisa e limpa a senha", () => {
-    const { tree, props } = mountRestore();
-    act(() => field(tree, "Senha do backup").props.onChangeText("minha frase de senha"));
-
-    act(() => button(tree, "Cancelar").props.onPress());
-
-    expect(props.onCancel).toHaveBeenCalledTimes(1);
-    expect(field(tree, "Senha do backup").props.value).toBe("");
   });
 });
