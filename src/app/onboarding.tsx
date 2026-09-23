@@ -2,10 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState, type ComponentProps } from "react";
-import { BackHandler, Image, ScrollView, TouchableOpacity, View } from "react-native";
+import { BackHandler, ScrollView, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CustomAlert } from "../components/CustomAlert";
 import { DebtModal } from "../components/DebtModal";
+import { OnboardingEntryStep } from "../components/onboarding/OnboardingEntryStep";
+import { OnboardingPhotoStep } from "../components/onboarding/OnboardingPhotoStep";
+import { OnboardingStepVisual } from "../components/onboarding/OnboardingStepVisual";
 import { OnboardingInstallmentModal } from "../components/OnboardingInstallmentModal";
 import { OnboardingRecurringModal } from "../components/OnboardingRecurringModal";
 import { createDebt } from "../database/debts";
@@ -17,9 +20,10 @@ import { getUser, updateUserAvatar } from "../database/users";
 import { markReleaseNotesSeen } from "../hooks/useReleaseNotes";
 import { useIndexStyles } from "../styles/indexStyles";
 import type { DebtDraft, InstallmentDraft, RecurringDraft } from "../types";
-import { formatCurrency, formatCurrencyInput } from "../utils/currency";
+import { formatCurrencyInput } from "../utils/currency";
 import { formatDateToString } from "../utils/dates";
 import { logError } from "../utils/logger";
+import { buildDebtEntries, buildInstallmentEntries, buildRecurringEntries } from "../utils/onboardingEntries";
 import { Text, useTheme } from "../theme";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
@@ -69,74 +73,6 @@ const STEPS: {
     addLabel: "Adicionar dívida ou empréstimo",
   },
 ];
-
-interface EntryRowProps {
-  icon: IconName;
-  color: string;
-  title: string;
-  subtitle: string;
-  amountText: string;
-  onRemove: () => void;
-}
-
-function EntryRow({
-  icon,
-  color,
-  title,
-  subtitle,
-  amountText,
-  onRemove,
-}: EntryRowProps) {
-  const { colors } = useTheme();
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: colors.surfaceAlt,
-        borderRadius: 12,
-        padding: 14,
-        marginBottom: 10,
-      }}
-    >
-      <View
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          backgroundColor: `${color}26`,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Ionicons name={icon} size={20} color={color} />
-      </View>
-
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "600" }}
-          numberOfLines={1}
-        >
-          {title}
-        </Text>
-        <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>
-          {subtitle}
-        </Text>
-      </View>
-
-      <Text style={{ color, fontSize: 14, fontWeight: "bold" }}>
-        {amountText}
-      </Text>
-
-      <TouchableOpacity onPress={onRemove} hitSlop={8}>
-        <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-      </TouchableOpacity>
-    </View>
-  );
-}
 
 const newId = () =>
   `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -277,45 +213,19 @@ export default function OnboardingScreen() {
     }
   };
 
-  const entries: (EntryRowProps & { id: string })[] =
+  const entries =
     stepKey === "recurring"
-      ? recurring.map((item) => ({
-          id: item.id,
-          icon: item.type === "income" ? "arrow-down-outline" : "arrow-up-outline",
-          color: item.type === "income" ? colors.income : colors.expense,
-          title: item.title,
-          subtitle: `Todo dia ${item.day} • ${item.category}`,
-          amountText: formatCurrency(item.amount),
-          onRemove: () =>
-            setRecurring((prev) => prev.filter((r) => r.id !== item.id)),
-        }))
+      ? buildRecurringEntries(recurring, colors, (id) =>
+          setRecurring((prev) => prev.filter((r) => r.id !== id)),
+        )
       : stepKey === "installments"
-        ? installments.map((item) => {
-            const remaining = item.total - item.startNumber + 1;
-            return {
-              id: item.id,
-              icon: "card-outline" as IconName,
-              color: colors.expense,
-              title: item.title,
-              subtitle: `${remaining} ${remaining === 1 ? "parcela restante" : "parcelas restantes"} • próxima em ${item.firstDate}`,
-              amountText: `${formatCurrency(item.installmentAmount)}/mês`,
-              onRemove: () =>
-                setInstallments((prev) => prev.filter((i) => i.id !== item.id)),
-            };
-          })
+        ? buildInstallmentEntries(installments, colors, (id) =>
+            setInstallments((prev) => prev.filter((i) => i.id !== id)),
+          )
         : stepKey === "debts"
-          ? debts.map((item) => ({
-            id: item.id,
-            icon: (item.type === "lent"
-              ? "arrow-down-outline"
-              : "arrow-up-outline") as IconName,
-            color: item.type === "lent" ? colors.income : colors.expense,
-            title: item.person,
-            subtitle: `${item.type === "lent" ? "Te deve" : "Você deve"}${item.dueDate ? ` • até ${item.dueDate}` : ""}`,
-            amountText: formatCurrency(item.amount),
-            onRemove: () =>
-              setDebts((prev) => prev.filter((d) => d.id !== item.id)),
-          }))
+          ? buildDebtEntries(debts, colors, (id) =>
+              setDebts((prev) => prev.filter((d) => d.id !== id)),
+            )
           : [];
 
   const primaryLabel = isSaving
@@ -370,45 +280,11 @@ export default function OnboardingScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={{ alignItems: "center", marginBottom: 28 }}>
-          {stepKey === "photo" ? (
-            <View
-              style={{
-                width: 112,
-                height: 112,
-                borderRadius: 56,
-                backgroundColor: colors.surfaceAlt,
-                borderWidth: 2,
-                borderColor: avatarUri ? colors.accent : colors.borderSubtle,
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
-                marginBottom: 16,
-              }}
-            >
-              {avatarUri ? (
-                <Image
-                  source={{ uri: avatarUri }}
-                  style={{ width: "100%", height: "100%" }}
-                />
-              ) : (
-                <Ionicons name="person" size={48} color={colors.textMuted} />
-              )}
-            </View>
-          ) : (
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                backgroundColor: `${colors.income}1A`,
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: 16,
-              }}
-            >
-              <Ionicons name={currentStep.icon} size={30} color={colors.income} />
-            </View>
-          )}
+          <OnboardingStepVisual
+            isPhotoStep={stepKey === "photo"}
+            icon={currentStep.icon}
+            avatarUri={avatarUri}
+          />
 
           {step === 0 && userName ? (
             <Text style={{ color: colors.textSecondary, fontSize: 14, marginBottom: 6 }}>
@@ -460,47 +336,20 @@ export default function OnboardingScreen() {
           </Text>
         </View>
 
-        {entries.map(({ id, ...row }) => (
-          <EntryRow key={id} {...row} />
-        ))}
-
-        {stepKey === "photo" && avatarUri ? (
-          <TouchableOpacity
-            onPress={() => setAvatarUri(null)}
-            style={{ alignItems: "center", marginBottom: 14 }}
-            hitSlop={8}
-          >
-            <Text style={{ color: colors.expense, fontSize: 13, fontWeight: "600" }}>
-              Remover foto
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-
-        <TouchableOpacity
-          onPress={stepKey === "photo" ? pickImage : () => setIsModalOpen(true)}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            paddingVertical: 16,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-            borderStyle: "dashed",
-            borderRadius: 12,
-          }}
-        >
-          <Ionicons
-            name={stepKey === "photo" ? "image-outline" : "add-circle-outline"}
-            size={20}
-            color={colors.textPrimary}
+        {stepKey === "photo" ? (
+          <OnboardingPhotoStep
+            avatarUri={avatarUri}
+            addLabel={currentStep.addLabel}
+            onPickImage={pickImage}
+            onRemoveImage={() => setAvatarUri(null)}
           />
-          <Text style={{ color: colors.textPrimary, fontWeight: "bold", fontSize: 14 }}>
-            {stepKey === "photo" && avatarUri
-              ? "Escolher outra foto"
-              : currentStep.addLabel}
-          </Text>
-        </TouchableOpacity>
+        ) : (
+          <OnboardingEntryStep
+            entries={entries}
+            addLabel={currentStep.addLabel}
+            onAdd={() => setIsModalOpen(true)}
+          />
+        )}
       </ScrollView>
 
       <View style={{ flexDirection: "row", gap: 12, padding: 24, paddingTop: 12 }}>
